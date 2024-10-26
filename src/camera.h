@@ -2,19 +2,13 @@
 
 #include <stdbool.h>
 
-typedef struct
-{
+typedef struct {
     float matrix[4][4];
-    float x;
-    float y;
-    float z;
-    float pitch;
-    float yaw;
-    int width;
-    int height;
+    float x, y, z;
+    float pitch, yaw;
+    int width, height;
     float fov;
-    float near;
-    float far;
+    float near, far;
     bool dirty;
 } camera_t;
 
@@ -33,7 +27,17 @@ void camera_size(
     camera_t* camera,
     const int width,
     const int height);
-bool camera_visible(
+
+/// @brief Test if an AABB can be seen from the camera
+/// @param camera The camera
+/// @param x The x position
+/// @param y The y position
+/// @param z The z position
+/// @param a The x size
+/// @param b The y size
+/// @param c The z size
+/// @return True if the AABB can be seen
+bool camera_test(
     const camera_t* camera,
     const float x,
     const float y,

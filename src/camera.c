@@ -3,21 +3,9 @@
 #include "camera.h"
 #include "helpers.h"
 
-void camera_init(camera_t* camera)
-{
-    assert(camera);
-    camera->x = 0.0f;
-    camera->y = 0.0f;
-    camera->z = 0.0f;
-    camera->pitch = rad(0.0f);
-    camera->yaw = rad(0.0f);
-    camera->width = 640.0f;
-    camera->height = 480.0f;
-    camera->fov = rad(90.0f);
-    camera->near = 0.1f;
-    camera->far = 5000.0f;
-    camera->dirty = true;
-}
+////////////////////////////////////////////////////////////////////////////////
+// Matrix Helpers //////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 static void multiply(
     float matrix[4][4],
@@ -119,6 +107,26 @@ static void perspective(
     matrix[3][3] = 0.0f;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Camera Implementation ///////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+void camera_init(camera_t* camera)
+{
+    assert(camera);
+    camera->x = 0.0f;
+    camera->y = 0.0f;
+    camera->z = 0.0f;
+    camera->pitch = rad(0.0f);
+    camera->yaw = rad(0.0f);
+    camera->width = 640.0f;
+    camera->height = 480.0f;
+    camera->fov = rad(90.0f);
+    camera->near = 0.1f;
+    camera->far = 5000.0f;
+    camera->dirty = true;
+}
+
 void camera_update(camera_t* camera)
 {
     assert(camera);
@@ -186,30 +194,7 @@ void camera_size(
     camera->dirty = true;
 }
 
-static bool visible(
-    const camera_t* camera,
-    const float x,
-    const float y,
-    const float z,
-    const float a,
-    const float b,
-    const float c)
-{
-    float d = x - camera->x;
-    float e = y - camera->y;
-    float f = z - camera->z;
-    const float length = sqrtf(d * d + e * e + f * f);
-    if (length < 50.0f) {
-        return true;
-    }
-    d /= length;
-    e /= length;
-    f /= length;
-    const float g = d * a + e * b + f * c;
-    return acosf(g) < camera->fov / 1.5f;
-}
-
-bool camera_visible(
+bool camera_test(
     const camera_t* camera,
     const float x,
     const float y,
@@ -232,10 +217,18 @@ bool camera_visible(
     const float e = sinf(camera->pitch);
     const float f = cosf(camera->yaw) * -cosf(camera->pitch);
     for (int i = 0; i < 8; i++) {
-        const float s = points[i][0];
-        const float t = points[i][1];
-        const float p = points[i][2];
-        if (visible(camera, s, t, p, d, e, f)) {
+        float s = points[i][0] - camera->x;
+        float t = points[i][1] - camera->y;
+        float p = points[i][2] - camera->z;
+        const float length = sqrtf(s * s + t * t + p * p);
+        if (length < 50.0f) {
+            return true;
+        }
+        s /= length;
+        t /= length;
+        p /= length;
+        const float dot = d * s + e * t + f * p;
+        if (acos(dot) < camera->fov / 1.5f) {
             return true;
         }
     }

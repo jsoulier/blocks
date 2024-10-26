@@ -678,7 +678,7 @@ void world_render(
         x *= CHUNK_X;
         y *= CHUNK_Y;
         z *= CHUNK_Z;
-        if (!camera_visible(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
+        if (!camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
         {
             continue;
         }
