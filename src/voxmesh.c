@@ -90,6 +90,7 @@ static uint32_t pack(
 static uint32_t fill(
     const chunk_t* chunk,
     const chunk_t* neighbors[DIRECTION_3],
+    const int height,
     uint32_t* data,
     const uint32_t capacity)
 {
@@ -103,7 +104,7 @@ static uint32_t fill(
             continue;
         }
         for (direction_t d = 0; d < DIRECTION_3; d++) {
-            if (y == 0 && d != DIRECTION_U) {
+            if (height == 0 && y == 0 && d != DIRECTION_U) {
                 continue;
             }
             block_t b;
@@ -134,6 +135,7 @@ static uint32_t fill(
 bool voxmesh_vbo(
     chunk_t* chunk,
     chunk_t* neighbors[DIRECTION_3],
+    const int height,
     SDL_GPUDevice* device,
     SDL_GPUTransferBuffer** tbo,
     uint32_t* capacity)
@@ -150,7 +152,7 @@ bool voxmesh_vbo(
             return false;
         }
     }
-    chunk->size = fill(chunk, neighbors, data, *capacity);
+    chunk->size = fill(chunk, neighbors, height, data, *capacity);
     if (data) {
         SDL_UnmapGPUTransferBuffer(device, *tbo);
     }
@@ -176,7 +178,7 @@ bool voxmesh_vbo(
             SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
             return false;
         }
-        chunk->size = fill(chunk, neighbors, data, *capacity);
+        chunk->size = fill(chunk, neighbors, height, data, *capacity);
         SDL_UnmapGPUTransferBuffer(device, *tbo);
     }
     if (chunk->size > chunk->capacity) {

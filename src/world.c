@@ -83,7 +83,7 @@ static int loop(void* args)
                     neighbors[d] = &neighbor->chunks[b];
                 }
             }
-            if (voxmesh_vbo(chunk, neighbors, device,
+            if (voxmesh_vbo(chunk, neighbors, y, device,
                     &worker->tbo, &worker->size)) {
                 chunk->renderable = 1;
             }
@@ -489,7 +489,6 @@ void world_set_block(
     int d = chunk_mod_x(x);
     int f = chunk_mod_z(z);
     group_t* group = grid_get2(&grid, a, c);
-    assert(get_chunk_block_from_group(group, d, y, f) != BLOCK_EMPTY);
     set_block_in_group(group, d, y, f, block);
     const int e = y / CHUNK_Y;
     chunk_t* chunk = &group->chunks[e];

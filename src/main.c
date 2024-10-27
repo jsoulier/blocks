@@ -396,6 +396,47 @@ static void create_quad_vbo()
     SDL_ReleaseGPUTransferBuffer(device, tbo);
 }
 
+static bool raycast(
+    float* x,
+    float* y,
+    float* z,
+    const bool previous)
+{
+    float a, b, c;
+    camera_vector(&camera, &a, &b, &c);
+    const float step = 0.1f;
+    const float length = 10.0f;
+    for (float i = 0; i < length; i += step) {
+        float s, t, p;
+        camera_position(&camera, &s, &t, &p);
+        *x = s + a * i;
+        *y = t + b * i;
+        *z = p + c * i;
+        if (*x <= 0) {
+            *x -= 1.0f;
+        }
+        if (*z <= 0) {
+            *z -= 1.0f;
+        }
+        if (world_get_block(*x, *y, *z) != BLOCK_EMPTY) {
+            if (previous) {
+                *x -= a * step;
+                *y -= b * step;
+                *z -= c * step;
+            }
+            // TODO: why?
+            if (*x < 0.0f && *x > -1.0f && a > 0.0f) {
+                *x = -1.0f;
+            }
+            if (*z < 0.0f && *z > -1.0f && c > 0.0f) {
+                *z = -1.0f;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool poll()
 {
     SDL_Event event;
@@ -417,30 +458,14 @@ static bool poll()
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             SDL_SetWindowRelativeMouseMode(window, 1);
             if (event.button.button == SDL_BUTTON_LEFT) {
-                float s, t, p;
-                camera_vector(&camera, &s, &t, &p);
-                float length = sqrtf(s * s + t * t + p * p);
-                s /= length;
-                t /= length;
-                p /= length;
                 float a, b, c;
-                for (float i = 0; i < 10.0f; i += 0.1f) {
-                    float x, y, z;
-                    camera_position(&camera, &x, &y, &z);
-                    a = x + s * i;
-                    b = y + t * i;
-                    c = z + p * i;
-                    if (a < 0) {
-                        a -= 1;
-                    }
-                    if (c < 0) {
-                        c -= 1;
-                    }
-                    block_t block = world_get_block(a, b, c);
-                    if (block) {
-                        world_set_block(a, b, c, BLOCK_EMPTY);
-                        break;
-                    }
+                if (raycast(&a, &b, &c, false)) {
+                    world_set_block(a, b, c, BLOCK_EMPTY);
+                }
+            } else if (event.button.button == SDL_BUTTON_RIGHT) {
+                float a, b, c;
+                if (raycast(&a, &b, &c, true)) {
+                    world_set_block(a, b, c, BLOCK_STONE);
                 }
             }
             break;
