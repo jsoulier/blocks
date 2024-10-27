@@ -13,69 +13,14 @@ static SDL_GPUTexture* color_texture;
 static SDL_GPUTexture* depth_texture;
 static SDL_GPUGraphicsPipeline* world_pipeline;
 static SDL_GPUGraphicsPipeline* ui_pipeline;
-static SDL_GPUBuffer* ui_vbo;
+static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUSampler* atlas_sampler;
 static SDL_Surface* atlas_surface;
+static SDL_GPUBuffer* quad_vbo;
 static uint32_t width;
 static uint32_t height;
 static camera_t camera;
-
-////////////////////////////////////////////////////////////////////////////////
-// Helpers /////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-static SDL_GPUShader* load_shader(
-    const char* file,
-    const int uniforms,
-    const int samplers)
-{
-    assert(device);
-    assert(file);
-    SDL_GPUShaderCreateInfo info = {0};
-    void* code = SDL_LoadFile(file, &info.code_size);
-    if (!code) {
-        SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
-        return NULL;
-    }
-    info.code = code;
-    if (strstr(file, ".vert")) {
-        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
-    } else {
-        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
-    }
-    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    info.entrypoint = "main";
-    info.num_uniform_buffers = uniforms;
-    info.num_samplers = samplers;
-    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
-    SDL_free(code);
-    if (!shader) {
-        SDL_Log("Failed to create %s shader: %s", file, SDL_GetError());
-        return NULL;
-    }
-    return shader;
-}
-
-static SDL_Surface* load_bmp(const char* file)
-{
-    SDL_Surface* argb32 = SDL_LoadBMP(file);
-    if (!argb32) {
-        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
-    if (!rgba32) {
-        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_DestroySurface(argb32);
-    return rgba32;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Atlas Implementation ////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 static void load_atlas()
 {
@@ -178,15 +123,73 @@ SDL_Surface* get_atlas_icon(const block_t block)
     return icon;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// World Implementation ////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+static void load_sky_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info = {
+        .vertex_shader = load_shader(device, "sky.vert", 0, 0),
+        .fragment_shader = load_shader(device, "sky.frag", 2, 0),
+        .target_info = {
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
+                .format = SDL_GetGPUSwapchainTextureFormat(device, window)
+            }},
+        },
+        .vertex_input_state = {
+            .num_vertex_attributes = 1,
+            .vertex_attributes = (SDL_GPUVertexAttribute[]) {{
+                .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+            }},
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]) {{
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                .pitch = 8,
+            }},
+        },
+    };
+    sky_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!sky_pipeline) {
+        SDL_Log("Failed to create sky pipeline: %s", SDL_GetError());
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+}
+
+static void load_ui_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info = {
+        .vertex_shader = load_shader(device, "ui.vert", 0, 0),
+        .fragment_shader = load_shader(device, "ui.frag", 1, 0),
+        .target_info = {
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
+                .format = SDL_GetGPUSwapchainTextureFormat(device, window)
+            }},
+        },
+        .vertex_input_state = {
+            .num_vertex_attributes = 1,
+            .vertex_attributes = (SDL_GPUVertexAttribute[]) {{
+                .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+            }},
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]) {{
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                .pitch = 8,
+            }},
+        },
+    };
+    ui_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!ui_pipeline) {
+        SDL_Log("Failed to create ui pipeline: %s", SDL_GetError());
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+}
 
 static void load_world_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
-        .vertex_shader = load_shader("world.vert", 3, 0),
-        .fragment_shader = load_shader("world.frag", 0, 1),
+        .vertex_shader = load_shader(device, "world.vert", 3, 0),
+        .fragment_shader = load_shader(device, "world.frag", 0, 1),
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
@@ -225,11 +228,53 @@ static void load_world_pipeline()
     SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
+static void draw_sky(SDL_GPUCommandBuffer* commands)
+{
+    SDL_GPUColorTargetInfo cti = {0};
+    cti.load_op = SDL_GPU_LOADOP_DONT_CARE;
+    cti.store_op = SDL_GPU_STOREOP_STORE;
+    cti.texture = color_texture;
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
+    if (!pass) {
+        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
+        return;
+    }
+    float size[2] = { camera.width, camera.height };
+    SDL_GPUBufferBinding bb = {0};
+    bb.buffer = quad_vbo;
+    SDL_BindGPUGraphicsPipeline(pass, sky_pipeline);
+    SDL_PushGPUFragmentUniformData(commands, 0, size, sizeof(size));
+    SDL_PushGPUFragmentUniformData(commands, 1, &camera.pitch, 4);
+    SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
+    SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
+    SDL_EndGPURenderPass(pass);
+}
+
+static void draw_ui(SDL_GPUCommandBuffer* commands)
+{
+    SDL_GPUColorTargetInfo cti = {0};
+    cti.load_op = SDL_GPU_LOADOP_LOAD;
+    cti.store_op = SDL_GPU_STOREOP_STORE;
+    cti.texture = color_texture;
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
+    if (!pass) {
+        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
+        return;
+    }
+    float size[2] = { camera.width, camera.height };
+    SDL_GPUBufferBinding bb = {0};
+    bb.buffer = quad_vbo;
+    SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
+    SDL_PushGPUFragmentUniformData(commands, 0, &size, sizeof(size));
+    SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
+    SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
+    SDL_EndGPURenderPass(pass);
+}
+
 static void draw_world(SDL_GPUCommandBuffer* commands)
 {
     SDL_GPUColorTargetInfo cti = {0};
-    cti.clear_color = (SDL_FColor) {1.0f, 0.0f, 1.0f, 1.0f};
-    cti.load_op = SDL_GPU_LOADOP_CLEAR;
+    cti.load_op = SDL_GPU_LOADOP_LOAD;
     cti.store_op = SDL_GPU_STOREOP_STORE;
     cti.texture = color_texture;
     SDL_GPUDepthStencilTargetInfo dsti = {0};
@@ -255,121 +300,6 @@ static void draw_world(SDL_GPUCommandBuffer* commands)
     world_render(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// UI Implementation ///////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-static void load_ui_pipeline()
-{
-    SDL_GPUGraphicsPipelineCreateInfo info = {
-        .vertex_shader = load_shader("ui.vert", 0, 0),
-        .fragment_shader = load_shader("ui.frag", 1, 0),
-        .target_info = {
-            .num_color_targets = 1,
-            .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
-                .format = SDL_GetGPUSwapchainTextureFormat(device, window)
-            }},
-        },
-        .vertex_input_state = {
-            .num_vertex_attributes = 1,
-            .vertex_attributes = (SDL_GPUVertexAttribute[]) {{
-                .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-            }},
-            .num_vertex_buffers = 1,
-            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]) {{
-                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
-                .pitch = 8,
-            }},
-        },
-    };
-    ui_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
-    if (!ui_pipeline) {
-        SDL_Log("Failed to create ui pipeline: %s", SDL_GetError());
-    }
-    SDL_ReleaseGPUShader(device, info.vertex_shader);
-    SDL_ReleaseGPUShader(device, info.fragment_shader);
-}
-
-static void create_ui_vbo()
-{
-    const float vertices[][2] = {
-        { -1, -1 },
-        { 1, -1 },
-        { -1, 1 },
-        { 1, 1 },
-        { 1, -1 },
-        { -1, 1 },
-    };
-
-    SDL_GPUBufferCreateInfo bci = {0};
-    bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-    bci.size = sizeof(vertices);
-    ui_vbo = SDL_CreateGPUBuffer(device, &bci);
-    if (!ui_vbo) {
-        SDL_Log("Failed to create vertex buffer: %s", SDL_GetError());
-        return;
-    }
-    SDL_GPUTransferBufferCreateInfo tbci = {0};
-    tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    tbci.size = sizeof(vertices);
-    SDL_GPUTransferBuffer* tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
-    if (!tbo) {
-        SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
-        return;
-    }
-    void* data = SDL_MapGPUTransferBuffer(device, tbo, 0);
-    if (!data) {
-        SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
-        return;
-    }
-    memcpy(data, vertices, sizeof(vertices));
-    SDL_UnmapGPUTransferBuffer(device, tbo);
-    SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
-    if (!commands) {
-        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
-        return;
-    }
-    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commands);
-    if (!pass) {
-        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
-        return;
-    } 
-    SDL_GPUTransferBufferLocation location = {0};
-    location.transfer_buffer = tbo;
-    SDL_GPUBufferRegion region = {0};
-    region.size = sizeof(vertices);
-    region.buffer = ui_vbo;
-    SDL_UploadToGPUBuffer(pass, &location, &region, 1);
-    SDL_EndGPUCopyPass(pass);
-    SDL_SubmitGPUCommandBuffer(commands); 
-    SDL_ReleaseGPUTransferBuffer(device, tbo);
-}
-
-static void draw_ui(SDL_GPUCommandBuffer* commands)
-{
-    SDL_GPUColorTargetInfo cti = {0};
-    cti.load_op = SDL_GPU_LOADOP_LOAD;
-    cti.store_op = SDL_GPU_STOREOP_STORE;
-    cti.texture = color_texture;
-    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
-    if (!pass) {
-        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
-        return;
-    }
-    float size[2] = { camera.width, camera.height };
-    SDL_PushGPUFragmentUniformData(commands, 0, &size, sizeof(size));
-    SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
-    SDL_GPUBufferBinding bb = {0};
-    bb.buffer = ui_vbo;
-    SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
-    SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
-    SDL_EndGPURenderPass(pass);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Main Render /////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 static void draw()
 {
@@ -406,14 +336,65 @@ static void draw()
         height = h;
     }
     camera_update(&camera);
+    draw_sky(commands);
     draw_world(commands);
     draw_ui(commands);
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Events //////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
+static void create_quad_vbo()
+{
+    const float vertices[][2] = {
+        {-1, -1 },
+        { 1, -1 },
+        {-1,  1 },
+        { 1,  1 },
+        { 1, -1 },
+        {-1,  1 },
+    };
+    SDL_GPUBufferCreateInfo bci = {0};
+    bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+    bci.size = sizeof(vertices);
+    quad_vbo = SDL_CreateGPUBuffer(device, &bci);
+    if (!quad_vbo) {
+        SDL_Log("Failed to create vertex buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTransferBufferCreateInfo tbci = {0};
+    tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    tbci.size = sizeof(vertices);
+    SDL_GPUTransferBuffer* tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
+    if (!tbo) {
+        SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
+        return;
+    }
+    void* data = SDL_MapGPUTransferBuffer(device, tbo, 0);
+    if (!data) {
+        SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
+        return;
+    }
+    memcpy(data, vertices, sizeof(vertices));
+    SDL_UnmapGPUTransferBuffer(device, tbo);
+    SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
+    if (!commands) {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commands);
+    if (!pass) {
+        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
+        return;
+    } 
+    SDL_GPUTransferBufferLocation location = {0};
+    location.transfer_buffer = tbo;
+    SDL_GPUBufferRegion region = {0};
+    region.size = sizeof(vertices);
+    region.buffer = quad_vbo;
+    SDL_UploadToGPUBuffer(pass, &location, &region, 1);
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(commands); 
+    SDL_ReleaseGPUTransferBuffer(device, tbo);
+}
 
 static bool poll()
 {
@@ -455,9 +436,6 @@ static bool poll()
                     if (c < 0) {
                         c -= 1;
                     }
-                    // if (p > 0 && s < 0) {
-                    //     c -= 1;
-                    // }
                     block_t block = world_get_block(a, b, c);
                     if (block) {
                         world_set_block(a, b, c, BLOCK_EMPTY);
@@ -476,10 +454,6 @@ static bool poll()
     return true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Movement ////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
 static void move()
 {
     float dx = 0.0f;
@@ -497,10 +471,6 @@ static void move()
     dz *= speed;
     camera_move(&camera, dx, dy, dz);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Main ////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv)
 {
@@ -528,9 +498,10 @@ int main(int argc, char** argv)
         return false;
     }
     load_atlas();
-    load_world_pipeline();
+    load_sky_pipeline();
     load_ui_pipeline();
-    create_ui_vbo();
+    load_world_pipeline();
+    create_quad_vbo();
     noise_init(NOISE_CUBE);
     if (!world_init(device)) {
         return EXIT_FAILURE;
@@ -559,8 +530,9 @@ int main(int argc, char** argv)
     SDL_ReleaseGPUSampler(device, atlas_sampler);
     SDL_ReleaseGPUGraphicsPipeline(device, world_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
     SDL_ReleaseGPUTexture(device, depth_texture);
-    SDL_ReleaseGPUBuffer(device, ui_vbo);
+    SDL_ReleaseGPUBuffer(device, quad_vbo);
     SDL_ReleaseWindowFromGPUDevice(device, window);
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);

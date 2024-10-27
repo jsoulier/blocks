@@ -1,27 +1,29 @@
 #version 450
 
-layout(location = 0) out vec4 color; // Output color
-
+layout(location = 0) out vec4 color;
 layout(set = 3, binding = 0) uniform window_t {
      vec2 size;
 } window;
 
+const float crosshair_size = 0.02f;
+const float crosshair_thickness = 0.005f;
+const vec4 crosshair_color = vec4(0.9, 0.9, 0.9, 1.0);
+
+bool is_crosshair(in vec2 ndc)
+{
+    return
+        (abs(ndc.x) < crosshair_size &&
+            abs(ndc.y) < crosshair_thickness) ||
+        (abs(ndc.y) < crosshair_size &&
+            abs(ndc.x) < crosshair_thickness);
+}
+
 void main()
 {
-     float crosshairSize = 0.02f;
-    // Convert fragment coordinates to normalized coordinates
-    vec2 normalizedCoords = (gl_FragCoord.xy / window.size) * 2.0 - 1.0; // Adjust based on viewport size
-    normalizedCoords.x *= window.size.x / window.size.y;
-
-    // Check if the fragment is within the crosshair area
-    bool isCrosshair = (abs(normalizedCoords.x) < crosshairSize && abs(normalizedCoords.y) < 0.005) || // Horizontal line
-                       (abs(normalizedCoords.y) < crosshairSize && abs(normalizedCoords.x) < 0.005); // Vertical line
-
-    // If not part of the crosshair, discard the fragment
-    if (!isCrosshair) {
-        discard; // Discard fragments outside the crosshair
+    vec2 ndc = (gl_FragCoord.xy / window.size) * 2.0 - 1.0;
+    ndc.x *= window.size.x / window.size.y;
+    if (!is_crosshair(ndc)) {
+        discard;
     }
-
-    // Set color for the crosshair
-    color = vec4(1.0, 0.0, 0.0, 1.0); // Red color for the crosshair
+    color = crosshair_color;
 }

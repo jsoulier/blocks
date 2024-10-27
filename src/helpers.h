@@ -171,3 +171,52 @@ static void set_block_in_group(
     chunk->blocks[x][b][z] = block;
     chunk->empty = false;
 }
+
+static SDL_GPUShader* load_shader(
+    SDL_GPUDevice* device,
+    const char* file,
+    const int uniforms,
+    const int samplers)
+{
+    assert(device);
+    assert(file);
+    SDL_GPUShaderCreateInfo info = {0};
+    void* code = SDL_LoadFile(file, &info.code_size);
+    if (!code) {
+        SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
+        return NULL;
+    }
+    info.code = code;
+    if (strstr(file, ".vert")) {
+        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    } else {
+        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+    }
+    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+    info.entrypoint = "main";
+    info.num_uniform_buffers = uniforms;
+    info.num_samplers = samplers;
+    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
+    SDL_free(code);
+    if (!shader) {
+        SDL_Log("Failed to create %s shader: %s", file, SDL_GetError());
+        return NULL;
+    }
+    return shader;
+}
+
+static SDL_Surface* load_bmp(const char* file)
+{
+    SDL_Surface* argb32 = SDL_LoadBMP(file);
+    if (!argb32) {
+        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
+        return NULL;
+    }
+    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
+    if (!rgba32) {
+        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
+        return NULL;
+    }
+    SDL_DestroySurface(argb32);
+    return rgba32;
+}

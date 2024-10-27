@@ -35,9 +35,11 @@ function(shader FILE)
         COMMAND glslc ${SOURCE} -o ${OUTPUT}
         DEPENDS ${SOURCE} BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
 endfunction()
-shader(world.frag)
-shader(world.vert)
+shader(sky.frag)
+shader(sky.vert)
 shader(ui.frag)
 shader(ui.vert)
+shader(world.frag)
+shader(world.vert)
 
 configure_file(${CMAKE_SOURCE_DIR}/res/atlas.bmp ${BINARY_DIR} COPYONLY)
