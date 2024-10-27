@@ -213,8 +213,7 @@ int main(int argc, char** argv)
         camera_position(&camera, &x, &y, &z);
         // SDL_Log("position = %f, %f, %f", x, y, z);
 
-        world_move(x, y, z);
-        world_update();
+        world_update(x, y, z);
 
         draw();
     }

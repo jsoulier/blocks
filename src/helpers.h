@@ -106,3 +106,65 @@ bool on_world_border(
     const int32_t x,
     const int32_t y,
     const int32_t z);
+
+static int wrap_x(int x)
+{
+    x = x % CHUNK_X;
+    return x > 0 ? x : x + CHUNK_X;
+}
+
+static int wrap_z(int z)
+{
+    z = z % CHUNK_Z;
+    return z > 0 ? z : z + CHUNK_Z;
+}
+
+// TODO: move the types
+
+typedef struct
+{
+    SDL_GPUBuffer* vbo;
+    uint32_t size;
+    uint32_t capacity;
+    tag_t tag;
+    // fix me to block_t
+    uint8_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
+    bool renderable;
+    bool empty;
+} chunk_t;
+
+typedef struct
+{
+    tag_t tag;
+    chunk_t chunks[GROUP_CHUNKS];
+    direction_t neighbors;
+    bool loaded;
+} group_t;
+
+static int get_chunk_block_from_group(
+    const group_t* group,
+    const int x,
+    const int y,
+    const int z)
+{
+    assert(group);
+    const int a = y / CHUNK_Y;
+    const int b = y - a * CHUNK_Y;
+    const chunk_t* chunk = &group->chunks[a];
+    return chunk->blocks[x][b][z];
+}
+
+static void set_block_in_group(
+    group_t* group,
+    const int x,
+    const int y,
+    const int z,
+    const int block)
+{
+    assert(group);
+    const int a = y / CHUNK_Y;
+    const int b = y - a * CHUNK_Y;
+    chunk_t* chunk = &group->chunks[a];
+    chunk->blocks[x][b][z] = block;
+    chunk->empty = false;
+}

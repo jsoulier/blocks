@@ -188,15 +188,15 @@ bool voxmesh_vbo(
         SDL_UnmapGPUTransferBuffer(device, *transfer);
     }
     if (chunk->size > chunk->capacity) {
-        if (chunk->buffer) {
-            SDL_ReleaseGPUBuffer(device, chunk->buffer);
+        if (chunk->vbo) {
+            SDL_ReleaseGPUBuffer(device, chunk->vbo);
             chunk->capacity = 0;
         }
         SDL_GPUBufferCreateInfo bci = {0};
         bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
         bci.size = chunk->size * 16;
-        chunk->buffer = SDL_CreateGPUBuffer(device, &bci);
-        if (!chunk->buffer) {
+        chunk->vbo = SDL_CreateGPUBuffer(device, &bci);
+        if (!chunk->vbo) {
             SDL_Log("Failed to create vertex buffer: %s", SDL_GetError());
             return false;
         }
@@ -216,7 +216,7 @@ bool voxmesh_vbo(
     location.transfer_buffer = *transfer;
     SDL_GPUBufferRegion region = {0};
     region.size = chunk->size * 16;
-    region.buffer = chunk->buffer;
+    region.buffer = chunk->vbo;
     SDL_UploadToGPUBuffer(pass, &location, &region, 1);
     SDL_EndGPUCopyPass(pass);
     SDL_SubmitGPUCommandBuffer(commands);
