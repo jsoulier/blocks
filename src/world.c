@@ -418,8 +418,7 @@ void world_update(
             on_load(group, job->x, job->z);
             break;
         case JOB_TYPE_MESH:
-            const chunk_t* chunk = &group->chunks[job->y];
-            size = max(size, chunk->size);
+            size = max(size, group->chunks[job->y].size);
             break;
         default:
             assert(0);

@@ -16,10 +16,6 @@ add_executable(${PROJECT_NAME} WIN32
     ${CMAKE_SOURCE_DIR}/src/camera.c
     ${CMAKE_SOURCE_DIR}/src/containers.c
     ${CMAKE_SOURCE_DIR}/src/database.c
-    ${CMAKE_SOURCE_DIR}/src/gfx/atlas.c
-    ${CMAKE_SOURCE_DIR}/src/gfx/gfx.c
-    ${CMAKE_SOURCE_DIR}/src/gfx/pipeline.c
-    ${CMAKE_SOURCE_DIR}/src/gfx/shader.c
     ${CMAKE_SOURCE_DIR}/src/helpers.c
     ${CMAKE_SOURCE_DIR}/src/main.c
     ${CMAKE_SOURCE_DIR}/src/noise.c
@@ -39,7 +35,9 @@ function(shader FILE)
         COMMAND glslc ${SOURCE} -o ${OUTPUT}
         DEPENDS ${SOURCE} BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
 endfunction()
-shader(voxel.frag)
-shader(voxel.vert)
+shader(world.frag)
+shader(world.vert)
+shader(ui.frag)
+shader(ui.vert)
 
 configure_file(${CMAKE_SOURCE_DIR}/res/atlas.bmp ${BINARY_DIR} COPYONLY)

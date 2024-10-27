@@ -143,49 +143,49 @@ bool voxmesh_vbo(
     chunk_t* chunk,
     chunk_t* neighbors[DIRECTION_3],
     SDL_GPUDevice* device,
-    SDL_GPUTransferBuffer** transfer,
+    SDL_GPUTransferBuffer** tbo,
     uint32_t* capacity)
 {
     assert(chunk);
     assert(device);
-    assert(transfer);
+    assert(tbo);
     assert(capacity);
-    void* data = *transfer;
+    void* data = *tbo;
     if (data) {
-        data = SDL_MapGPUTransferBuffer(device, *transfer, true);
+        data = SDL_MapGPUTransferBuffer(device, *tbo, true);
         if (!data) {
-            SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
+            SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
             return false;
         }
     }
     chunk->size = fill(chunk, neighbors, data, *capacity);
     if (data) {
-        SDL_UnmapGPUTransferBuffer(device, *transfer);
+        SDL_UnmapGPUTransferBuffer(device, *tbo);
     }
     if (!chunk->size) {
         return false;
     }
     if (chunk->size > *capacity) {
-        if (*transfer) {
-            SDL_ReleaseGPUTransferBuffer(device, *transfer);
+        if (*tbo) {
+            SDL_ReleaseGPUTransferBuffer(device, *tbo);
             *capacity = 0;
         }
         SDL_GPUTransferBufferCreateInfo tbci = {0};
         tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
         tbci.size = chunk->size * 16;
-        *transfer = SDL_CreateGPUTransferBuffer(device, &tbci);
-        if (!*transfer) {
-            SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
+        *tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
+        if (!*tbo) {
+            SDL_Log("Failed to create tbo buffer: %s", SDL_GetError());
             return false;
         }
         *capacity = chunk->size;
-        data = SDL_MapGPUTransferBuffer(device, *transfer, false);
+        data = SDL_MapGPUTransferBuffer(device, *tbo, false);
         if (!data) {
-            SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
+            SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
             return false;
         }
         chunk->size = fill(chunk, neighbors, data, *capacity);
-        SDL_UnmapGPUTransferBuffer(device, *transfer);
+        SDL_UnmapGPUTransferBuffer(device, *tbo);
     }
     if (chunk->size > chunk->capacity) {
         if (chunk->vbo) {
@@ -213,7 +213,7 @@ bool voxmesh_vbo(
         return false;
     }
     SDL_GPUTransferBufferLocation location = {0};
-    location.transfer_buffer = *transfer;
+    location.transfer_buffer = *tbo;
     SDL_GPUBufferRegion region = {0};
     region.size = chunk->size * 16;
     region.buffer = chunk->vbo;
@@ -225,31 +225,31 @@ bool voxmesh_vbo(
 
 bool voxmesh_ibo(
     SDL_GPUDevice* device,
-    SDL_GPUBuffer** buffer,
+    SDL_GPUBuffer** ibo,
     const uint32_t size)
 {
     assert(device);
-    assert(buffer);
+    assert(ibo);
     assert(size);
     SDL_GPUTransferBufferCreateInfo tbci = {0};
     tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
     tbci.size = size * 24;
-    SDL_GPUTransferBuffer* transfer = SDL_CreateGPUTransferBuffer(device, &tbci);
-    if (!transfer) {
-        SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
+    SDL_GPUTransferBuffer* tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
+    if (!tbo) {
+        SDL_Log("Failed to create tbo buffer: %s", SDL_GetError());
         return false;
     }
     SDL_GPUBufferCreateInfo bci = {0};
     bci.usage = SDL_GPU_BUFFERUSAGE_INDEX;
     bci.size = size * 24;
-    *buffer = SDL_CreateGPUBuffer(device, &bci);
-    if (!*buffer) {
+    *ibo = SDL_CreateGPUBuffer(device, &bci);
+    if (!*ibo) {
         SDL_Log("Failed to create index buffer: %s", SDL_GetError());
         return false;
     }
-    uint32_t* data = SDL_MapGPUTransferBuffer(device, transfer, false);
+    uint32_t* data = SDL_MapGPUTransferBuffer(device, tbo, false);
     if (!data) {
-        SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
+        SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
         return false;
     }
     for (uint32_t i = 0; i < size; i++) {
@@ -260,7 +260,7 @@ bool voxmesh_ibo(
         data[i * 6 + 4] = i * 4 + 2;
         data[i * 6 + 5] = i * 4 + 1;
     }
-    SDL_UnmapGPUTransferBuffer(device, transfer);
+    SDL_UnmapGPUTransferBuffer(device, tbo);
     SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
     if (!commands) {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
@@ -272,13 +272,13 @@ bool voxmesh_ibo(
         return false;
     }
     SDL_GPUTransferBufferLocation location = {0};
-    location.transfer_buffer = transfer;
+    location.transfer_buffer = tbo;
     SDL_GPUBufferRegion region = {0};
     region.size = size * 24;
-    region.buffer = *buffer;
+    region.buffer = *ibo;
     SDL_UploadToGPUBuffer(pass, &location, &region, 1);
     SDL_EndGPUCopyPass(pass);
     SDL_SubmitGPUCommandBuffer(commands);
-    SDL_ReleaseGPUTransferBuffer(device, transfer);
+    SDL_ReleaseGPUTransferBuffer(device, tbo);
     return true;
 }
