@@ -11,20 +11,23 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/SDL)
 add_executable(${PROJECT_NAME} WIN32
+    ${CMAKE_SOURCE_DIR}/lib/sqlite3/sqlite3.c
     ${CMAKE_SOURCE_DIR}/src/block.c
     ${CMAKE_SOURCE_DIR}/src/camera.c
     ${CMAKE_SOURCE_DIR}/src/containers.c
+    ${CMAKE_SOURCE_DIR}/src/database.c
     ${CMAKE_SOURCE_DIR}/src/gfx/atlas.c
     ${CMAKE_SOURCE_DIR}/src/gfx/gfx.c
     ${CMAKE_SOURCE_DIR}/src/gfx/pipeline.c
     ${CMAKE_SOURCE_DIR}/src/gfx/shader.c
     ${CMAKE_SOURCE_DIR}/src/helpers.c
     ${CMAKE_SOURCE_DIR}/src/main.c
-    ${CMAKE_SOURCE_DIR}/src/voxmesh.c
     ${CMAKE_SOURCE_DIR}/src/noise.c
+    ${CMAKE_SOURCE_DIR}/src/voxmesh.c
     ${CMAKE_SOURCE_DIR}/src/world.c
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/lib/sqlite3)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src) # TODO
 set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 11)
 

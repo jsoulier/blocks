@@ -233,6 +233,7 @@ bool camera_test(
     const float b,
     const float c)
 {
+    assert(camera);
     const float points[][3] = {
         { x,     y,     z     },
         { x + a, y,     z     },
@@ -250,7 +251,7 @@ bool camera_test(
         float t = points[i][1] - camera->y;
         float p = points[i][2] - camera->z;
         const float length = sqrtf(s * s + t * t + p * p);
-        if (length < 50.0f) {
+        if (length < max3(a, b, c)) {
             return true;
         }
         s /= length;

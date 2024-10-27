@@ -1,0 +1,9 @@
+#include <sqlite3.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <threads.h>
+#include "helpers.h"
+#include "database.h"
+#include "containers.h"
