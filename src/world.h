@@ -8,7 +8,7 @@
 
 typedef struct
 {
-    void* vbo;
+    void* buffer;
     uint32_t size;
     uint32_t capacity;
     tag_t tag;
