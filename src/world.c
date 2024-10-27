@@ -46,6 +46,25 @@ static ring_t jobs;
 static int sorted[WORLD_Y][WORLD_CHUNKS][3];
 static int height;
 
+static void get_neighbors(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z,
+    chunk_t* neighbors[DIRECTION_3])
+{
+    for (direction_t d = 0; d < DIRECTION_3; d++) {
+        const int32_t a = x + directions[d][0];
+        const int32_t b = y + directions[d][1];
+        const int32_t c = z + directions[d][2];
+        if (!grid_in2(&grid, a, c) || b < 0 || b > WORLD_Y - 1) {
+            neighbors[d] = NULL;
+            continue;
+        }
+        group_t* neighbor = grid_get2(&grid, a, c);
+        neighbors[d] = &neighbor->chunks[b];
+    }
+}
+
 static int loop(void* args)
 {
     worker_t* worker = args;
@@ -73,16 +92,8 @@ static int loop(void* args)
         case JOB_TYPE_MESH:
             chunk_t* chunk = &group->chunks[y];
             assert(!chunk->empty);
-            chunk_t* neighbors[DIRECTION_3] = {0};
-            for (direction_t d = 0; d < DIRECTION_3; d++) {
-                const int32_t a = x + directions[d][0];
-                const int32_t b = y + directions[d][1];
-                const int32_t c = z + directions[d][2];
-                if (grid_in2(&grid, a, c) && b >= 0 && b < WORLD_Y) {
-                    group_t* neighbor = grid_get2(&grid, a, c);
-                    neighbors[d] = &neighbor->chunks[b];
-                }
-            }
+            chunk_t* neighbors[DIRECTION_3];
+            get_neighbors(x, y, z, neighbors);
             if (voxmesh_vbo(chunk, neighbors, y, device,
                     &worker->tbo, &worker->size)) {
                 chunk->renderable = 1;
@@ -151,6 +162,9 @@ static bool mesh(
 {
     assert(chunk);
     assert(grid_in2(&grid, x, z));
+    if (chunk->empty) {
+        return true;
+    }
     tag_invalidate(&chunk->tag);
     job_t job;
     job.type = JOB_TYPE_MESH;
@@ -179,7 +193,7 @@ static void mesh_all(
     }
     for (int y = 0; y < GROUP_CHUNKS; y++) {
         chunk_t* chunk = &group->chunks[y];
-        if (chunk->empty || chunk->renderable) {
+        if (chunk->renderable) {
             continue;
         }
         if (!mesh(chunk, x, y, z)) {
@@ -470,10 +484,10 @@ block_t world_get_block(
     const int32_t y,
     const int32_t z)
 {
-    int a = floor((float) x / CHUNK_X);
-    int c = floor((float) z / CHUNK_Z);
-    int d = chunk_mod_x(x);
-    int f = chunk_mod_z(z);
+    const int a = floor((float) x / CHUNK_X);
+    const int c = floor((float) z / CHUNK_Z);
+    const int d = chunk_mod_x(x);
+    const int f = chunk_mod_z(z);
     const group_t* group = grid_get2(&grid, a, c);
     return get_chunk_block_from_group(group, d, y, f);
 }
@@ -484,13 +498,31 @@ void world_set_block(
     const int32_t z,
     const block_t block)
 {
-    int a = floor((float) x / CHUNK_X);
-    int c = floor((float) z / CHUNK_Z);
-    int d = chunk_mod_x(x);
-    int f = chunk_mod_z(z);
+    const int a = floor((float) x / CHUNK_X);
+    const int b = y % CHUNK_Y;
+    const int c = floor((float) z / CHUNK_Z);
+    const int d = chunk_mod_x(x);
+    const int f = chunk_mod_z(z);
     group_t* group = grid_get2(&grid, a, c);
     set_block_in_group(group, d, y, f, block);
     const int e = y / CHUNK_Y;
     chunk_t* chunk = &group->chunks[e];
     mesh(chunk, a, e, c);
+    chunk_t* neighbors[DIRECTION_3];
+    get_neighbors(a, e, c, neighbors);
+    if (d == 0 && neighbors[DIRECTION_W]) {
+        mesh(neighbors[DIRECTION_W], a - 1, e, c);
+    } else if (d == CHUNK_X - 1 && neighbors[DIRECTION_E]) {
+        mesh(neighbors[DIRECTION_E], a + 1, e, c);
+    }
+    if (f == 0 && neighbors[DIRECTION_S]) {
+        mesh(neighbors[DIRECTION_S], a, e, c - 1);
+    } else if (f == CHUNK_Z - 1 && neighbors[DIRECTION_N]) {
+        mesh(neighbors[DIRECTION_N], a, e, c + 1);
+    }
+    if (b == 0 && neighbors[DIRECTION_D]) {
+        mesh(neighbors[DIRECTION_D], a, e - 1, c);
+    } else if (b == CHUNK_Y - 1 && neighbors[DIRECTION_U]) {
+        mesh(neighbors[DIRECTION_U], a, e + 1, c);
+    }
 }

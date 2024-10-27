@@ -527,7 +527,7 @@ int main(int argc, char** argv)
     load_ui_pipeline();
     load_world_pipeline();
     create_quad_vbo();
-    noise_init(NOISE_FLAT);
+    noise_init(NOISE_CUBE);
     if (!world_init(device)) {
         return EXIT_FAILURE;
     }
