@@ -27,6 +27,16 @@ void camera_size(
     camera_t* camera,
     const int width,
     const int height);
+void camera_position(
+    const camera_t* camera,
+    float* x,
+    float* y,
+    float* z);
+void camera_vector(
+    const camera_t* camera,
+    float* x,
+    float* y,
+    float* z);
 
 /// @brief Test if an AABB can be seen from the camera
 /// @param camera The camera

@@ -83,7 +83,7 @@ void grid_init(
     grid->height = height;
     grid->x = INT32_MAX;
     grid->y = INT32_MAX;
-    grid->data = calloc(width * height, sizeof(grid->data));
+    grid->data = calloc(width * height, sizeof(void*));
     assert(grid->data);
 }
 
@@ -237,8 +237,8 @@ int* grid_move(
     const int h = grid->height;
     grid->x = x;
     grid->y = y;
-    void** data1 = calloc(w * h, sizeof(grid->data));
-    void** data2 = malloc(w * h * sizeof(grid->data));
+    void** data1 = calloc(w * h, sizeof(void*));
+    void** data2 = malloc(w * h * sizeof(void*));
     int* indices = malloc(w * h * 2 * sizeof(int));
     assert(data1 && data2 && indices);
     for (int i = 0; i < w; i++) {

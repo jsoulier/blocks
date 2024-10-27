@@ -190,7 +190,7 @@ bool voxmesh_vbo(
     if (chunk->size > chunk->capacity) {
         if (chunk->buffer) {
             SDL_ReleaseGPUBuffer(device, chunk->buffer);
-            chunk->size = 0;
+            chunk->capacity = 0;
         }
         SDL_GPUBufferCreateInfo bci = {0};
         bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;

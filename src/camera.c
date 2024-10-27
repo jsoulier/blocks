@@ -194,6 +194,36 @@ void camera_size(
     camera->dirty = true;
 }
 
+void camera_position(
+    const camera_t* camera,
+    float* x,
+    float* y,
+    float* z)
+{
+    assert(camera);
+    assert(x);
+    assert(y);
+    assert(z);
+    *x = camera->x;
+    *y = camera->y;
+    *z = camera->z;
+}
+
+void camera_vector(
+    const camera_t* camera,
+    float* x,
+    float* y,
+    float* z)
+{
+    assert(camera);
+    assert(x);
+    assert(y);
+    assert(z);
+    *x = cosf(camera->yaw - rad(90)) * cosf(camera->pitch);
+    *y = sinf(camera->pitch);
+    *z = sinf(camera->yaw - rad(90)) * cosf(camera->pitch);
+}
+
 bool camera_test(
     const camera_t* camera,
     const float x,
@@ -213,9 +243,8 @@ bool camera_test(
         { x + a, y,     z + c },
         { x + a, y + b, z + c },
     };
-    const float d = sinf(camera->yaw) * cosf(camera->pitch);
-    const float e = sinf(camera->pitch);
-    const float f = cosf(camera->yaw) * -cosf(camera->pitch);
+    float d, e, f;
+    camera_vector(camera, &d, &e, &f);
     for (int i = 0; i < 8; i++) {
         float s = points[i][0] - camera->x;
         float t = points[i][1] - camera->y;

@@ -1,6 +1,7 @@
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_log.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@
 #include "helpers.h"
 #include "voxmesh.h"
 #include "world.h"
+#include "noise.h"
 
 #define MAX_JOBS 1000
 #define MAX_WORKERS 4
@@ -69,7 +71,8 @@ static void mesh(worker_t* worker)
     const int32_t y = worker->job->y;
     const int32_t z = worker->job->z;
     chunk_t* chunk = world_get_chunk(x, y, z);
-    assert(!chunk->renderable);
+    // when you break a chunk it stays renderable
+    // assert(!chunk->renderable);
     assert(!chunk->empty);
     chunk_t* neighbors[DIRECTION_3];
     world_get_chunk_neighbors(x, y, z, neighbors);
@@ -203,6 +206,25 @@ void worker_load(
     }
 }
 
+static void worker_mesh_chunk_only(
+    chunk_t* chunk,
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    tag_invalidate(&chunk->tag);
+    job_t job;
+    job.type = JOB_TYPE_MESH;
+    job.tag = chunk->tag;
+    job.x = x;
+    job.y = y;
+    job.z = z;
+    if (!ring_add(&jobs, &job, true))
+    {
+        SDL_Log("Failed to add mesh job");
+    }
+}
+
 void worker_mesh(
     group_t* group,
     const int32_t x,
@@ -223,18 +245,7 @@ void worker_mesh(
         {
             continue;
         }
-        tag_invalidate(&chunk->tag);
-        job_t job;
-        job.type = JOB_TYPE_MESH;
-        job.tag = chunk->tag;
-        job.x = x;
-        job.y = y;
-        job.z = z;
-        if (!ring_add(&jobs, &job, true))
-        {
-            SDL_Log("Failed to add mesh job");
-            break;
-        }
+        worker_mesh_chunk_only(chunk, x, y, z);
     }
 }
 
@@ -480,6 +491,8 @@ void world_render(
         }
         x += wx;
         z += wz;
+        // z -= wz;
+        // z -= WORLD_Z;
         x *= CHUNK_X;
         y *= CHUNK_Y;
         z *= CHUNK_Z;
@@ -495,6 +508,7 @@ void world_render(
         assert(chunk->size <= capacity);
         SDL_DrawGPUIndexedPrimitives(pass, chunk->size * 6, 1, 0, 0, 0);
     }
+    // SDL_Log("%d, %d, %d", wx, wy, wz);
 }
 
 void world_move(
@@ -537,6 +551,7 @@ void world_move(
         worker_load(group, j + wx, k + wz);
     }
     free(oob);
+
 }
 
 group_t* world_get_group(
@@ -601,4 +616,92 @@ bool world_on_border(
     const int32_t a = x - wx;
     const int32_t b = z - wz;
     return on_world_border(a, y, b);
+}
+
+block_t get_chunk_block_from_group(
+    group_t* group,
+    const int x,
+    const int y,
+    const int z)
+{
+    assert(group);
+    const int a = y / CHUNK_Y;
+    const int b = y - a * CHUNK_Y;
+    chunk_t* chunk = &group->chunks[a];
+    return chunk->blocks[x][b][z];
+}
+
+void set_block_in_group(
+    group_t* group,
+    const int x,
+    const int y,
+    const int z,
+    const block_t block)
+{
+    assert(group);
+    const int a = y / CHUNK_Y;
+    const int b = y - a * CHUNK_Y;
+    chunk_t* chunk = &group->chunks[a];
+    chunk->blocks[x][b][z] = block;
+    chunk->empty = false;
+}
+
+static int wrap_x(int x)
+{
+    x = x % CHUNK_X;
+    return x > 0 ? x : x + CHUNK_X;
+}
+
+static int wrap_z(int z)
+{
+    z = z % CHUNK_Z;
+    return z > 0 ? z : z + CHUNK_Z;
+}
+
+block_t world_get_block(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    int a = floor((float) x / (float) CHUNK_X);
+    int c = floor((float) z / (float) CHUNK_Z);
+    int d = wrap_x(x);
+    int f = wrap_z(z);
+    // f = CHUNK_Z - f;
+    // d = CHUNK_X - d;
+    // f = CHUNK_Z - f;
+    group_t* group = world_get_group(a, c);
+    block_t block = get_chunk_block_from_group(group, d, y, f);
+    if (block != BLOCK_EMPTY) {
+        SDL_Log("a=%d, c=%d, d=%d, f=%d", a, c, d, f);
+        return block;
+    }
+    return block;
+}
+
+void world_set_block(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z,
+    const block_t block)
+{
+    int a = floor((float) x / (float) CHUNK_X);
+    int c = floor((float) z / (float) CHUNK_Z);
+    int d = wrap_x(x);
+    int f = wrap_z(z);
+    // f = CHUNK_Z - f;
+    // d = CHUNK_X - d;
+    // f = CHUNK_Z - f;
+    group_t* group = world_get_group(a, c);
+    // for (int i = 0; i < GROUP_CHUNKS; i++) {
+    //     memset(group->chunks[i].blocks, 0, sizeof(group->chunks[i].blocks));
+    // }
+    // noise_init(NOISE_FLAT);
+    // noise_generate(group, a, c);
+    set_block_in_group(group, d, y, f, block);
+
+    const int e = y / CHUNK_Y;
+    chunk_t* chunk = &group->chunks[e];
+
+    worker_mesh_chunk_only(chunk, a, e, c);
 }

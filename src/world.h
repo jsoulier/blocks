@@ -60,3 +60,12 @@ bool world_on_border(
     const int32_t x,
     const int32_t y,
     const int32_t z);
+block_t world_get_block(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z);
+void world_set_block(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z,
+    const block_t block);
