@@ -486,8 +486,8 @@ block_t world_get_block(
 {
     int a = floor((float) x / CHUNK_X);
     int c = floor((float) z / CHUNK_Z);
-    int d = wrap_x(x);
-    int f = wrap_z(z);
+    int d = chunk_mod_x(x);
+    int f = chunk_mod_z(z);
     const group_t* group = grid_get2(&grid, a, c);
     return get_chunk_block_from_group(group, d, y, f);
 }
@@ -500,9 +500,10 @@ void world_set_block(
 {
     int a = floor((float) x / CHUNK_X);
     int c = floor((float) z / CHUNK_Z);
-    int d = wrap_x(x);
-    int f = wrap_z(z);
+    int d = chunk_mod_x(x);
+    int f = chunk_mod_z(z);
     group_t* group = grid_get2(&grid, a, c);
+    assert(get_chunk_block_from_group(group, d, y, f) != BLOCK_EMPTY);
     set_block_in_group(group, d, y, f, block);
     const int e = y / CHUNK_Y;
     chunk_t* chunk = &group->chunks[e];

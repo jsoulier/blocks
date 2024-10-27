@@ -17,7 +17,7 @@ bool voxmesh_vbo(
     chunk_t* chunk,
     chunk_t* neighbors[DIRECTION_3],
     SDL_GPUDevice* device,
-    SDL_GPUTransferBuffer** transfer,
+    SDL_GPUTransferBuffer** tbo,
     uint32_t* capacity);
 
 /// @brief Create clockwise wound indices for a voxel mesh
@@ -27,5 +27,5 @@ bool voxmesh_vbo(
 /// @return If the indices were created (false does mean error)
 bool voxmesh_ibo(
     SDL_GPUDevice* device,
-    SDL_GPUBuffer** buffer,
+    SDL_GPUBuffer** ibo,
     const uint32_t size);

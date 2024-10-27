@@ -264,7 +264,7 @@ static void load_ui_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
         .vertex_shader = load_shader("ui.vert", 0, 0),
-        .fragment_shader = load_shader("ui.frag", 0, 0),
+        .fragment_shader = load_shader("ui.frag", 1, 0),
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
@@ -279,7 +279,7 @@ static void load_ui_pipeline()
             .num_vertex_buffers = 1,
             .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]) {{
                 .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
-                .pitch = 12,
+                .pitch = 8,
             }},
         },
     };
@@ -294,13 +294,14 @@ static void load_ui_pipeline()
 static void create_ui_vbo()
 {
     const float vertices[][2] = {
-        { 0, 0, },
-        { 1, 0, },
-        { 0, 1, },
-        { 1, 1, },
-        { 1, 0, },
-        { 0, 1, },
+        { -1, -1 },
+        { 1, -1 },
+        { -1, 1 },
+        { 1, 1 },
+        { 1, -1 },
+        { -1, 1 },
     };
+
     SDL_GPUBufferCreateInfo bci = {0};
     bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
     bci.size = sizeof(vertices);
@@ -351,11 +352,13 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
     cti.load_op = SDL_GPU_LOADOP_LOAD;
     cti.store_op = SDL_GPU_STOREOP_STORE;
     cti.texture = color_texture;
-    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 0, NULL);
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
     if (!pass) {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
+    float size[2] = { camera.width, camera.height };
+    SDL_PushGPUFragmentUniformData(commands, 0, &size, sizeof(size));
     SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = ui_vbo;
@@ -404,7 +407,7 @@ static void draw()
     }
     camera_update(&camera);
     draw_world(commands);
-    // draw_ui(commands);
+    draw_ui(commands);
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
@@ -440,12 +443,21 @@ static bool poll()
                 t /= length;
                 p /= length;
                 float a, b, c;
-                for (float i = 0; i < 10.0f; i += 0.0001f) {
+                for (float i = 0; i < 10.0f; i += 0.1f) {
                     float x, y, z;
                     camera_position(&camera, &x, &y, &z);
                     a = x + s * i;
                     b = y + t * i;
                     c = z + p * i;
+                    if (a < 0) {
+                        a -= 1;
+                    }
+                    if (c < 0) {
+                        c -= 1;
+                    }
+                    // if (p > 0 && s < 0) {
+                    //     c -= 1;
+                    // }
                     block_t block = world_get_block(a, b, c);
                     if (block) {
                         world_set_block(a, b, c, BLOCK_EMPTY);
@@ -479,7 +491,7 @@ static void move()
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Q]) dy--;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W]) dz++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S]) dz--;
-    float speed = 1.2f;
+    float speed = 0.2f;
     dx *= speed;
     dy *= speed;
     dz *= speed;
@@ -529,6 +541,7 @@ int main(int argc, char** argv)
     SDL_DestroySurface(icon);
     camera_init(&camera);
     camera_move(&camera, 0, 30, 0);
+    camera_size(&camera, 1024, 764);
     int loop = 1;
     while (loop) {
         if (!poll()) {
@@ -546,6 +559,7 @@ int main(int argc, char** argv)
     SDL_ReleaseGPUSampler(device, atlas_sampler);
     SDL_ReleaseGPUGraphicsPipeline(device, world_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
+    SDL_ReleaseGPUTexture(device, depth_texture);
     SDL_ReleaseGPUBuffer(device, ui_vbo);
     SDL_ReleaseWindowFromGPUDevice(device, window);
     SDL_DestroyGPUDevice(device);

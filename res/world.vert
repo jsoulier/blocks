@@ -23,16 +23,13 @@
 
 layout(location = 0) in uint voxel;
 layout(location = 0) out vec2 uv;
-layout(set = 1, binding = 0) uniform mvp_t
-{
+layout(set = 1, binding = 0) uniform mvp_t {
     mat4 matrix;
 } mvp;
-layout(set = 1, binding = 1) uniform chunk_t
-{
+layout(set = 1, binding = 1) uniform chunk_t {
     ivec3 vector;
 } chunk;
-layout(set = 1, binding = 2) uniform scale_t
-{
+layout(set = 1, binding = 2) uniform scale_t {
     vec2 vector;
 } scale;
 

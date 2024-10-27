@@ -108,16 +108,16 @@ bool on_world_border(
     const int32_t y,
     const int32_t z);
 
-static int wrap_x(int x)
+static int chunk_mod_x(int x)
 {
     x = x % CHUNK_X;
-    return x > 0 ? x : x + CHUNK_X;
+    return x >= 0 ? x : x + CHUNK_X;
 }
 
-static int wrap_z(int z)
+static int chunk_mod_z(int z)
 {
     z = z % CHUNK_Z;
-    return z > 0 ? z : z + CHUNK_Z;
+    return z >= 0 ? z : z + CHUNK_Z;
 }
 
 // TODO: move the types
@@ -152,6 +152,8 @@ static int get_chunk_block_from_group(
     const int a = y / CHUNK_Y;
     const int b = y - a * CHUNK_Y;
     const chunk_t* chunk = &group->chunks[a];
+    assert(x < CHUNK_X);
+    assert(z < CHUNK_Z);
     return chunk->blocks[x][b][z];
 }
 
