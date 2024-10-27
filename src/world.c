@@ -9,6 +9,7 @@
 #include "camera.h"
 #include "containers.h"
 #include "helpers.h"
+#include "voxmesh.h"
 #include "world.h"
 
 #define MAX_JOBS 1000
@@ -36,7 +37,6 @@ typedef struct
     mtx_t mtx;
     cnd_t cnd;
     const job_t* job;
-    uint8_t lights[3][3][3][CHUNK_X][CHUNK_Y][CHUNK_Z];
     SDL_GPUTransferBuffer* tbo;
     uint32_t size;
 } worker_t;
@@ -63,67 +63,6 @@ static void load(worker_t* worker)
     group->loaded = true;
 }
 
-static uint32_t fill(
-    const chunk_t* chunk,
-    const chunk_t* neighbors[DIRECTION_3],
-    const uint8_t lights[CHUNK_X][CHUNK_Y][CHUNK_Z],
-    uint32_t* data,
-    const uint32_t capacity)
-{
-    assert(chunk);
-    assert(!chunk->empty);
-    assert(!chunk->renderable);
-    uint32_t size = 0;
-    for (int x = 0; x < CHUNK_X; x++)
-    for (int y = 0; y < CHUNK_Y; y++)
-    for (int z = 0; z < CHUNK_Z; z++)
-    {
-        const block_t a = chunk->blocks[x][y][z];
-        if (a == BLOCK_EMPTY)
-        {
-            continue;
-        }
-        for (direction_t direction = 0; direction < DIRECTION_3; direction++)
-        {
-            if (y == 0 && direction != DIRECTION_U)
-            {
-                continue;
-            }
-            block_t b = BLOCK_EMPTY;
-            int c = x + directions[direction][0];
-            int d = y + directions[direction][1];
-            int e = z + directions[direction][2];
-            if (in_chunk(c, d, e))
-            {
-                b = chunk->blocks[c][d][e];
-            }
-            else if (neighbors[direction])
-            {
-                c = (c + CHUNK_X) % CHUNK_X;
-                d = (d + CHUNK_Y) % CHUNK_Y;
-                e = (e + CHUNK_Z) % CHUNK_Z;
-                b = neighbors[direction]->blocks[c][d][e];
-            }
-            if (!block_visible(a, b) || ++size > capacity)
-            {
-                continue;
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                data[(size * 4) - 4 + i] = block_get_voxel(
-                    a,
-                    x,
-                    y,
-                    z,
-                    direction,
-                    lights[x][y][z],
-                    i);
-            }
-        }
-    }
-    return size;
-}
-
 static void mesh(worker_t* worker)
 {
     const int32_t x = worker->job->x;
@@ -144,8 +83,7 @@ static void mesh(worker_t* worker)
             return;
         }
     }
-    const void* lights = worker->lights[1][1][1];
-    chunk->size = fill(chunk, neighbors, lights, data, worker->size);
+    chunk->size = voxmesh_make(chunk, neighbors, data, worker->size);
     if (data)
     {
         SDL_UnmapGPUTransferBuffer(device, worker->tbo);
@@ -177,7 +115,7 @@ static void mesh(worker_t* worker)
             SDL_Log("Failed to map worker transfer buffer: %s", SDL_GetError());
             return;
         }
-        chunk->size = fill(chunk, neighbors, lights, data, worker->size);
+        chunk->size = voxmesh_make(chunk, neighbors, data, worker->size);
         SDL_UnmapGPUTransferBuffer(device, worker->tbo);
     }
     if (chunk->size > chunk->capacity)
@@ -610,11 +548,7 @@ void world_update()
         SDL_Log("Failed to map world transfer buffer: %s", SDL_GetError());
         return;
     }
-    for (uint32_t i = 0; i < size; i++)
-    for (uint32_t j = 0; j < 6; j++)
-    {
-        data[i * 6 + j] = i * 4 + block_get_index(j);
-    }
+    voxmesh_indices(data, size);
     SDL_UnmapGPUTransferBuffer(device, buffer);
     SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
     if (!commands)

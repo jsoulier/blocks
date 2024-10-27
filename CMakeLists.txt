@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME} WIN32
     ${CMAKE_SOURCE_DIR}/src/gfx/shader.c
     ${CMAKE_SOURCE_DIR}/src/helpers.c
     ${CMAKE_SOURCE_DIR}/src/main.c
+    ${CMAKE_SOURCE_DIR}/src/voxmesh.c
     ${CMAKE_SOURCE_DIR}/src/noise.c
     ${CMAKE_SOURCE_DIR}/src/world.c
 )
@@ -32,7 +33,7 @@ function(shader FILE)
     set(SOURCE ${CMAKE_SOURCE_DIR}/res/${FILE})
     set(OUTPUT ${BINARY_DIR}/${FILE})
     add_custom_target(${NAME} ALL
-        COMMAND glslc ${SOURCE} -o ${OUTPUT} -I ${CMAKE_SOURCE_DIR}/src
+        COMMAND glslc ${SOURCE} -o ${OUTPUT}
         DEPENDS ${SOURCE} BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
 endfunction()
 shader(voxel.frag)

@@ -240,7 +240,7 @@ int* grid_move(
     void** data1 = calloc(w * h, sizeof(grid->data));
     void** data2 = malloc(w * h * sizeof(grid->data));
     int* indices = malloc(w * h * 2 * sizeof(int));
-    assert(data1 && data2);
+    assert(data1 && data2 && indices);
     for (int i = 0; i < w; i++) {
         for (int j = 0; j < h; j++) {
             const int c = i - a;

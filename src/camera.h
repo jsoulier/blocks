@@ -6,7 +6,7 @@ typedef struct {
     float matrix[4][4];
     float x, y, z;
     float pitch, yaw;
-    int width, height;
+    float width, height;
     float fov;
     float near, far;
     bool dirty;

@@ -23,12 +23,3 @@ enum
 extern const int blocks[][DIRECTION_3][2];
 
 bool block_visible(const block_t a, const block_t b);
-uint32_t block_get_index(const int i);
-uint32_t block_get_voxel(
-    const block_t block,
-    const int x,
-    const int y,
-    const int z,
-    const direction_t direction,
-    const int light,
-    const int i);
