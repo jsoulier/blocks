@@ -13,6 +13,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/lib/SDL)
 add_executable(${PROJECT_NAME} WIN32
     ${CMAKE_SOURCE_DIR}/src/block.c
     ${CMAKE_SOURCE_DIR}/src/camera.c
+    ${CMAKE_SOURCE_DIR}/src/containers.c
     ${CMAKE_SOURCE_DIR}/src/gfx/atlas.c
     ${CMAKE_SOURCE_DIR}/src/gfx/gfx.c
     ${CMAKE_SOURCE_DIR}/src/gfx/pipeline.c

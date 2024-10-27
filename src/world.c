@@ -7,6 +7,7 @@
 #include <threads.h>
 #include "block.h"
 #include "camera.h"
+#include "containers.h"
 #include "helpers.h"
 #include "world.h"
 
@@ -42,7 +43,7 @@ typedef struct
 
 static worker_t workers[MAX_WORKERS];
 static ring_t jobs;
-static group_t* groups[WORLD_X][WORLD_Z];
+static grid_t groups;
 static int32_t wx;
 static int32_t wy;
 static int32_t wz;
@@ -276,11 +277,7 @@ bool worker_init()
             return false;
         }
     }
-    if (!ring_init(&jobs, MAX_JOBS, sizeof(job_t)))
-    {
-        SDL_Log("Failed to allocate scheduler ring");
-        return false;
-    }
+    ring_init(&jobs, MAX_JOBS, sizeof(job_t));
     return true;
 }
 
@@ -518,6 +515,7 @@ bool world_init(void* handle)
         }
         sort_3d(WORLD_X / 2, i, WORLD_Z / 2, presort[i], WORLD_CHUNKS, true);
     }
+    grid_init(&groups, WORLD_X, WORLD_Z);
     for (int x = 0; x < WORLD_X; x++)
     for (int z = 0; z < WORLD_Z; z++)
     {
@@ -527,7 +525,7 @@ bool world_init(void* handle)
             SDL_Log("Failed to allocate group");
             return false;
         }
-        groups[x][z] = group;
+        grid_set(&groups, x, z, group);
         for (int i = 0; i < GROUP_CHUNKS; i++)
         {
             chunk_t* chunk = &group->chunks[i];
@@ -553,7 +551,7 @@ void world_free()
     for (int x = 0; x < WORLD_X; x++)
     for (int z = 0; z < WORLD_Z; z++)
     {
-        group_t* group = groups[x][z];
+        group_t* group = grid_get(&groups, x, z);
         for (int i = 0; i < GROUP_CHUNKS; i++)
         {
             chunk_t* chunk = &group->chunks[i];
@@ -563,9 +561,8 @@ void world_free()
                 chunk->vbo = NULL;
             }
         }
-        free(group);
-        groups[x][z] = NULL;
     }
+    grid_free(&groups);
     if (ibo)
     {
         SDL_ReleaseGPUBuffer(device, ibo);
@@ -663,7 +660,7 @@ void world_render(
         {
             continue;
         }
-        const group_t* group = groups[x][z];
+        const group_t* group = grid_get(&groups, x, z);
         if (!group->loaded)
         {
             continue;
@@ -697,50 +694,25 @@ void world_move(
     const int32_t y,
     const int32_t z)
 {
-    const int a = x / CHUNK_X - WORLD_X / 2 - wx;
-    const int b = y / CHUNK_Y - WORLD_Y / 2 - wy;
-    const int c = z / CHUNK_Z - WORLD_Z / 2 - wz;
-    wx += a;
-    wy = clamp(wy + b, 0, WORLD_Y - 1);
-    wz += c;
-    if (!a && !c)
-    {
+    const int a = x / CHUNK_X - WORLD_X / 2;
+    const int b = y / CHUNK_Y - WORLD_Y / 2;
+    const int c = z / CHUNK_Z - WORLD_Z / 2;
+
+    wx = a;
+    wy = clamp(b, 0, WORLD_Y - 1);
+    wz = c;
+
+    int num_oob;
+    int* oob = grid_move(&groups, a, c, &num_oob);
+    if (!oob) {
         return;
     }
-    int size = 0;
-    group_t* groups1[WORLD_X][WORLD_Z] = {0};
-    group_t* groups2[WORLD_GROUPS];
-    for (int s = 0; s < WORLD_X; s++)
-    for (int t = 0; t < WORLD_Z; t++)
-    {
-        const int cx = s - a;
-        const int cz = t - c;
-        if (in_world(cx, 0, cz))
-        {
-            groups1[cx][cz] = groups[s][t];
-        }
-        else
-        {
-            groups2[size++] = groups[s][t];
-        }
-        groups[s][t] = NULL;
-    }
-    memcpy(groups, groups1, sizeof(groups));
-    int i = size;
-    for (int s = 0; s < WORLD_X; s++)
-    for (int t = 0; t < WORLD_Z; t++)
-    {
-        if (groups[s][t])
-        {
-            continue;
-        }
-        --i;
-        sort[i][0] = s;
-        sort[i][1] = t;
-        group_t* group = groups2[i];
-        groups[s][t] = group;
-        for (int j = 0; j < GROUP_CHUNKS; j++)
-        {
+    sort_2d(WORLD_X / 2, WORLD_Z / 2, oob, num_oob, true);
+    for (int i = 0; i < num_oob; i++) {
+        const int j = oob[i * 2 + 0];
+        const int k = oob[i * 2 + 1];
+        group_t* group = grid_get(&groups, j, k);
+        for (int j = 0; j < GROUP_CHUNKS; j++) {
             chunk_t* chunk = &group->chunks[j];
             memset(chunk->blocks, 0, sizeof(chunk->blocks));
             chunk->renderable = false;
@@ -749,26 +721,21 @@ void world_move(
         group->neighbors = 0;
         group->loaded = false;
     }
-    assert(!i);
-    sort_2d(WORLD_X / 2, WORLD_Z / 2, sort, size, true);
-    for (i = 0; i < size; i++)
-    {
-        const int s = sort[i][0];
-        const int t = sort[i][1];
-        assert(in_world(s, 0, t));
-        group_t* group = groups[s][t];
-        worker_load(group, s + wx, t + wz);
+    for (int i = 0; i < num_oob; i++) {
+        const int j = oob[i * 2 + 0];
+        const int k = oob[i * 2 + 1];
+        assert(in_world(j, 0, k));
+        group_t* group = grid_get(&groups, j, k);
+        worker_load(group, j + wx, k + wz);
     }
+    free(oob);
 }
 
 group_t* world_get_group(
     const int32_t x,
     const int32_t z)
 {
-    const int32_t a = x - wx;
-    const int32_t b = z - wz;
-    assert(in_world(a, 0, b));
-    return groups[a][b];
+    return grid_get2(&groups, x, z);
 }
 
 chunk_t* world_get_chunk(
@@ -776,10 +743,7 @@ chunk_t* world_get_chunk(
     const int32_t y,
     const int32_t z)
 {
-    const int32_t a = x - wx;
-    const int32_t b = z - wz;
-    assert(in_world(a, y, b));
-    return &groups[a][b]->chunks[y];
+    return &(((group_t*) grid_get2(&groups, x, z))->chunks[y]);
 }
 
 void world_get_group_neighbors(
@@ -787,18 +751,7 @@ void world_get_group_neighbors(
     const int32_t z,
     group_t* neighbors[DIRECTION_2])
 {
-    for (direction_t direction = 0; direction < DIRECTION_2; direction++)
-    {
-        const int32_t a = x + directions[direction][0];
-        const int32_t b = z + directions[direction][2];
-        if (!world_in(a, 0, b))
-        {
-            neighbors[direction] = NULL;
-            continue;
-        }
-        group_t* group = world_get_group(a, b);
-        neighbors[direction] = group;
-    }
+    grid_neighbors2(&groups, x, z, neighbors);
 }
 
 void world_get_chunk_neighbors(

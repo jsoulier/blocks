@@ -104,68 +104,6 @@ bool tag_same(const tag_t a, const tag_t b)
     return a.a == b.a && a.b == b.b;
 }
 
-bool ring_init(
-    ring_t* ring,
-    const int size,
-    const int stride)
-{
-    assert(ring);
-    assert(size);
-    assert(stride);
-    ring->size = size + 1;
-    ring->stride = stride;
-    ring->head = 0;
-    ring->tail = 0;
-    ring->data = malloc(stride * ring->size);
-    return ring->data != NULL;
-}
-
-void ring_free(ring_t* ring)
-{
-    assert(ring);
-    free(ring->data);
-    ring->data = NULL;
-}
-
-bool ring_add(
-    ring_t* ring,
-    const void* item,
-    const bool priority)
-{
-    assert(ring);
-    assert(ring->data);
-    assert(item);
-    if ((ring->tail + 1) % ring->size == ring->head)
-    {
-        return false;
-    }
-    if (priority)
-    {
-        ring->head = (ring->head - 1 + ring->size) % ring->size;
-        memcpy(ring->data + ring->head * ring->stride, item, ring->stride);
-    }
-    else
-    {
-        memcpy(ring->data + ring->tail * ring->stride, item, ring->stride);
-        ring->tail = (ring->tail + 1) % ring->size;
-    }
-    return true;
-}
-
-bool ring_remove(ring_t* ring, void* item)
-{
-    assert(ring);
-    assert(ring->data);
-    assert(item);
-    if (ring->head == ring->tail)
-    {
-        return false;
-    }
-    memcpy(item, ring->data + ring->head * ring->stride, ring->stride);
-    ring->head = (ring->head + 1) % ring->size;
-    return true;
-}
-
 static_assert(WORLD_X % 2 == 1, "");
 static_assert(WORLD_Y % 2 == 1, "");
 static_assert(WORLD_Z % 2 == 1, "");

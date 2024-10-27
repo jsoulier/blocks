@@ -69,26 +69,6 @@ void tag_init(tag_t* tag);
 void tag_invalidate(tag_t* tag);
 bool tag_same(const tag_t a, const tag_t b);
 
-typedef struct ring
-{
-    uint8_t* data;
-    int size;
-    int stride;
-    int head;
-    int tail;
-} ring_t;
-
-bool ring_init(
-    ring_t* ring,
-    const int size,
-    const int stride);
-void ring_free(ring_t* ring);
-bool ring_add(
-    ring_t* ring,
-    const void* item,
-    const bool priority);
-bool ring_remove(ring_t* ring, void* item);
-
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30
