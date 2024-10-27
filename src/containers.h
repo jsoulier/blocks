@@ -66,13 +66,6 @@ void grid_neighbors2(
     const int32_t x,
     const int32_t y,
     void* neighbors[DIRECTION_2]);
-
-/// @brief Move the grid and return the indices to moved pointers
-/// @param grid The grid
-/// @param x The x position
-/// @param y The y position
-/// @param size The number of indices
-/// @return The indices to moved pointers (The caller should free)
 int* grid_move(
     grid_t* grid,
     const int32_t x,

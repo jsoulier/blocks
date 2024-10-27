@@ -1,1 +1,9 @@
-[ ] Transparency by sorting on GPU?
+[ ] Transparency
+ - Parallel sort on GPU using compute shaders
+[ ] Lighting
+[ ] Database
+[ ] Collision
+[ ] Noise
+[ ] Skybox
+ - Maybe just use the UI buffer but as the player looks up, fade it into
+   specific colors

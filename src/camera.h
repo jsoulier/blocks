@@ -37,16 +37,6 @@ void camera_vector(
     float* x,
     float* y,
     float* z);
-
-/// @brief Test if an AABB can be seen from the camera
-/// @param camera The camera
-/// @param x The x position
-/// @param y The y position
-/// @param z The z position
-/// @param a The x size
-/// @param b The y size
-/// @param c The z size
-/// @return True if the AABB can be seen
 bool camera_test(
     const camera_t* camera,
     const float x,
