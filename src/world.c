@@ -78,8 +78,8 @@ static int loop(void* args)
                 const int32_t a = x + directions[d][0];
                 const int32_t b = y + directions[d][1];
                 const int32_t c = z + directions[d][2];
-                if (grid_in2(&grid, a, c) && y >= 0 && y < WORLD_Y) {
-                    group_t* neighbor = grid_get2(&grid, x, z);
+                if (grid_in2(&grid, a, c) && b >= 0 && b < WORLD_Y) {
+                    group_t* neighbor = grid_get2(&grid, a, c);
                     neighbors[d] = &neighbor->chunks[b];
                 }
             }

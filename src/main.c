@@ -459,7 +459,7 @@ static bool poll()
             SDL_SetWindowRelativeMouseMode(window, 1);
             if (event.button.button == SDL_BUTTON_LEFT) {
                 float a, b, c;
-                if (raycast(&a, &b, &c, false)) {
+                if (raycast(&a, &b, &c, false) && b >= 1.0f) {
                     world_set_block(a, b, c, BLOCK_EMPTY);
                 }
             } else if (event.button.button == SDL_BUTTON_RIGHT) {
@@ -527,7 +527,7 @@ int main(int argc, char** argv)
     load_ui_pipeline();
     load_world_pipeline();
     create_quad_vbo();
-    noise_init(NOISE_CUBE);
+    noise_init(NOISE_FLAT);
     if (!world_init(device)) {
         return EXIT_FAILURE;
     }
