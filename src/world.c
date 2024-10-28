@@ -291,6 +291,8 @@ void world_free()
     for (int i = 0; i < MAX_WORKERS; i++) {
         worker_t* worker = &workers[i];
         thrd_join(worker->thrd, NULL);
+        mtx_destroy(&worker->mtx);
+        cnd_destroy(&worker->cnd);
         if (worker->tbo) {
             SDL_ReleaseGPUTransferBuffer(device, worker->tbo);
             worker->tbo = NULL;

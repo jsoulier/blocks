@@ -1,5 +1,4 @@
-#ifndef NOISE_H
-#define NOISE_H
+#pragma once
 
 #include <stdint.h>
 #include "world.h"
@@ -16,5 +15,3 @@ void noise_generate(
     group_t* group,
     const int32_t x,
     const int32_t z);
-
-#endif

@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "camera.h"
+#include "database.h"
 #include "noise.h"
 #include "world.h"
 
@@ -403,12 +404,12 @@ static bool raycast(
     const bool previous)
 {
     float a, b, c;
-    camera_vector(&camera, &a, &b, &c);
+    camera_get_vector(&camera, &a, &b, &c);
     const float step = 0.1f;
     const float length = 10.0f;
     for (float i = 0; i < length; i += step) {
         float s, t, p;
-        camera_position(&camera, &s, &t, &p);
+        camera_get_position(&camera, &s, &t, &p);
         *x = s + a * i;
         *y = t + b * i;
         *z = p + c * i;
@@ -445,7 +446,7 @@ static bool poll()
         case SDL_EVENT_QUIT:
             return false;
         case SDL_EVENT_WINDOW_RESIZED:
-            camera_size(&camera, event.window.data1, event.window.data2);
+            camera_set_size(&camera, event.window.data1, event.window.data2);
             break;
         case SDL_EVENT_MOUSE_MOTION:
             if (SDL_GetWindowRelativeMouseMode(window)) {
@@ -456,16 +457,19 @@ static bool poll()
             }
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            SDL_SetWindowRelativeMouseMode(window, 1);
-            if (event.button.button == SDL_BUTTON_LEFT) {
-                float a, b, c;
-                if (raycast(&a, &b, &c, false) && b >= 1.0f) {
-                    world_set_block(a, b, c, BLOCK_EMPTY);
-                }
-            } else if (event.button.button == SDL_BUTTON_RIGHT) {
-                float a, b, c;
-                if (raycast(&a, &b, &c, true)) {
-                    world_set_block(a, b, c, BLOCK_STONE);
+            if (!SDL_GetWindowRelativeMouseMode(window)) {
+                SDL_SetWindowRelativeMouseMode(window, 1);
+            } else {
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    float a, b, c;
+                    if (raycast(&a, &b, &c, false) && b >= 1.0f) {
+                        world_set_block(a, b, c, BLOCK_EMPTY);
+                    }
+                } else if (event.button.button == SDL_BUTTON_RIGHT) {
+                    float a, b, c;
+                    if (raycast(&a, &b, &c, true)) {
+                        world_set_block(a, b, c, BLOCK_STONE);
+                    }
                 }
             }
             break;
@@ -528,6 +532,7 @@ int main(int argc, char** argv)
     load_world_pipeline();
     create_quad_vbo();
     noise_init(NOISE_CUBE);
+    database_init("blocks.sqlite3");
     if (!world_init(device)) {
         return EXIT_FAILURE;
     }
@@ -537,19 +542,40 @@ int main(int argc, char** argv)
     SDL_DestroySurface(icon);
     camera_init(&camera);
     camera_move(&camera, 0, 30, 0);
-    camera_size(&camera, 1024, 764);
+    camera_set_size(&camera, 1024, 764);
+
+    float x, y, z;
+    float pitch, yaw;
+
+    float a, b, c, d, e;
+    if (database_get_player(0, &x, &y, &z, &pitch, &yaw)) {
+        camera_set_position(&camera, x, y, z);
+        camera_set_rotation(&camera, pitch, yaw);
+    }
+
+    int cooldown = 0;
+    int time = 100;
+
     int loop = 1;
     while (loop) {
         if (!poll()) {
             break;
         }
         move();
-        float x, y, z;
-        camera_position(&camera, &x, &y, &z);
+        camera_get_position(&camera, &x, &y, &z);
         world_update(x, y, z);
         draw();
+
+        if (cooldown++ > time) {
+            camera_get_position(&camera, &x, &y, &z);
+            camera_get_rotation(&camera, &pitch, &yaw);
+            database_set_player(0, x, y, z, pitch, yaw);
+            database_commit();
+            cooldown = 0;
+        }
     }
     world_free();
+    database_free();
     SDL_DestroySurface(atlas_surface);
     SDL_ReleaseGPUTexture(device, atlas_texture);
     SDL_ReleaseGPUSampler(device, atlas_sampler);

@@ -166,14 +166,12 @@ void camera_rotate(
     if (!pitch && !yaw) {
         return;
     }
-    const float e = PI / 2.0f - EPSILON;
-    camera->pitch += rad(pitch);
-    camera->yaw += rad(yaw);
-    camera->pitch = clamp(camera->pitch, -e, e);
-    camera->dirty = true;
+    const float a = camera->pitch + rad(pitch);
+    const float b = camera->yaw + rad(yaw);
+    camera_set_rotation(camera, a, b);
 }
 
-void camera_size(
+void camera_set_size(
     camera_t* camera,
     const int width,
     const int height)
@@ -186,7 +184,20 @@ void camera_size(
     camera->dirty = true;
 }
 
-void camera_position(
+void camera_set_position(
+    camera_t* camera,
+    const float x,
+    const float y,
+    const float z)
+{
+    assert(camera);
+    camera->x = x;
+    camera->y = y;
+    camera->z = z;
+    camera->dirty = true;
+}
+
+void camera_get_position(
     const camera_t* camera,
     float* x,
     float* y,
@@ -201,7 +212,31 @@ void camera_position(
     *z = camera->z;
 }
 
-void camera_vector(
+void camera_set_rotation(
+    camera_t* camera,
+    const float pitch,
+    const float yaw)
+{
+    assert(camera);
+    const float e = PI / 2.0f - EPSILON;
+    camera->pitch = clamp(pitch, -e, e);
+    camera->yaw = yaw;
+    camera->dirty = true;
+}
+
+void camera_get_rotation(
+    camera_t* camera,
+    float* pitch,
+    float* yaw)
+{
+    assert(camera);
+    assert(pitch);
+    assert(yaw);
+    *pitch = camera->pitch;
+    *yaw = camera->yaw;
+}
+
+void camera_get_vector(
     const camera_t* camera,
     float* x,
     float* y,
@@ -237,7 +272,7 @@ bool camera_test(
         { x + a, y + b, z + c },
     };
     float d, e, f;
-    camera_vector(camera, &d, &e, &f);
+    camera_get_vector(camera, &d, &e, &f);
     for (int i = 0; i < 8; i++) {
         float s = points[i][0] - camera->x;
         float t = points[i][1] - camera->y;

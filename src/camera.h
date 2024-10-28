@@ -23,16 +23,29 @@ void camera_rotate(
     camera_t* camera,
     const float pitch,
     const float yaw);
-void camera_size(
+void camera_set_size(
     camera_t* camera,
     const int width,
     const int height);
-void camera_position(
+void camera_set_position(
+    camera_t* camera,
+    const float x,
+    const float y,
+    const float z);
+void camera_get_position(
     const camera_t* camera,
     float* x,
     float* y,
     float* z);
-void camera_vector(
+void camera_set_rotation(
+    camera_t* camera,
+    const float pitch,
+    const float yaw);
+void camera_get_rotation(
+    camera_t* camera,
+    float* pitch,
+    float* yaw);
+void camera_get_vector(
     const camera_t* camera,
     float* x,
     float* y,

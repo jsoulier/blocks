@@ -2,8 +2,11 @@
  - Parallel sort on GPU using compute shaders
 [ ] Lighting
 [ ] Database
+ - Indices
 [ ] Collision
 [ ] Noise
 [ ] Skybox
  - Maybe just use the UI buffer but as the player looks up, fade it into
    specific colors
+[ ] Weird Sampler Bug
+ - Seeing UVs leaking into neighboring blocks
