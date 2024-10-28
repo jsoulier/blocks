@@ -8,6 +8,7 @@
 #include "helpers.h"
 #include "database.h"
 #include "containers.h"
+#include "block.h"
 
 #define MAX_JOBS 100
 
@@ -25,9 +26,16 @@ typedef struct {
 } job_player_t;
 
 typedef struct {
+    int32_t a, c;
+    int32_t x, y, z;
+    block_t id;
+} job_block_t;
+
+typedef struct {
     job_type_t type;
     union {
         job_player_t player;
+        job_block_t block;
     };
 } job_t;
 
@@ -38,6 +46,8 @@ static cnd_t cnd;
 static sqlite3* handle;
 static sqlite3_stmt* set_player_stmt;
 static sqlite3_stmt* get_player_stmt;
+static sqlite3_stmt* set_block_stmt;
+static sqlite3_stmt* get_blocks_stmt;
 
 static void set_player(const job_t* job)
 {
@@ -51,6 +61,20 @@ static void set_player(const job_t* job)
         SDL_Log("Failed to set player %d: %s", job->player.id, sqlite3_errmsg(handle));
     }
     sqlite3_reset(set_player_stmt);
+}
+
+static void set_block(const job_t* job)
+{
+    sqlite3_bind_int(set_block_stmt, 1, job->block.a);
+    sqlite3_bind_int(set_block_stmt, 2, job->block.c);
+    sqlite3_bind_int(set_block_stmt, 3, job->block.x);
+    sqlite3_bind_int(set_block_stmt, 4, job->block.y);
+    sqlite3_bind_int(set_block_stmt, 5, job->block.z);
+    sqlite3_bind_int(set_block_stmt, 6, job->block.id);
+    if (sqlite3_step(set_block_stmt) != SQLITE_DONE) {
+        SDL_Log("Failed to set block: %s", sqlite3_errmsg(handle));
+    }
+    sqlite3_reset(set_block_stmt);
 }
 
 static int loop(void* args)
@@ -71,6 +95,7 @@ static int loop(void* args)
             set_player(&job);
             break;
         case JOB_TYPE_BLOCK:
+            set_block(&job);
             break;
         case JOB_TYPE_COMMIT:
             sqlite3_exec(handle, "COMMIT; BEGIN TRANSACTION;", NULL, NULL, NULL);
@@ -98,7 +123,7 @@ bool database_init(const char* file)
         SDL_Log("Failed to open %s database: %s", file, sqlite3_errmsg(handle));
         return false;
     }
-    const char* player_table =
+    const char* players_table =
         "CREATE TABLE IF NOT EXISTS players ("
         "id INT PRIMARY KEY NOT NULL, "
         "x REAL NOT NULL, "
@@ -107,7 +132,7 @@ bool database_init(const char* file)
         "pitch REAL NOT NULL, "
         "yaw REAL NOT NULL"
         ");";
-    const char* block_table =
+    const char* blocks_table =
         "CREATE TABLE IF NOT EXISTS blocks ("
         "a INTEGER NOT NULL, "
         "c INTEGER NOT NULL, "
@@ -122,11 +147,23 @@ bool database_init(const char* file)
     const char* get_player =
         "SELECT x, y, z, pitch, yaw FROM players "
         "WHERE id = ?;";
-    if (sqlite3_exec(handle, player_table, NULL, NULL, NULL) != SQLITE_OK) {
+    const char* set_block =
+        "INSERT OR REPLACE INTO blocks (a, c, x, y, z, data) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
+    const char* get_blocks =
+        "SELECT x, y, z, data FROM blocks "
+        "WHERE a = ? AND c = ?;";
+    const char* players_index =
+        "CREATE INDEX IF NOT EXISTS players_index "
+        "ON players (id);";
+    const char* blocks_index =
+        "CREATE INDEX IF NOT EXISTS blocks_index "
+        "ON blocks (a, c);";
+    if (sqlite3_exec(handle, players_table, NULL, NULL, NULL) != SQLITE_OK) {
         SDL_Log("Failed to create players table: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_exec(handle, block_table, NULL, NULL, NULL) != SQLITE_OK) {
+    if (sqlite3_exec(handle, blocks_table, NULL, NULL, NULL) != SQLITE_OK) {
         SDL_Log("Failed to create blocks table: %s", sqlite3_errmsg(handle));
         return false;
     }
@@ -136,6 +173,22 @@ bool database_init(const char* file)
     }
     if (sqlite3_prepare_v2(handle, get_player, -1, &get_player_stmt, NULL) != SQLITE_OK) {
         SDL_Log("Failed to prepare get player statement: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_prepare_v2(handle, set_block, -1, &set_block_stmt, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to prepare set block statement: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_prepare_v2(handle, get_blocks, -1, &get_blocks_stmt, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to prepare get blocks statement: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_exec(handle, players_index, NULL, NULL, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to create players index: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_exec(handle, blocks_index, NULL, NULL, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to create blocks index: %s", sqlite3_errmsg(handle));
         return false;
     }
     if (mtx_init(&mtx, mtx_plain) != thrd_success) {
@@ -163,6 +216,8 @@ void database_free()
     cnd_destroy(&cnd);
     sqlite3_finalize(set_player_stmt);
     sqlite3_finalize(get_player_stmt);
+    sqlite3_finalize(set_block_stmt);
+    sqlite3_finalize(get_blocks_stmt);
     sqlite3_close(handle);
     ring_free(&jobs);
     handle = NULL;
@@ -207,18 +262,56 @@ bool database_get_player(
     assert(z);
     assert(pitch);
     assert(yaw);
+    mtx_lock(&mtx);
     sqlite3_bind_int(get_player_stmt, 1, id);
-    if (sqlite3_step(get_player_stmt) == SQLITE_ROW) {
+    bool exists = sqlite3_step(get_player_stmt) == SQLITE_ROW;
+    if (exists) {
         *x = sqlite3_column_double(get_player_stmt, 0);
         *y = sqlite3_column_double(get_player_stmt, 1);
         *z = sqlite3_column_double(get_player_stmt, 2);
         *pitch = sqlite3_column_double(get_player_stmt, 3);
         *yaw = sqlite3_column_double(get_player_stmt, 4);
-        sqlite3_reset(get_player_stmt);
-        return true;
-    } else {
-        SDL_Log("Failed to get player %d: %s", id, sqlite3_errmsg(handle));
-        sqlite3_reset(get_player_stmt);
-        return false;
     }
+    sqlite3_reset(get_player_stmt);
+    mtx_unlock(&mtx);
+    return exists;
+}
+
+void database_set_block(
+    const int32_t a,
+    const int32_t c,
+    const int32_t x,
+    const int32_t y,
+    const int32_t z,
+    const block_t block)
+{
+    job_t job;
+    job.type = JOB_TYPE_BLOCK;
+    job.block.a = a;
+    job.block.c = c;
+    job.block.x = x;
+    job.block.y = y;
+    job.block.z = z;
+    job.block.id = block;
+    dispatch(&job);
+}
+
+void database_get_blocks(
+    group_t* group,
+    const int32_t a,
+    const int32_t c)
+{
+    assert(group);
+    mtx_lock(&mtx);
+    sqlite3_bind_int(get_blocks_stmt, 1, a);
+    sqlite3_bind_int(get_blocks_stmt, 2, c);
+    while (sqlite3_step(get_blocks_stmt) == SQLITE_ROW) {
+        const int x = sqlite3_column_int(get_blocks_stmt, 0);
+        const int y = sqlite3_column_int(get_blocks_stmt, 1);
+        const int z = sqlite3_column_int(get_blocks_stmt, 2);
+        const block_t block = sqlite3_column_int(get_blocks_stmt, 3);
+        set_block_in_group(group, x, y, z, block);
+    }
+    sqlite3_reset(get_blocks_stmt);
+    mtx_unlock(&mtx);
 }

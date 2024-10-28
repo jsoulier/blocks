@@ -8,6 +8,7 @@
 #include "block.h"
 #include "camera.h"
 #include "containers.h"
+#include "database.h"
 #include "helpers.h"
 #include "noise.h"
 #include "voxmesh.h"
@@ -87,6 +88,7 @@ static int loop(void* args)
         case JOB_TYPE_LOAD:
             assert(!group->loaded);
             noise_generate(group, x, z);
+            database_get_blocks(group, x, z);
             group->loaded = true;
             break;
         case JOB_TYPE_MESH:
@@ -506,6 +508,7 @@ void world_set_block(
     const int d = chunk_mod_x(x);
     const int f = chunk_mod_z(z);
     group_t* group = grid_get2(&grid, a, c);
+    database_set_block(a, c, d, y, f, block);
     set_block_in_group(group, d, y, f, block);
     const int e = y / CHUNK_Y;
     chunk_t* chunk = &group->chunks[e];

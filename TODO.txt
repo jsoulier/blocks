@@ -10,3 +10,6 @@
    specific colors
 [ ] Weird Sampler Bug
  - Seeing UVs leaking into neighboring blocks
+[ ] When width and height of screen is zero, skip the draw
+ - Causes depth buffer recreate to crash
+ - Also when window is hidden

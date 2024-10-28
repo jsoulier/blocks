@@ -24,7 +24,6 @@ add_executable(${PROJECT_NAME} WIN32
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/lib/sqlite3)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src) # TODO
 set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 11)
 
 function(shader FILE)
