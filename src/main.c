@@ -22,6 +22,7 @@ static SDL_GPUBuffer* quad_vbo;
 static uint32_t width;
 static uint32_t height;
 static camera_t camera;
+static block_t hand = BLOCK_GRASS;
 
 static void load_atlas()
 {
@@ -159,7 +160,7 @@ static void load_ui_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
         .vertex_shader = load_shader(device, "ui.vert", 0, 0),
-        .fragment_shader = load_shader(device, "ui.frag", 1, 1),
+        .fragment_shader = load_shader(device, "ui.frag", 2, 1),
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
@@ -263,6 +264,7 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
         return;
     }
     float size[2] = { camera.width, camera.height };
+    int32_t block[2] = { blocks[hand][0][0], blocks[hand][0][1] };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
     SDL_GPUTextureSamplerBinding tsb = {0};
@@ -271,6 +273,7 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
     SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     SDL_PushGPUFragmentUniformData(commands, 0, &size, sizeof(size));
+    SDL_PushGPUFragmentUniformData(commands, 1, &block, sizeof(block));
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
     SDL_EndGPURenderPass(pass);
@@ -472,7 +475,7 @@ static bool poll()
                 } else if (event.button.button == SDL_BUTTON_RIGHT) {
                     float a, b, c;
                     if (raycast(&a, &b, &c, true)) {
-                        world_set_block(a, b, c, BLOCK_STONE);
+                        world_set_block(a, b, c, hand);
                     }
                 }
             }
@@ -480,6 +483,9 @@ static bool poll()
         case SDL_EVENT_KEY_DOWN:
             if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
                 SDL_SetWindowRelativeMouseMode(window, 0);
+            } else if (event.key.scancode == SDL_SCANCODE_B) {
+                hand = (hand + 1) % BLOCK_COUNT;
+                hand = clamp(hand, BLOCK_EMPTY + 1, BLOCK_COUNT - 1);
             }
             break;
         }
