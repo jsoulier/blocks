@@ -55,16 +55,9 @@ void main()
         const float y = position.y - bottom;
         const float a = x / width;
         const float b = y / height;
-        // color = vec4(a, b, 1, 1);
-
-
-
-        const float c = a / 16.0 + 2.0 / 256.0 * 16.0 + 0.01;
-        const float d = b / 16.0;
-        // const float c = a / 16 + 2 / 256 * 16;
-        // const float d = b / 16;
+        const float c = a / 15.0 + 2.0 * (16.0 / 240.0);
+        const float d = 1.0 / 15.0 - b / 15.0;
         color = texture(atlas, vec2(c, d));
-
     } else {
         discard;
     }
