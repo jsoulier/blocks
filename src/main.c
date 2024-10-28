@@ -589,7 +589,7 @@ static bool poll()
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             if (!SDL_GetWindowRelativeMouseMode(window)) {
-                SDL_SetWindowRelativeMouseMode(window, 1);
+                SDL_SetWindowRelativeMouseMode(window, true);
             } else {
                 if (event.button.button == SDL_BUTTON_LEFT) {
                     float a, b, c;
@@ -606,10 +606,21 @@ static bool poll()
             break;
         case SDL_EVENT_KEY_DOWN:
             if (event.key.scancode == SDL_SCANCODE_ESCAPE) {
-                SDL_SetWindowRelativeMouseMode(window, 0);
+                SDL_SetWindowRelativeMouseMode(window, false);
+                SDL_SetWindowFullscreen(window, false);
             } else if (event.key.scancode == SDL_SCANCODE_B) {
                 hand = (hand + 1) % BLOCK_COUNT;
                 hand = clamp(hand, BLOCK_EMPTY + 1, BLOCK_COUNT - 1);
+                SDL_Surface* icon = get_atlas_icon(hand);
+                SDL_SetWindowIcon(window, icon);
+                SDL_DestroySurface(icon);
+            } else if (event.key.scancode == SDL_SCANCODE_F11) {
+                if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
+                    SDL_SetWindowFullscreen(window, false);
+                } else {
+                    SDL_SetWindowFullscreen(window, true);
+                    SDL_SetWindowRelativeMouseMode(window, true);
+                }
             }
             break;
         }
@@ -673,7 +684,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
     SDL_SetWindowResizable(window, true);
-    SDL_Surface* icon = get_atlas_icon(BLOCK_GRASS);
+    SDL_Surface* icon = get_atlas_icon(hand);
     SDL_SetWindowIcon(window, icon);
     SDL_DestroySurface(icon);
     camera_init(&camera);

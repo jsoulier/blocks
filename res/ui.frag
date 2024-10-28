@@ -21,17 +21,17 @@ layout(set = 2, binding = 0) uniform sampler2D atlas;
 bool draw_crosshair(in vec2 position)
 {
     const float aspect = window.size.x / window.size.y;
-    const float width_1 = CROSSHAIR_WIDTH;
-    const float thickness_1 = CROSSHAIR_THICKNESS;
-    const float width_2 = CROSSHAIR_WIDTH / aspect;
-    const float thickness_2 = CROSSHAIR_THICKNESS / aspect;
-    const vec2 start1 = vec2(0.5 - width_2, 0.5 - thickness_1);
-    const vec2 end1 = vec2(0.5 + width_2, 0.5 + thickness_1);
-    const vec2 start_2 = vec2(0.5 - thickness_2, 0.5 - width_1);
-    const vec2 end2 = vec2(0.5 + thickness_2, 0.5 + width_1);
+    const float width1 = CROSSHAIR_WIDTH;
+    const float thickness1 = CROSSHAIR_THICKNESS;
+    const float width2 = CROSSHAIR_WIDTH / aspect;
+    const float thickness2 = CROSSHAIR_THICKNESS / aspect;
+    const vec2 start1 = vec2(0.5 - width2, 0.5 - thickness1);
+    const vec2 end1 = vec2(0.5 + width2, 0.5 + thickness1);
+    const vec2 start2 = vec2(0.5 - thickness2, 0.5 - width1);
+    const vec2 end2 = vec2(0.5 + thickness2, 0.5 + width1);
     if ((position.x > start1.x && position.y > start1.y &&
             position.x < end1.x && position.y < end1.y) ||
-        (position.x > start_2.x && position.y > start_2.y &&
+        (position.x > start2.x && position.y > start2.y &&
             position.x < end2.x && position.y < end2.y)) {
         color = vec4(1.0, 1.0, 1.0, ALPHA);
         return true;
