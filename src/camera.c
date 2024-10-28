@@ -125,16 +125,14 @@ void camera_update(camera_t* camera)
     if (!camera->dirty) {
         return;
     }
-    float a[4][4];
-    float b[4][4];
     const float aspect = camera->width / camera->height;
-    translate(a, -camera->x, -camera->y, -camera->z);
-    rotate(b, cosf(camera->yaw), 0.0f, sinf(camera->yaw), camera->pitch);
-    multiply(a, b, a);
-    rotate(b, 0.0f, 1.0f, 0.0f, -camera->yaw);
-    multiply(a, b, a);
-    perspective(b, aspect, camera->fov, camera->near, camera->far);
-    multiply(camera->matrix, b, a);
+    translate(camera->view, -camera->x, -camera->y, -camera->z);
+    rotate(camera->proj, cosf(camera->yaw), 0.0f, sinf(camera->yaw), camera->pitch);
+    multiply(camera->view, camera->proj, camera->view);
+    rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
+    multiply(camera->view, camera->proj, camera->view);
+    perspective(camera->proj, aspect, camera->fov, camera->near, camera->far);
+    multiply(camera->matrix, camera->proj, camera->view);
     camera->dirty = false;
 }
 

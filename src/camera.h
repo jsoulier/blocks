@@ -3,6 +3,8 @@
 #include <stdbool.h>
 
 typedef struct {
+    float view[4][4];
+    float proj[4][4];
     float matrix[4][4];
     float x, y, z;
     float pitch, yaw;

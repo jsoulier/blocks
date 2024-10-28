@@ -1,20 +1,26 @@
 [ ] Transparency
  - Parallel sort on GPU using compute shaders
 [ ] Lighting
-[ ] Database
- - Indices
 [ ] Collision
 [ ] Noise
-[ ] Skybox
- - Maybe just use the UI buffer but as the player looks up, fade it into
-   specific colors
 [ ] Weird Sampler Bug
  - Seeing UVs leaking into neighboring blocks
 [ ] When width and height of screen is zero, skip the draw
  - Causes depth buffer recreate to crash
  - Also when window is hidden
 
-Choices for next thing (Something fun and easy):
-[ ] Wireframe for current highlighted block
-[ ] UI for current selected block (definitely finicky with pure shader approach
-  but probably very fun)
+
+
+
+
+
+Potential Race Condition with Database:
+- If you write to the database queue, then unload and reload the chunk
+  before the queue flushes the write, the chunk won't load the changes
+- To fix
+  1. Make database writes synchronous
+  2. Mark dirty chunk positions
+     - When the dirty chunk position is referenced for a read, the
+       database has to flush it's queue before reading into the chunk
+  3. Search through the database jobs on reads for any block writes
+- NOTE: While it's possible, I've never reproduced it myself
