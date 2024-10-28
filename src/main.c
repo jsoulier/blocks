@@ -159,7 +159,7 @@ static void load_ui_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
         .vertex_shader = load_shader(device, "ui.vert", 0, 0),
-        .fragment_shader = load_shader(device, "ui.frag", 1, 0),
+        .fragment_shader = load_shader(device, "ui.frag", 1, 1),
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
@@ -265,7 +265,11 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
     float size[2] = { camera.width, camera.height };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
+    SDL_GPUTextureSamplerBinding tsb = {0};
+    tsb.sampler = atlas_sampler;
+    tsb.texture = atlas_texture;
     SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
+    SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     SDL_PushGPUFragmentUniformData(commands, 0, &size, sizeof(size));
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
@@ -488,13 +492,14 @@ static void move()
     float dx = 0.0f;
     float dy = 0.0f;
     float dz = 0.0f;
+    float speed = 0.2f;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D]) dx++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A]) dx--;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_E]) dy++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Q]) dy--;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W]) dz++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S]) dz--;
-    float speed = 0.2f;
+    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LCTRL]) speed = 3.0f;
     dx *= speed;
     dy *= speed;
     dz *= speed;

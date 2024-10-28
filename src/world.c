@@ -277,7 +277,6 @@ bool world_init(SDL_GPUDevice* handle)
         }
     }
     ring_init(&jobs, MAX_JOBS, sizeof(job_t));
-    world_update(0, 0, 0);
     return true;
 }
 
