@@ -1,20 +1,20 @@
-[ ] Transparency
- - Parallel sort on GPU using compute shaders
-[ ] Lighting
-[ ] Collision
-[ ] Noise
-[ ] Weird Sampler Bug
- - Seeing UVs leaking into neighboring blocks
-[ ] When width and height of screen is zero, skip the draw
- - Causes depth buffer recreate to crash
- - Also when window is hidden
+Features:
+- Collision
+- Lighting
+- Noise
+- Transparency
+  - Parallel sort on GPU via compute shader?
+  - OIT?
 
+Bug Fixes:
+- UV sampling sometimes bleeding into neighboring blocks
+  - Precision issue?
+  - Driver bug?
+- When window size is zero or hidden, stop drawing
+  - There's actually a crash right now because sometimes it causes a
+    depth buffer recreate with a size of zero
 
-
-
-
-
-Potential Race Condition with Database:
+Potential Database Race:
 - If you write to the database queue, then unload and reload the chunk
   before the queue flushes the write, the chunk won't load the changes
 - To fix

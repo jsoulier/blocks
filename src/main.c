@@ -27,6 +27,7 @@ static uint32_t width;
 static uint32_t height;
 static camera_t camera;
 static block_t hand = BLOCK_GRASS;
+static bool collision = true;
 
 static SDL_GPUShader* load_shader(
     SDL_GPUDevice* device,
@@ -188,7 +189,7 @@ static bool raycast(
     camera_get_vector(&camera, &a, &b, &c);
     float s, t, p;
     camera_get_position(&camera, &s, &t, &p);
-    if (physics_raycast(&s, &t, &p, a, b, c, 0.1f, 10.0f, previous)) {
+    if (physics_raycast(&s, &t, &p, a, b, c, 10.0f, previous)) {
         *x = s;
         *y = t;
         *z = p;
@@ -632,8 +633,7 @@ static bool poll()
                     float a, b, c;
                     camera_get_position(&camera, &x, &y, &z);
                     camera_get_vector(&camera, &a, &b, &c);
-                    if (physics_raycast(&x, &y, &z, a, b, c,
-                        RAYCAST_STEP, RAYCAST_LENGTH, previous)) {
+                    if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, previous)) {
                         world_set_block(x, y, z, block);
                     }
                 }
@@ -656,6 +656,8 @@ static bool poll()
                     SDL_SetWindowFullscreen(window, true);
                     SDL_SetWindowRelativeMouseMode(window, true);
                 }
+            } else if (event.key.scancode == SDL_SCANCODE_P) {
+                collision = !collision;
             }
             break;
         }
@@ -668,7 +670,7 @@ static void move()
     float dx = 0.0f;
     float dy = 0.0f;
     float dz = 0.0f;
-    float speed = 0.2f;
+    float speed = 0.05f;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D]) dx++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A]) dx--;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_E]) dy++;
@@ -679,7 +681,16 @@ static void move()
     dx *= speed;
     dy *= speed;
     dz *= speed;
+
+    float x1, y1, z1;
+    camera_get_position(&camera, &x1, &y1, &z1);
     camera_move(&camera, dx, dy, dz);
+    if (collision) {
+        float x2, y2, z2;
+        camera_get_position(&camera, &x2, &y2, &z2);
+        physics_collide(&x1, &y1, &z1, x2, y2, z2);
+        camera_set_position(&camera, x1, y1, z1);
+    }
 }
 
 int main(int argc, char** argv)

@@ -10,6 +10,12 @@ bool physics_raycast(
     const float dx,
     const float dy,
     const float dz,
-    const float step,
     const float length,
     const bool previous);
+void physics_collide(
+    float* x1,
+    float* y1,
+    float* z1,
+    const float x2,
+    const float y2,
+    const float z2);

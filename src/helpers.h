@@ -18,6 +18,7 @@
 #define clamp(x, a, b) min(b, max(a, x))
 #define deg(rad) ((rad) * 180.0 / PI)
 #define rad(deg) ((deg) * PI / 180.0)
+#define abs(x) ((x) > 0 ? (x) : -(x))
 
 #ifndef NDEBUG
 #define assert(e) SDL_assert_always(e)
