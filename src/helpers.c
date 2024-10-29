@@ -6,6 +6,16 @@
 #include <threads.h>
 #include "helpers.h"
 
+const int directions[][3] =
+{
+    { 0, 0, 1 },
+    { 0, 0,-1 },
+    { 1, 0, 0 },
+    {-1, 0, 0 },
+    { 0, 1, 0 },
+    { 0,-1, 0 },
+};
+
 static thread_local int cx;
 static thread_local int cy;
 static thread_local int cz;
@@ -80,23 +90,6 @@ void sort_3d(
     qsort(data, size, 12, compare);
 }
 
-static bool opaque(const block_t block)
-{
-    assert(block > BLOCK_EMPTY);
-    assert(block < BLOCK_COUNT);
-    switch (block) {
-    case BLOCK_GLASS:
-    case BLOCK_WATER:
-        return 0;
-    }
-    return 1;
-}
-
-bool block_visible(const block_t a, const block_t b)
-{
-    return b == BLOCK_EMPTY || (opaque(a) && !opaque(b));
-}
-
 static int counter = 0;
 
 void tag_init(tag_t* tag)
@@ -113,76 +106,3 @@ bool tag_same(const tag_t a, const tag_t b)
 {
     return a.a == b.a && a.b == b.b;
 }
-
-SDL_GPUShader* load_shader(
-    SDL_GPUDevice* device,
-    const char* file,
-    const int uniforms,
-    const int samplers)
-{
-    assert(device);
-    assert(file);
-    SDL_GPUShaderCreateInfo info = {0};
-    void* code = SDL_LoadFile(file, &info.code_size);
-    if (!code) {
-        SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
-        return NULL;
-    }
-    info.code = code;
-    if (strstr(file, ".vert")) {
-        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
-    } else {
-        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
-    }
-    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    info.entrypoint = "main";
-    info.num_uniform_buffers = uniforms;
-    info.num_samplers = samplers;
-    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
-    SDL_free(code);
-    if (!shader) {
-        SDL_Log("Failed to create %s shader: %s", file, SDL_GetError());
-        return NULL;
-    }
-    return shader;
-}
-
-SDL_Surface* load_bmp(const char* file)
-{
-    SDL_Surface* argb32 = SDL_LoadBMP(file);
-    if (!argb32) {
-        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
-    if (!rgba32) {
-        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_DestroySurface(argb32);
-    return rgba32;
-}
-
-const int directions[][3] =
-{
-    { 0, 0, 1 },
-    { 0, 0,-1 },
-    { 1, 0, 0 },
-    {-1, 0, 0 },
-    { 0, 1, 0 },
-    { 0,-1, 0 },
-};
-
-const int blocks[][DIRECTION_3][2] =
-{
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{3, 0}, {3, 0}, {3, 0}, {3, 0}, {3, 0}, {3, 0}},
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{2, 0}, {2, 0}, {2, 0}, {2, 0}, {1, 0}, {3, 0}},
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}},
-    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-};

@@ -12,6 +12,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/SDL)
 add_executable(${PROJECT_NAME} WIN32
     ${CMAKE_SOURCE_DIR}/lib/sqlite3/sqlite3.c
+    ${CMAKE_SOURCE_DIR}/src/block.c
     ${CMAKE_SOURCE_DIR}/src/camera.c
     ${CMAKE_SOURCE_DIR}/src/containers.c
     ${CMAKE_SOURCE_DIR}/src/database.c

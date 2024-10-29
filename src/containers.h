@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "block.h"
 #include "helpers.h"
 
 typedef struct {

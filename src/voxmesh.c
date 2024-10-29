@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "block.h"
 #include "helpers.h"
 #include "voxmesh.h"
 #include "world.h"
@@ -99,7 +100,8 @@ static uint32_t fill(
             } else {
                 b = BLOCK_EMPTY;
             }
-            if (!block_visible(a, b) || ++size > capacity) {
+            if ((b != BLOCK_EMPTY && ( block_opaque(a) ||
+                !block_opaque(b))) || ++size > capacity) {
                 continue;
             }
             for (int i = 0; i < 4; i++) {

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include "block.h"
 #include "camera.h"
 #include "containers.h"
 #include "database.h"
@@ -93,7 +94,7 @@ static int loop(void* args)
             chunk_t* neighbors[DIRECTION_3];
             get_neighbors(x, y, z, neighbors);
             if (voxmesh_vbo(chunk, neighbors, y, device,
-                    &worker->tbo, &worker->size)) {
+                &worker->tbo, &worker->size)) {
                 chunk->renderable = 1;
             }
             break;
@@ -480,8 +481,11 @@ void world_set_block(
     const block_t block)
 {
     const int a = floor((float) x / CHUNK_X);
-    const int b = y % CHUNK_Y;
     const int c = floor((float) z / CHUNK_Z);
+    if (!grid_in2(&grid, a, c) || y < 0 || y >= GROUP_Y) {
+        return;
+    }
+    const int b = y % CHUNK_Y;
     const int d = chunk_wrap_x(x);
     const int f = chunk_wrap_z(z);
     group_t* group = grid_get2(&grid, a, c);
@@ -516,6 +520,9 @@ block_t world_get_block(
 {
     const int a = floor((float) x / CHUNK_X);
     const int c = floor((float) z / CHUNK_Z);
+    if (!grid_in2(&grid, a, c) || y < 0 || y >= GROUP_Y) {
+        return BLOCK_EMPTY;
+    }
     const int d = chunk_wrap_x(x);
     const int f = chunk_wrap_z(z);
     const group_t* group = grid_get2(&grid, a, c);

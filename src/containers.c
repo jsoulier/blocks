@@ -158,7 +158,6 @@ void* grid_get2(
     const int32_t y)
 {
     assert(grid);
-    assert(grid_in2(grid, x, y));
     const int32_t a = x - grid->x;
     const int32_t b = y - grid->y;
     return grid_get(grid, a, b);

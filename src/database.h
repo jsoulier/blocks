@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include "block.h"
 #include "containers.h"
 #include "helpers.h"
 

@@ -36,6 +36,8 @@ typedef enum {
     DIRECTION_3 = 6,
 } direction_t;
 
+extern const int directions[][3];
+
 void sort_2d(
     const int x,
     const int z,
@@ -58,30 +60,3 @@ typedef struct {
 void tag_init(tag_t* tag);
 void tag_invalidate(tag_t* tag);
 bool tag_same(const tag_t a, const tag_t b);
-
-typedef uint8_t block_t;
-enum {
-    BLOCK_EMPTY,
-    BLOCK_CLOUD,
-    BLOCK_DIRT,
-    BLOCK_GLASS,
-    BLOCK_GRASS,
-    BLOCK_LAVA,
-    BLOCK_SAND,
-    BLOCK_SNOW,
-    BLOCK_STONE,
-    BLOCK_WATER,
-    BLOCK_COUNT,
-};
-
-bool block_visible(const block_t a, const block_t b);
-
-SDL_GPUShader* load_shader(
-    SDL_GPUDevice* device,
-    const char* file,
-    const int uniforms,
-    const int samplers);
-SDL_Surface* load_bmp(const char* file);
-
-extern const int directions[][3];
-extern const int blocks[][DIRECTION_3][2];

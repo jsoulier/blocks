@@ -3,9 +3,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include "block.h"
 #include "camera.h"
 #include "database.h"
 #include "noise.h"
+#include "physics.h"
 #include "world.h"
 
 static SDL_Window* window;
@@ -25,6 +27,55 @@ static uint32_t width;
 static uint32_t height;
 static camera_t camera;
 static block_t hand = BLOCK_GRASS;
+
+static SDL_GPUShader* load_shader(
+    SDL_GPUDevice* device,
+    const char* file,
+    const int uniforms,
+    const int samplers)
+{
+    assert(device);
+    assert(file);
+    SDL_GPUShaderCreateInfo info = {0};
+    void* code = SDL_LoadFile(file, &info.code_size);
+    if (!code) {
+        SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
+        return NULL;
+    }
+    info.code = code;
+    if (strstr(file, ".vert")) {
+        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    } else {
+        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+    }
+    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+    info.entrypoint = "main";
+    info.num_uniform_buffers = uniforms;
+    info.num_samplers = samplers;
+    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
+    SDL_free(code);
+    if (!shader) {
+        SDL_Log("Failed to create %s shader: %s", file, SDL_GetError());
+        return NULL;
+    }
+    return shader;
+}
+
+static SDL_Surface* load_bmp(const char* file)
+{
+    SDL_Surface* argb32 = SDL_LoadBMP(file);
+    if (!argb32) {
+        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
+        return NULL;
+    }
+    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
+    if (!rgba32) {
+        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
+        return NULL;
+    }
+    SDL_DestroySurface(argb32);
+    return rgba32;
+}
 
 static void load_atlas()
 {
@@ -135,35 +186,13 @@ static bool raycast(
 {
     float a, b, c;
     camera_get_vector(&camera, &a, &b, &c);
-    const float step = 0.1f;
-    const float length = 10.0f;
-    for (float i = 0; i < length; i += step) {
-        float s, t, p;
-        camera_get_position(&camera, &s, &t, &p);
-        *x = s + a * i;
-        *y = t + b * i;
-        *z = p + c * i;
-        if (*x <= 0) {
-            *x -= 1.0f;
-        }
-        if (*z <= 0) {
-            *z -= 1.0f;
-        }
-        if (world_get_block(*x, *y, *z) != BLOCK_EMPTY) {
-            if (previous) {
-                *x -= a * step;
-                *y -= b * step;
-                *z -= c * step;
-            }
-            // TODO: why?
-            if (*x < 0.0f && *x > -1.0f && a > 0.0f) {
-                *x = -1.0f;
-            }
-            if (*z < 0.0f && *z > -1.0f && c > 0.0f) {
-                *z = -1.0f;
-            }
-            return true;
-        }
+    float s, t, p;
+    camera_get_position(&camera, &s, &t, &p);
+    if (physics_raycast(&s, &t, &p, a, b, c, 0.1f, 10.0f, previous)) {
+        *x = s;
+        *y = t;
+        *z = p;
+        return true;
     }
     return false;
 }
@@ -591,15 +620,21 @@ static bool poll()
             if (!SDL_GetWindowRelativeMouseMode(window)) {
                 SDL_SetWindowRelativeMouseMode(window, true);
             } else {
-                if (event.button.button == SDL_BUTTON_LEFT) {
-                    float a, b, c;
-                    if (raycast(&a, &b, &c, false) && b >= 1.0f) {
-                        world_set_block(a, b, c, BLOCK_EMPTY);
+                if (event.button.button == SDL_BUTTON_LEFT ||
+                    event.button.button == SDL_BUTTON_RIGHT) {
+                    bool previous = true;
+                    block_t block = hand;
+                    if (event.button.button == SDL_BUTTON_LEFT) {
+                        previous = false;
+                        block = BLOCK_EMPTY;
                     }
-                } else if (event.button.button == SDL_BUTTON_RIGHT) {
+                    float x, y, z;
                     float a, b, c;
-                    if (raycast(&a, &b, &c, true)) {
-                        world_set_block(a, b, c, hand);
+                    camera_get_position(&camera, &x, &y, &z);
+                    camera_get_vector(&camera, &a, &b, &c);
+                    if (physics_raycast(&x, &y, &z, a, b, c,
+                        RAYCAST_STEP, RAYCAST_LENGTH, previous)) {
+                        world_set_block(x, y, z, block);
                     }
                 }
             }

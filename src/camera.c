@@ -283,7 +283,7 @@ bool camera_test(
         t /= length;
         p /= length;
         const float dot = d * s + e * t + f * p;
-        if (acos(dot) < camera->fov / 1.5f) {
+        if (acos(dot) < camera->fov) {
             return true;
         }
     }

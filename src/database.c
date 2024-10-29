@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
+#include "block.h"
 #include "containers.h"
 #include "database.h"
 #include "helpers.h"

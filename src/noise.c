@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include "block.h"
+#include "containers.h"
 #include "helpers.h"
 #include "noise.h"
 #include "world.h"
@@ -30,18 +32,12 @@ static void cube(
 {
     for (int a = 1; a < CHUNK_X - 1; a++)
     for (int b = 1; b < CHUNK_Z - 1; b++)
-    for (int y = 1; y < CHUNK_Y - 1; y++)
-    {
-        if (y >= CHUNK_Y - 2)
-        {
+    for (int y = 1; y < CHUNK_Y - 1; y++) {
+        if (y >= CHUNK_Y - 2) {
             set(group, a, y, b, BLOCK_GRASS);
-        }
-        else if (y >= CHUNK_Y - 5)
-        {
+        } else if (y >= CHUNK_Y - 5) {
             set(group, a, y, b, BLOCK_DIRT);
-        }
-        else
-        {
+        } else {
             set(group, a, y, b, BLOCK_STONE);
         }
     }
@@ -53,8 +49,7 @@ static void flat(
     const int32_t z)
 {
     for (int a = 0; a < CHUNK_X; a++)
-    for (int b = 0; b < CHUNK_Z; b++)
-    {
+    for (int b = 0; b < CHUNK_Z; b++) {
         set(group, a, 0, b, BLOCK_STONE);
         set(group, a, 1, b, BLOCK_DIRT);
         set(group, a, 2, b, BLOCK_GRASS);
@@ -63,8 +58,7 @@ static void flat(
 
 void noise_init(const noise_t noise)
 {
-    switch (noise)
-    {
+    switch (noise) {
     case NOISE_CUBE:
         generator = cube;
         break;
