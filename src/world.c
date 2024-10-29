@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-#include "block.h"
 #include "camera.h"
 #include "containers.h"
 #include "database.h"
@@ -13,9 +12,6 @@
 #include "noise.h"
 #include "voxmesh.h"
 #include "world.h"
-
-#define MAX_JOBS 1000
-#define MAX_WORKERS 4
 
 typedef enum {
     JOB_TYPE_QUIT,
@@ -42,7 +38,7 @@ static SDL_GPUDevice* device;
 static SDL_GPUBuffer* ibo;
 static uint32_t capacity;
 static grid_t grid;
-static worker_t workers[MAX_WORKERS];
+static worker_t workers[WORLD_MAX_WORKERS];
 static ring_t jobs;
 static int sorted[WORLD_Y][WORLD_CHUNKS][3];
 static int height;
@@ -244,15 +240,10 @@ bool world_init(SDL_GPUDevice* handle)
         const int h = WORLD_Z / 2;
         sort_3d(w, i, h, sorted[i], WORLD_CHUNKS, true);
     }
-    grid_init(&grid, WORLD_X, WORLD_Z);
+    grid_init(&grid);
     for (int x = 0; x < WORLD_X; x++) {
         for (int z = 0; z < WORLD_Z; z++) {
-            group_t* group = calloc(1, sizeof(group_t));
-            if (!group) {
-                SDL_Log("Failed to allocate group");
-                return false;
-            }
-            grid_set(&grid, x, z, group);
+            group_t* group = grid_get(&grid, x, z);
             for (int i = 0; i < GROUP_CHUNKS; i++) {
                 chunk_t* chunk = &group->chunks[i];
                 tag_init(&chunk->tag);
@@ -260,7 +251,7 @@ bool world_init(SDL_GPUDevice* handle)
             tag_init(&group->tag);
         }
     }
-    for (int i = 0; i < MAX_WORKERS; i++) {
+    for (int i = 0; i < WORLD_MAX_WORKERS; i++) {
         worker_t* worker = &workers[i];
         memset(worker, 0, sizeof(worker_t));
         if (mtx_init(&worker->mtx, mtx_plain) != thrd_success) {
@@ -276,7 +267,7 @@ bool world_init(SDL_GPUDevice* handle)
             return false;
         }
     }
-    ring_init(&jobs, MAX_JOBS, sizeof(job_t));
+    ring_init(&jobs, WORLD_MAX_JOBS, sizeof(job_t));
     return true;
 }
 
@@ -284,12 +275,12 @@ void world_free()
 {
     job_t job;
     job.type = JOB_TYPE_QUIT;
-    for (int i = 0; i < MAX_WORKERS; i++) {
+    for (int i = 0; i < WORLD_MAX_WORKERS; i++) {
         worker_t* worker = &workers[i];
         job.type = JOB_TYPE_QUIT;
         dispatch(worker, &job);
     }
-    for (int i = 0; i < MAX_WORKERS; i++) {
+    for (int i = 0; i < WORLD_MAX_WORKERS; i++) {
         worker_t* worker = &workers[i];
         thrd_join(worker->thrd, NULL);
         mtx_destroy(&worker->mtx);
@@ -352,7 +343,7 @@ static void move(
     for (int i = 0; i < size; i++) {
         const int j = data[i * 2 + 0];
         const int k = data[i * 2 + 1];
-        assert(in_world(j, 0, k));
+        assert(grid_in(&grid, j, k));
         group_t* group = grid_get(&grid, j, k);
         load(group, j + grid.x, k + grid.y);
     }
@@ -396,9 +387,9 @@ void world_update(
     const int32_t z)
 {
     uint32_t n;
-    job_t data[MAX_WORKERS];
+    job_t data[WORLD_MAX_WORKERS];
     uint32_t size = 0;
-    for (n = 0; n < MAX_WORKERS;) {
+    for (n = 0; n < WORLD_MAX_WORKERS;) {
         if (!ring_remove(&jobs, &data[n])) {
             break;
         }
@@ -410,7 +401,7 @@ void world_update(
     for (int i = 0; i < n; i++) {
         dispatch(&workers[i], &data[i]);
     }
-    for (int i = 0; i < MAX_WORKERS; i++) {
+    for (int i = 0; i < WORLD_MAX_WORKERS; i++) {
         wait(&workers[i]);
     }
     for (int i = 0; i < n; i++) {
@@ -482,19 +473,6 @@ void world_render(
     }
 }
 
-block_t world_get_block(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
-{
-    const int a = floor((float) x / CHUNK_X);
-    const int c = floor((float) z / CHUNK_Z);
-    const int d = chunk_mod_x(x);
-    const int f = chunk_mod_z(z);
-    const group_t* group = grid_get2(&grid, a, c);
-    return get_chunk_block_from_group(group, d, y, f);
-}
-
 void world_set_block(
     const int32_t x,
     const int32_t y,
@@ -504,11 +482,11 @@ void world_set_block(
     const int a = floor((float) x / CHUNK_X);
     const int b = y % CHUNK_Y;
     const int c = floor((float) z / CHUNK_Z);
-    const int d = chunk_mod_x(x);
-    const int f = chunk_mod_z(z);
+    const int d = chunk_wrap_x(x);
+    const int f = chunk_wrap_z(z);
     group_t* group = grid_get2(&grid, a, c);
     database_set_block(a, c, d, y, f, block);
-    set_block_in_group(group, d, y, f, block);
+    group_set_block(group, d, y, f, block);
     const int e = y / CHUNK_Y;
     chunk_t* chunk = &group->chunks[e];
     mesh(chunk, a, e, c);
@@ -529,4 +507,17 @@ void world_set_block(
     } else if (b == CHUNK_Y - 1 && neighbors[DIRECTION_U]) {
         mesh(neighbors[DIRECTION_U], a, e + 1, c);
     }
+}
+
+block_t world_get_block(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    const int a = floor((float) x / CHUNK_X);
+    const int c = floor((float) z / CHUNK_Z);
+    const int d = chunk_wrap_x(x);
+    const int f = chunk_wrap_z(z);
+    const group_t* group = grid_get2(&grid, a, c);
+    return group_get_group(group, d, y, f);
 }

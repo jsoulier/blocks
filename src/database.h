@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
+#include "containers.h"
 #include "helpers.h"
-#include "block.h"
 
 bool database_init(const char* file);
 void database_free();

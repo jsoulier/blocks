@@ -393,7 +393,7 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    float size[2] = { camera.width, camera.height };
+    int32_t viewport[2] = { camera.width, camera.height };
     int32_t block[2] = { blocks[hand][0][0], blocks[hand][0][1] };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
@@ -402,7 +402,7 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
     tsb.texture = atlas_texture;
     SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
-    SDL_PushGPUFragmentUniformData(commands, 0, &size, sizeof(size));
+    SDL_PushGPUFragmentUniformData(commands, 0, &viewport, sizeof(viewport));
     SDL_PushGPUFragmentUniformData(commands, 1, &block, sizeof(block));
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);

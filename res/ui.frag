@@ -1,6 +1,6 @@
 #version 450
 
-#include "helpers.glsl"
+#include "config.glsl"
 
 #define CROSSHAIR_WIDTH 0.01
 #define CROSSHAIR_THICKNESS 0.002
@@ -10,17 +10,16 @@
 #define ALPHA 0.6
 
 layout(location = 0) out vec4 color;
-layout(set = 3, binding = 0) uniform window_t {
-    vec2 size;
-} window;
+layout(set = 3, binding = 0) uniform viewport_t {
+    ivec2 size;
+} viewport;
 layout(set = 3, binding = 1) uniform block_t {
     ivec2 uv;
 } block;
 layout(set = 2, binding = 0) uniform sampler2D atlas;
 
-bool draw_crosshair(in vec2 position)
+bool draw_crosshair(in vec2 position, in float aspect)
 {
-    const float aspect = window.size.x / window.size.y;
     const float width1 = CROSSHAIR_WIDTH;
     const float thickness1 = CROSSHAIR_THICKNESS;
     const float width2 = CROSSHAIR_WIDTH / aspect;
@@ -39,9 +38,8 @@ bool draw_crosshair(in vec2 position)
     return false;
 }
 
-bool draw_block(in vec2 position)
+bool draw_block(in vec2 position, in float aspect)
 {
-    const float aspect = window.size.x / window.size.y;
     const float width = BLOCK_WIDTH / aspect;
     const float height = BLOCK_WIDTH;
     const vec2 start = vec2(BLOCK_LEFT, BLOCK_BOTTOM);
@@ -63,11 +61,12 @@ bool draw_block(in vec2 position)
 
 void main()
 {
-    vec2 position = gl_FragCoord.xy / window.size;
+    vec2 position = gl_FragCoord.xy / viewport.size;
     position.y = 1.0 - position.y;
-    if (draw_crosshair(position)) {
+    const float aspect = float(viewport.size.x) / float(viewport.size.y);
+    if (draw_crosshair(position, aspect)) {
         return;
-    } else if (draw_block(position)) {
+    } else if (draw_block(position, aspect)) {
         return;
     }
     discard;

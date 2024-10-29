@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include "block.h"
 #include "helpers.h"
 #include "noise.h"
 #include "world.h"

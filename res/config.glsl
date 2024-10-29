@@ -1,5 +1,5 @@
-#ifndef HELPERS_H
-#define HELPERS_H
+#ifndef CONFIG_GLSL
+#define CONFIG_GLSL
 
 #define ATLAS_WIDTH 240.0
 #define ATLAS_HEIGHT 240.0

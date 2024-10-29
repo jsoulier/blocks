@@ -1,6 +1,6 @@
 #version 450
 
-#include "helpers.glsl"
+#include "config.glsl"
 
 layout(location = 0) in uint voxel;
 layout(location = 0) out vec2 uv;

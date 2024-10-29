@@ -1,3 +1,4 @@
+#include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -28,26 +29,18 @@ static int compare(const void* a, const void* b)
     const int* r = b;
     int c;
     int d;
-    if (is_2d)
-    {
+    if (is_2d) {
         c = dot(l[0], 0, l[1]);
         d = dot(r[0], 0, r[1]);
-    }
-    else
-    {
+    } else {
         c = dot(l[0], l[1], l[2]);
         d = dot(r[0], r[1], r[2]);
     }
-    if (c < d)
-    {
+    if (c < d) {
         return is_ascending ? -1 : 1;
-    }
-    else if (c > d)
-    {
+    } else if (c > d) {
         return is_ascending ? 1 : -1;
-    }
-    else
-    {
+    } else {
         return 0;
     }
 }
@@ -87,6 +80,23 @@ void sort_3d(
     qsort(data, size, 12, compare);
 }
 
+static bool opaque(const block_t block)
+{
+    assert(block > BLOCK_EMPTY);
+    assert(block < BLOCK_COUNT);
+    switch (block) {
+    case BLOCK_GLASS:
+    case BLOCK_WATER:
+        return 0;
+    }
+    return 1;
+}
+
+bool block_visible(const block_t a, const block_t b)
+{
+    return b == BLOCK_EMPTY || (opaque(a) && !opaque(b));
+}
+
 static int counter = 0;
 
 void tag_init(tag_t* tag)
@@ -104,72 +114,75 @@ bool tag_same(const tag_t a, const tag_t b)
     return a.a == b.a && a.b == b.b;
 }
 
-static_assert(WORLD_X % 2 == 1, "");
-static_assert(WORLD_Y % 2 == 1, "");
-static_assert(WORLD_Z % 2 == 1, "");
-
-bool in_chunk(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
+SDL_GPUShader* load_shader(
+    SDL_GPUDevice* device,
+    const char* file,
+    const int uniforms,
+    const int samplers)
 {
-    return
-        x >= 0 && x < CHUNK_X &&
-        y >= 0 && y < CHUNK_Y &&
-        z >= 0 && z < CHUNK_Z;
+    assert(device);
+    assert(file);
+    SDL_GPUShaderCreateInfo info = {0};
+    void* code = SDL_LoadFile(file, &info.code_size);
+    if (!code) {
+        SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
+        return NULL;
+    }
+    info.code = code;
+    if (strstr(file, ".vert")) {
+        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    } else {
+        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+    }
+    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+    info.entrypoint = "main";
+    info.num_uniform_buffers = uniforms;
+    info.num_samplers = samplers;
+    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
+    SDL_free(code);
+    if (!shader) {
+        SDL_Log("Failed to create %s shader: %s", file, SDL_GetError());
+        return NULL;
+    }
+    return shader;
 }
 
-bool on_chunk_border(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
+SDL_Surface* load_bmp(const char* file)
 {
-    return
-        x == 0 || x == CHUNK_X - 1 ||
-        y == 0 || y == CHUNK_Y - 1 ||
-        z == 0 || z == CHUNK_Z - 1;
+    SDL_Surface* argb32 = SDL_LoadBMP(file);
+    if (!argb32) {
+        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
+        return NULL;
+    }
+    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
+    if (!rgba32) {
+        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
+        return NULL;
+    }
+    SDL_DestroySurface(argb32);
+    return rgba32;
 }
 
-bool in_group(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
+const int directions[][3] =
 {
-    return
-        x >= 0 && x < GROUP_X &&
-        y >= 0 && y < GROUP_Y &&
-        z >= 0 && z < GROUP_Z;
-}
+    { 0, 0, 1 },
+    { 0, 0,-1 },
+    { 1, 0, 0 },
+    {-1, 0, 0 },
+    { 0, 1, 0 },
+    { 0,-1, 0 },
+};
 
-bool on_group_border(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
+const int blocks[][DIRECTION_3][2] =
 {
-    return
-        x == 0 || x == GROUP_X - 1 ||
-        y == 0 || y == GROUP_Y - 1 ||
-        z == 0 || z == GROUP_Z - 1;
-}
-
-bool in_world(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
-{
-    return
-        x >= 0 && x < WORLD_X &&
-        y >= 0 && y < WORLD_Y &&
-        z >= 0 && z < WORLD_Z;
-}
-
-bool on_world_border(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
-{
-    return
-        x == 0 || x == WORLD_X - 1 ||
-        y == 0 || y == WORLD_Y - 1 ||
-        z == 0 || z == WORLD_Z - 1;
-}
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{3, 0}, {3, 0}, {3, 0}, {3, 0}, {3, 0}, {3, 0}},
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{2, 0}, {2, 0}, {2, 0}, {2, 0}, {1, 0}, {3, 0}},
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}},
+    {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+};

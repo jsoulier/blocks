@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "config.h"
 
 #undef min
 #undef max
@@ -24,8 +25,7 @@
 #define assert(e)
 #endif
 
-typedef enum direction
-{
+typedef enum {
     DIRECTION_N,
     DIRECTION_S,
     DIRECTION_E,
@@ -35,16 +35,6 @@ typedef enum direction
     DIRECTION_2 = 4,
     DIRECTION_3 = 6,
 } direction_t;
-
-static const int directions[][3] =
-{
-    { 0, 0, 1 },
-    { 0, 0,-1 },
-    { 1, 0, 0 },
-    {-1, 0, 0 },
-    { 0, 1, 0 },
-    { 0,-1, 0 },
-};
 
 void sort_2d(
     const int x,
@@ -60,8 +50,7 @@ void sort_3d(
     const int size,
     const bool ascending);
 
-typedef struct
-{
+typedef struct {
     int a;
     int b;
 } tag_t;
@@ -70,153 +59,29 @@ void tag_init(tag_t* tag);
 void tag_invalidate(tag_t* tag);
 bool tag_same(const tag_t a, const tag_t b);
 
-#define CHUNK_X 30
-#define CHUNK_Y 30
-#define CHUNK_Z 30
-#define GROUP_CHUNKS 9
-#define GROUP_X (CHUNK_X)
-#define GROUP_Y (CHUNK_Y * GROUP_CHUNKS)
-#define GROUP_Z (CHUNK_Z)
-#define WORLD_X 21
-#define WORLD_Y (GROUP_CHUNKS)
-#define WORLD_Z 21
-#define WORLD_GROUPS (WORLD_X * WORLD_Z)
-#define WORLD_CHUNKS (WORLD_Y * WORLD_GROUPS)
+typedef uint8_t block_t;
+enum {
+    BLOCK_EMPTY,
+    BLOCK_CLOUD,
+    BLOCK_DIRT,
+    BLOCK_GLASS,
+    BLOCK_GRASS,
+    BLOCK_LAVA,
+    BLOCK_SAND,
+    BLOCK_SNOW,
+    BLOCK_STONE,
+    BLOCK_WATER,
+    BLOCK_COUNT,
+};
 
-bool in_chunk(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
-bool on_chunk_border(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
-bool in_group(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
-bool on_group_border(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
-bool in_world(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
-bool on_world_border(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
+bool block_visible(const block_t a, const block_t b);
 
-static int chunk_mod_x(int x)
-{
-    x = x % CHUNK_X;
-    return x >= 0 ? x : x + CHUNK_X;
-}
-
-static int chunk_mod_z(int z)
-{
-    z = z % CHUNK_Z;
-    return z >= 0 ? z : z + CHUNK_Z;
-}
-
-// TODO: move the types
-
-typedef struct
-{
-    SDL_GPUBuffer* vbo;
-    uint32_t size;
-    uint32_t capacity;
-    tag_t tag;
-    // fix me to block_t
-    uint8_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
-    bool renderable;
-    bool empty;
-} chunk_t;
-
-typedef struct
-{
-    tag_t tag;
-    chunk_t chunks[GROUP_CHUNKS];
-    direction_t neighbors;
-    bool loaded;
-} group_t;
-
-static int get_chunk_block_from_group(
-    const group_t* group,
-    const int x,
-    const int y,
-    const int z)
-{
-    assert(group);
-    const int a = y / CHUNK_Y;
-    const int b = y - a * CHUNK_Y;
-    const chunk_t* chunk = &group->chunks[a];
-    assert(x < CHUNK_X);
-    assert(z < CHUNK_Z);
-    return chunk->blocks[x][b][z];
-}
-
-static void set_block_in_group(
-    group_t* group,
-    const int x,
-    const int y,
-    const int z,
-    const int block)
-{
-    assert(group);
-    const int a = y / CHUNK_Y;
-    const int b = y - a * CHUNK_Y;
-    chunk_t* chunk = &group->chunks[a];
-    chunk->blocks[x][b][z] = block;
-    chunk->empty = false;
-}
-
-static SDL_GPUShader* load_shader(
+SDL_GPUShader* load_shader(
     SDL_GPUDevice* device,
     const char* file,
     const int uniforms,
-    const int samplers)
-{
-    assert(device);
-    assert(file);
-    SDL_GPUShaderCreateInfo info = {0};
-    void* code = SDL_LoadFile(file, &info.code_size);
-    if (!code) {
-        SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
-        return NULL;
-    }
-    info.code = code;
-    if (strstr(file, ".vert")) {
-        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
-    } else {
-        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
-    }
-    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    info.entrypoint = "main";
-    info.num_uniform_buffers = uniforms;
-    info.num_samplers = samplers;
-    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
-    SDL_free(code);
-    if (!shader) {
-        SDL_Log("Failed to create %s shader: %s", file, SDL_GetError());
-        return NULL;
-    }
-    return shader;
-}
+    const int samplers);
+SDL_Surface* load_bmp(const char* file);
 
-static SDL_Surface* load_bmp(const char* file)
-{
-    SDL_Surface* argb32 = SDL_LoadBMP(file);
-    if (!argb32) {
-        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
-    if (!rgba32) {
-        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_DestroySurface(argb32);
-    return rgba32;
-}
+extern const int directions[][3];
+extern const int blocks[][DIRECTION_3][2];

@@ -5,12 +5,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
-#include "helpers.h"
-#include "database.h"
 #include "containers.h"
-#include "block.h"
-
-#define MAX_JOBS 100
+#include "database.h"
+#include "helpers.h"
 
 typedef enum {
     JOB_TYPE_QUIT,
@@ -20,22 +17,18 @@ typedef enum {
 } job_type_t;
 
 typedef struct {
-    int id;
-    float x, y, z;
-    float pitch, yaw;
-} job_player_t;
-
-typedef struct {
-    int32_t a, c;
-    int32_t x, y, z;
-    block_t id;
-} job_block_t;
-
-typedef struct {
     job_type_t type;
     union {
-        job_player_t player;
-        job_block_t block;
+        struct {
+            int id;
+            float x, y, z;
+            float pitch, yaw;
+        } player;
+        struct {
+            int32_t a, c;
+            int32_t x, y, z;
+            block_t id;
+        } block;
     };
 } job_t;
 
@@ -118,7 +111,7 @@ static void dispatch(const job_t* job)
 bool database_init(const char* file)
 {
     assert(file);
-    ring_init(&jobs, MAX_JOBS, sizeof(job_t));
+    ring_init(&jobs, DATABASE_MAX_JOBS, sizeof(job_t));
     if (sqlite3_open(file, &handle) != SQLITE_OK) {
         SDL_Log("Failed to open %s database: %s", file, sqlite3_errmsg(handle));
         return false;
@@ -310,7 +303,7 @@ void database_get_blocks(
         const int y = sqlite3_column_int(get_blocks_stmt, 1);
         const int z = sqlite3_column_int(get_blocks_stmt, 2);
         const block_t block = sqlite3_column_int(get_blocks_stmt, 3);
-        set_block_in_group(group, x, y, z, block);
+        group_set_block(group, x, y, z, block);
     }
     sqlite3_reset(get_blocks_stmt);
     mtx_unlock(&mtx);

@@ -63,33 +63,82 @@ bool ring_remove(ring_t* ring, void* item)
     return true;
 }
 
-void grid_init(
-    grid_t* grid,
-    const int width,
-    const int height)
+int chunk_wrap_x(const int x)
+{
+    return (x % CHUNK_X + CHUNK_X) % CHUNK_X;
+}
+
+int chunk_wrap_z(const int z)
+{
+    return (z % CHUNK_Z + CHUNK_Z) % CHUNK_Z;
+}
+
+bool chunk_in(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    return
+        x >= 0 &&
+        y >= 0 &&
+        z >= 0 &&
+        x < CHUNK_X &&
+        y < CHUNK_Y &&
+        z < CHUNK_Z;
+}
+
+block_t group_get_group(
+    const group_t* group,
+    const int x,
+    const int y,
+    const int z)
+{
+    assert(group);
+    const int a = y / CHUNK_Y;
+    const int b = y - a * CHUNK_Y;
+    const chunk_t* chunk = &group->chunks[a];
+    assert(x < CHUNK_X);
+    assert(z < CHUNK_Z);
+    return chunk->blocks[x][b][z];
+}
+
+void group_set_block(
+    group_t* group,
+    const int x,
+    const int y,
+    const int z,
+    const block_t block)
+{
+    assert(group);
+    const int a = y / CHUNK_Y;
+    const int b = y - a * CHUNK_Y;
+    chunk_t* chunk = &group->chunks[a];
+    chunk->blocks[x][b][z] = block;
+    chunk->empty = false;
+}
+
+void grid_init(grid_t* grid)
 {
     assert(grid);
-    assert(width);
-    assert(height);
-    grid->width = width;
-    grid->height = height;
     grid->x = INT32_MAX;
     grid->y = INT32_MAX;
-    grid->data = calloc(width * height, sizeof(void*));
-    assert(grid->data);
+    for (int x = 0; x < WORLD_X; x++) {
+        for (int y = 0; y < WORLD_Z; y++) {
+            grid->groups[x][y] = calloc(1, sizeof(group_t));
+            assert(grid->groups[x][y]);
+        }
+    }
 }
 
 void grid_free(grid_t* grid)
 {
     assert(grid);
-    assert(grid->data);
-    for (int x = 0; x < grid->width; x++) {
-        for (int y = 0; y < grid->height; y++) {
-            free(grid_get(grid, x, y));
+    for (int x = 0; x < WORLD_X; x++) {
+        for (int y = 0; y < WORLD_Z; y++) {
+            free(grid->groups[x][y]);
+            grid->groups[x][y] = NULL;
         }
     }
-    free(grid->data);
-    grid->data = NULL;
 }
 
 void* grid_get(
@@ -98,10 +147,9 @@ void* grid_get(
     const int y)
 {
     assert(grid);
-    assert(grid->data);
     assert(grid_in(grid, x, y));
-    assert(grid->data[x * grid->width + y]);
-    return grid->data[x * grid->width + y];
+    assert(grid->groups[x][y]);
+    return grid->groups[x][y];
 }
 
 void* grid_get2(
@@ -110,26 +158,10 @@ void* grid_get2(
     const int32_t y)
 {
     assert(grid);
-    assert(grid->data);
     assert(grid_in2(grid, x, y));
     const int32_t a = x - grid->x;
     const int32_t b = y - grid->y;
-    assert(grid->data[a * grid->width + b]);
-    return grid->data[a * grid->width + b];
-}
-
-void grid_set(
-    grid_t* grid,
-    const int x,
-    const int y,
-    void* data)
-{
-    assert(grid);
-    assert(grid->data);
-    assert(grid_in(grid, x, y));
-    assert(!grid->data[x * grid->width + y]);
-    assert(data);
-    grid->data[x * grid->width + y] = data;
+    return grid_get(grid, a, b);
 }
 
 bool grid_in(
@@ -138,12 +170,11 @@ bool grid_in(
     const int y)
 {
     assert(grid);
-    assert(grid->data);
     return
         x >= 0 &&
         y >= 0 &&
-        x < grid->width &&
-        y < grid->height;
+        x < WORLD_X &&
+        y < WORLD_Z;
 }
 
 bool grid_border(
@@ -152,12 +183,11 @@ bool grid_border(
     const int y)
 {
     assert(grid);
-    assert(grid->data);
     return
         x == 0 ||
         y == 0 ||
-        x == grid->width - 1 ||
-        y == grid->height - 1;
+        x == WORLD_X - 1 ||
+        y == WORLD_Z - 1;
 }
 
 bool grid_in2(
@@ -166,14 +196,9 @@ bool grid_in2(
     const int32_t y)
 {
     assert(grid);
-    assert(grid->data);
     const int32_t a = x - grid->x;
     const int32_t b = y - grid->y;
-    return
-        a >= 0 &&
-        b >= 0 &&
-        a < grid->width &&
-        b < grid->height;
+    return grid_in(grid, a, b);
 }
 
 bool grid_border2(
@@ -182,14 +207,9 @@ bool grid_border2(
     const int32_t y)
 {
     assert(grid);
-    assert(grid->data);
     const int32_t a = x - grid->x;
     const int32_t b = y - grid->y;
-    return
-        a == 0 ||
-        b == 0 ||
-        a == grid->width - 1 ||
-        b == grid->height - 1;
+    return grid_border(grid, a, b);
 }
 
 void grid_neighbors2(
@@ -203,11 +223,11 @@ void grid_neighbors2(
     for (direction_t d = 0; d < DIRECTION_2; d++) {
         const int a = x + directions[d][0];
         const int b = y + directions[d][2];
-        if (!grid_in2(grid, a, b)) {
+        if (grid_in2(grid, a, b)) {
+            neighbors[d] = grid_get2(grid, a, b);
+        } else {
             neighbors[d] = NULL;
-            continue;
         }
-        neighbors[d] = grid_get2(grid, a, b);
     }
 }
 
@@ -225,41 +245,37 @@ int* grid_move(
     if (!a && !b) {
         return NULL;
     }
-    const int w = grid->width;
-    const int h = grid->height;
     grid->x = x;
     grid->y = y;
-    void** data1 = calloc(w * h, sizeof(void*));
-    void** data2 = malloc(w * h * sizeof(void*));
-    int* indices = malloc(w * h * 2 * sizeof(int));
-    assert(data1 && data2 && indices);
-    for (int i = 0; i < w; i++) {
-        for (int j = 0; j < h; j++) {
+    group_t* groups1[WORLD_X][WORLD_Z] = {0};
+    group_t* groups2[WORLD_GROUPS];
+    int* indices = malloc(WORLD_GROUPS * 2 * sizeof(int));
+    assert(indices);
+    for (int i = 0; i < WORLD_X; i++) {
+        for (int j = 0; j < WORLD_Z; j++) {
             const int c = i - a;
             const int d = j - b;
             if (grid_in(grid, c, d)) {
-                data1[c * w + d] = grid_get(grid, i, j);
+                groups1[c][d] = grid_get(grid, i, j);
             } else {
-                data2[(*size)++] = grid_get(grid, i, j);
+                groups2[(*size)++] = grid_get(grid, i, j);
             }
-            grid->data[i * w + j] = NULL;
+            grid->groups[i][j] = NULL;
         }
     }
-    memcpy(grid->data, data1, w * h * sizeof(grid->data));
+    memcpy(grid->groups, groups1, sizeof(groups1));
     int n = *size;
-    for (int i = 0; i < w; i++) {
-        for (int j = 0; j < h; j++) {
-            if (grid->data[i * w + j]) {
+    for (int i = 0; i < WORLD_X; i++) {
+        for (int j = 0; j < WORLD_Z; j++) {
+            if (grid->groups[i][j]) {
                 continue;
             }
             --n;
-            grid->data[i * w + j] = data2[n];
+            grid->groups[i][j] = groups2[n];
             indices[n * 2 + 0] = i;
             indices[n * 2 + 1] = j;
         }
     }
     assert(!n);
-    free(data1);
-    free(data2);
     return indices;
 }

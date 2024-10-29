@@ -3,8 +3,8 @@
 #include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "containers.h"
 #include "helpers.h"
-#include "world.h"
 
 bool voxmesh_vbo(
     chunk_t* chunk,

@@ -22,15 +22,47 @@ bool ring_add(
 bool ring_remove(ring_t* ring, void* item);
 
 typedef struct {
-    void** data;
-    int width, height;
+    tag_t tag;
+    block_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
+    SDL_GPUBuffer* vbo;
+    uint32_t size;
+    uint32_t capacity;
+    bool renderable;
+    bool empty;
+} chunk_t;
+
+int chunk_wrap_x(const int x);
+int chunk_wrap_z(const int z);
+bool chunk_in(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z);
+
+typedef struct {
+    tag_t tag;
+    chunk_t chunks[GROUP_CHUNKS];
+    direction_t neighbors;
+    bool loaded;
+} group_t;
+
+block_t group_get_group(
+    const group_t* group,
+    const int x,
+    const int y,
+    const int z);
+void group_set_block(
+    group_t* group,
+    const int x,
+    const int y,
+    const int z,
+    const block_t block);
+
+typedef struct {
+    group_t* groups[WORLD_X][WORLD_Z];
     int32_t x, y;
 } grid_t;
 
-void grid_init(
-    grid_t* grid,
-    const int width,
-    const int height);
+void grid_init(grid_t* grid);
 void grid_free(grid_t* grid);
 void* grid_get(
     const grid_t* grid,
@@ -40,11 +72,6 @@ void* grid_get2(
     const grid_t* grid,
     const int32_t x,
     const int32_t y);
-void grid_set(
-    grid_t* grid,
-    const int x,
-    const int y,
-    void* data);
 bool grid_in(
     const grid_t* grid,
     const int x,
