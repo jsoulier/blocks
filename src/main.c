@@ -282,7 +282,7 @@ static void load_ui_pipeline()
 static void load_opaque_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
-        .vertex_shader = load_shader(device, "world.vert", 2, 0),
+        .vertex_shader = load_shader(device, "world.vert", 3, 0),
         .fragment_shader = load_shader(device, "world.frag", 0, 1),
         .target_info = {
             .num_color_targets = 1,
@@ -325,7 +325,7 @@ static void load_opaque_pipeline()
 static void load_transparent_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
-        .vertex_shader = load_shader(device, "world.vert", 2, 0),
+        .vertex_shader = load_shader(device, "world.vert", 3, 0),
         .fragment_shader = load_shader(device, "world.frag", 0, 1),
         .target_info = {
             .num_color_targets = 1,
@@ -472,11 +472,14 @@ static void draw_opaque(SDL_GPUCommandBuffer* commands)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
+    float position[3];
+    camera_get_position(&camera, &position[0], &position[1], &position[2]);
     SDL_GPUTextureSamplerBinding tsb = {0};
     tsb.sampler = atlas_sampler;
     tsb.texture = atlas_texture;
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
+    SDL_PushGPUVertexUniformData(commands, 1, position, sizeof(position));
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     world_render_opaque(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);
@@ -497,11 +500,14 @@ static void draw_transparent(SDL_GPUCommandBuffer* commands)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
+    float position[3];
+    camera_get_position(&camera, &position[0], &position[1], &position[2]);
     SDL_GPUTextureSamplerBinding tsb = {0};
     tsb.sampler = atlas_sampler;
     tsb.texture = atlas_texture;
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
+    SDL_PushGPUVertexUniformData(commands, 1, position, sizeof(position));
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     world_render_transparent(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);

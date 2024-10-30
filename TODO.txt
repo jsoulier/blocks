@@ -3,8 +3,16 @@ Features:
 - Lighting
 - Noise
 - Transparency
-  - Parallel sort on GPU via compute shader?
-  - OIT?
+  - Sorting within chunks
+    - Probably need to increase job queue size for a new sort job
+
+Workflow
+- Make shaders depend on configuration files
+- Should rebuild on change
+
+Memory Optimizations
+- Chunk Paging
+  - Kinda an obvious one. Free empty chunks
 
 Bug Fixes:
 - Transparent water doesn't appear when toggling blocks in the UI

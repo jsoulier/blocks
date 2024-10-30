@@ -1,29 +1,22 @@
 #ifndef CONFIG_GLSL
 #define CONFIG_GLSL
 
-#define ATLAS_WIDTH 240.0
-#define ATLAS_HEIGHT 240.0
-#define ATLAS_FACE_WIDTH 16.0
-#define ATLAS_FACE_HEIGHT 16.0
-#define ATLAS_X_FACES 15.0
-#define ATLAS_Y_FACES 15.0
-#define VOXEL_X_BITS 5
-#define VOXEL_Y_BITS 5
-#define VOXEL_Z_BITS 5
-#define VOXEL_U_BITS 4
-#define VOXEL_V_BITS 4
-#define VOXEL_DIRECTION_BITS 3
-#define VOXEL_X_OFFSET (0)
-#define VOXEL_Y_OFFSET (VOXEL_X_OFFSET + VOXEL_X_BITS)
-#define VOXEL_Z_OFFSET (VOXEL_Y_OFFSET + VOXEL_Y_BITS)
-#define VOXEL_U_OFFSET (VOXEL_Z_OFFSET + VOXEL_Z_BITS)
-#define VOXEL_V_OFFSET (VOXEL_U_OFFSET + VOXEL_U_BITS)
-#define VOXEL_DIRECTION_OFFSET (VOXEL_V_OFFSET + VOXEL_V_BITS)
-#define VOXEL_X_MASK ((1 << VOXEL_X_BITS) - 1)
-#define VOXEL_Y_MASK ((1 << VOXEL_Y_BITS) - 1)
-#define VOXEL_Z_MASK ((1 << VOXEL_Z_BITS) - 1)
-#define VOXEL_U_MASK ((1 << VOXEL_U_BITS) - 1)
-#define VOXEL_V_MASK ((1 << VOXEL_V_BITS) - 1)
-#define VOXEL_DIRECTION_MASK ((1 << VOXEL_DIRECTION_BITS) - 1)
+#include "config.h"
+
+const float atlas_width = 240.0;
+const float atlas_height = 240.0;
+const float atlas_face_width = 16.0;
+const float atlas_face_height = 16.0;
+const float atlas_x_faces = 15.0;
+const float atlas_y_faces = 15.0;
+const vec3 sky_top_color = vec3(0.2, 0.4, 0.8);
+const vec3 sky_bottom_color = vec3(0.8, 0.9, 1.0);
+const float raycasat_alpha = 0.25;
+const vec3 crosshair_color = vec3(1.0, 1.0, 1.0);
+const float crosshair_width = 0.01;
+const float crosshair_thickness = 0.002;
+const float block_left = 0.01;
+const float block_bottom = 0.01;
+const float block_width = 0.1;
 
 #endif

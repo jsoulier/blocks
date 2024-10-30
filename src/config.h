@@ -1,18 +1,21 @@
-#pragma once
+// glslc: warning: '#pragma once' : not implemented
+
+#ifndef CONFIG_H
+#define CONFIG_H
 
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30
-#define GROUP_CHUNKS 9
+#define GROUP_CHUNKS 6
 #define GROUP_X (CHUNK_X)
 #define GROUP_Y (CHUNK_Y * GROUP_CHUNKS)
 #define GROUP_Z (CHUNK_Z)
-#define WORLD_X 21
+#define WORLD_X 30
 #define WORLD_Y (GROUP_CHUNKS)
-#define WORLD_Z 21
+#define WORLD_Z 30
 #define WORLD_GROUPS (WORLD_X * WORLD_Z)
 #define WORLD_CHUNKS (WORLD_Y * WORLD_GROUPS)
-#define WORLD_MAX_JOBS 1000
+#define WORLD_MAX_JOBS 3000
 #define WORLD_MAX_WORKERS 4
 #define DATABASE_MAX_JOBS 100
 #define VOXEL_X_BITS 5
@@ -35,3 +38,5 @@
 #define VOXEL_DIRECTION_MASK ((1 << VOXEL_DIRECTION_BITS) - 1)
 #define RAYCAST_STEP 0.1f
 #define RAYCAST_LENGTH 10.0f
+
+#endif

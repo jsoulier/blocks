@@ -493,7 +493,7 @@ static void render(
         return;
     }
     int32_t position[3] = { x, y, z };
-    SDL_PushGPUVertexUniformData(commands, 1, position, 12);
+    SDL_PushGPUVertexUniformData(commands, 2, position, 12);
     SDL_GPUBufferBinding vbb = {0};
     vbb.buffer = vbo;
     SDL_BindGPUVertexBuffers(pass, 0, &vbb, 1);
