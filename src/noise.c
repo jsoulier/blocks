@@ -1,14 +1,16 @@
+#include <stb_perlin.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 #include "block.h"
 #include "containers.h"
 #include "helpers.h"
 #include "noise.h"
 #include "world.h"
 
-static void (*generator)(
-    group_t* group,
-    const int32_t x,
-    const int32_t y);
+static noise_type_t type;
+static int seed;
 
 void set(
     group_t* group,
@@ -56,18 +58,68 @@ static void flat(
     }
 }
 
-void noise_init(const noise_t noise)
+static float base(
+    const int32_t x,
+    const int32_t z,
+    const int32_t a,
+    const int32_t b)
 {
-    switch (noise) {
-    case NOISE_CUBE:
-        generator = cube;
-        break;
-    case NOISE_FLAT:
-        generator = flat;
-        break;
-    default:
-        assert(0);
+    const int32_t c = x * CHUNK_X + a;
+    const int32_t d = z * CHUNK_Z + b;
+    const float f = 0.005f;
+    const float amplitude = 50.0f;
+    const float h = stb_perlin_noise3_seed(c * f, 0.0f, d * f, 0, 0, 0, seed);
+    return abs(h) * amplitude;
+}
+
+static void v1(
+    group_t* group,
+    const int32_t x,
+    const int32_t z)
+{
+    for (int a = 0; a < CHUNK_X; a++)
+    for (int b = 0; b < CHUNK_Z; b++) {
+        float height = base(x, z, a, b);
+        for (int h = 0; h <= height; h++) {
+            block_t block;
+            if (h < 10) {
+                block = BLOCK_SAND;
+            } else if (h > 60.0f) {
+                block = BLOCK_STONE;
+            } else if (h > 40.0f) {
+                block = BLOCK_DIRT;
+            } else {
+                block = BLOCK_GRASS;
+            }
+            set(group, a, h, b, block);
+        }
     }
+}
+
+void noise_init(
+    const noise_type_t t,
+    const int s)
+{
+    type = t;
+    if (!s) {
+        srand(time(NULL));
+        seed = rand() % 64;
+        if (!seed) {
+            seed = 1;
+        }
+    } else {
+        seed = s;
+    }
+}
+
+noise_type_t noise_type()
+{
+    return type;
+}
+
+int noise_seed()
+{
+    return seed;
 }
 
 void noise_generate(
@@ -76,6 +128,17 @@ void noise_generate(
     const int32_t z)
 {
     assert(group);
-    assert(generator);
-    generator(group, x, z);
+    switch (type) {
+    case NOISE_TYPE_CUBE:
+        cube(group, x, z);
+        break;
+    case NOISE_TYPE_FLAT:
+        flat(group, x, z);
+        break;
+    case NOISE_TYPE_V1:
+        v1(group, x, z);
+        break;
+    default:
+        assert(0);
+    }
 }

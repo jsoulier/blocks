@@ -359,7 +359,7 @@ static void on_load(
     assert(group);
     group_t* neighbors[DIRECTION_2];
     grid_neighbors2(&grid, x, z, neighbors);
-    int i = 0;
+    group->neighbors = 0;
     for (direction_t d = 0; d < DIRECTION_2; d++) {
         group_t* neighbor = neighbors[d];
         if (!neighbor) {
@@ -369,7 +369,7 @@ static void on_load(
         if (!neighbor->loaded) {
             continue;
         }
-        i++;
+        group->neighbors++;
         if (neighbor->neighbors < DIRECTION_2) {
             continue;
         }
@@ -377,7 +377,7 @@ static void on_load(
         const int32_t b = z + directions[d][2];
         mesh_all(neighbor, a, b);
     }
-    if (i >= DIRECTION_2) {
+    if (group->neighbors >= DIRECTION_2) {
         mesh_all(group, x, z);
     }
 }

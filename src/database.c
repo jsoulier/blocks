@@ -9,9 +9,11 @@
 #include "containers.h"
 #include "database.h"
 #include "helpers.h"
+#include "noise.h"
 
 typedef enum {
     JOB_TYPE_QUIT,
+    JOB_TYPE_NOISE,
     JOB_TYPE_PLAYER,
     JOB_TYPE_BLOCK,
     JOB_TYPE_COMMIT,
@@ -20,6 +22,10 @@ typedef enum {
 typedef struct {
     job_type_t type;
     union {
+        struct {
+            noise_type_t type;
+            int seed;
+        } noise;
         struct {
             int id;
             float x, y, z;
@@ -38,10 +44,22 @@ static thrd_t thrd;
 static mtx_t mtx;
 static cnd_t cnd;
 static sqlite3* handle;
+static sqlite3_stmt* set_noise_stmt;
+static sqlite3_stmt* get_noise_stmt;
 static sqlite3_stmt* set_player_stmt;
 static sqlite3_stmt* get_player_stmt;
 static sqlite3_stmt* set_block_stmt;
 static sqlite3_stmt* get_blocks_stmt;
+
+static void set_noise(const job_t* job)
+{
+    sqlite3_bind_int(set_noise_stmt, 1, job->noise.type);
+    sqlite3_bind_int(set_noise_stmt, 2, job->noise.seed);
+    if (sqlite3_step(set_noise_stmt) != SQLITE_DONE) {
+        SDL_Log("Failed to set noise: %s", sqlite3_errmsg(handle));
+    }
+    sqlite3_reset(set_noise_stmt);
+}
 
 static void set_player(const job_t* job)
 {
@@ -85,6 +103,9 @@ static int loop(void* args)
         case JOB_TYPE_QUIT:
             sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
             return 0;
+        case JOB_TYPE_NOISE:
+            set_noise(&job);
+            break;
         case JOB_TYPE_PLAYER:
             set_player(&job);
             break;
@@ -117,24 +138,35 @@ bool database_init(const char* file)
         SDL_Log("Failed to open %s database: %s", file, sqlite3_errmsg(handle));
         return false;
     }
+    const char* noise_table =
+        "CREATE TABLE IF NOT EXISTS noise ("
+        "    type INT NOT NULL, "
+        "    seed INT NOT NULL "
+        ");";
     const char* players_table =
         "CREATE TABLE IF NOT EXISTS players ("
-        "id INT PRIMARY KEY NOT NULL, "
-        "x REAL NOT NULL, "
-        "y REAL NOT NULL, "
-        "z REAL NOT NULL, "
-        "pitch REAL NOT NULL, "
-        "yaw REAL NOT NULL"
+        "    id INT PRIMARY KEY NOT NULL, "
+        "    x REAL NOT NULL, "
+        "    y REAL NOT NULL, "
+        "    z REAL NOT NULL, "
+        "    pitch REAL NOT NULL, "
+        "    yaw REAL NOT NULL"
         ");";
     const char* blocks_table =
         "CREATE TABLE IF NOT EXISTS blocks ("
-        "a INTEGER NOT NULL, "
-        "c INTEGER NOT NULL, "
-        "x INTEGER NOT NULL, "
-        "y INTEGER NOT NULL, "
-        "z INTEGER NOT NULL, "
-        "data INTEGER NOT NULL "
+        "    a INTEGER NOT NULL, "
+        "    c INTEGER NOT NULL, "
+        "    x INTEGER NOT NULL, "
+        "    y INTEGER NOT NULL, "
+        "    z INTEGER NOT NULL, "
+        "    data INTEGER NOT NULL "
         ");";
+    const char* set_noise =
+        "INSERT OR REPLACE INTO noise (type, seed) "
+        "VALUES (?, ?);";
+    const char* get_noise = 
+        "SELECT type, seed FROM noise "
+        "LIMIT 1;";
     const char* set_player =
         "INSERT OR REPLACE INTO players (id, x, y, z, pitch, yaw) "
         "VALUES (?, ?, ?, ?, ?, ?);";
@@ -153,12 +185,24 @@ bool database_init(const char* file)
     const char* blocks_index =
         "CREATE INDEX IF NOT EXISTS blocks_index "
         "ON blocks (a, c);";
+    if (sqlite3_exec(handle, noise_table, NULL, NULL, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to create noise table: %s", sqlite3_errmsg(handle));
+        return false;
+    }
     if (sqlite3_exec(handle, players_table, NULL, NULL, NULL) != SQLITE_OK) {
         SDL_Log("Failed to create players table: %s", sqlite3_errmsg(handle));
         return false;
     }
     if (sqlite3_exec(handle, blocks_table, NULL, NULL, NULL) != SQLITE_OK) {
         SDL_Log("Failed to create blocks table: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_prepare_v2(handle, set_noise, -1, &set_noise_stmt, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to prepare set noise statement: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_prepare_v2(handle, get_noise, -1, &get_noise_stmt, NULL) != SQLITE_OK) {
+        SDL_Log("Failed to prepare get noise statement: %s", sqlite3_errmsg(handle));
         return false;
     }
     if (sqlite3_prepare_v2(handle, set_player, -1, &set_player_stmt, NULL) != SQLITE_OK) {
@@ -222,6 +266,34 @@ void database_commit()
     job_t job;
     job.type = JOB_TYPE_COMMIT;
     dispatch(&job);
+}
+
+void database_set_noise(
+    const noise_type_t type,
+    const int seed)
+{
+    job_t job;
+    job.type = JOB_TYPE_NOISE;
+    job.noise.type = type;
+    job.noise.seed = seed;
+    dispatch(&job);
+}
+
+void database_get_noise(
+    noise_type_t* type,
+    int* seed)
+{
+    assert(type);
+    assert(seed);
+    mtx_lock(&mtx);
+    *type = NOISE_TYPE_LATEST;
+    *seed = 0;
+    if (sqlite3_step(get_noise_stmt) == SQLITE_ROW) {
+        *type = sqlite3_column_int(get_noise_stmt, 0);
+        *seed = sqlite3_column_int(get_noise_stmt, 1);
+    }
+    sqlite3_reset(get_noise_stmt);
+    mtx_unlock(&mtx);
 }
 
 void database_set_player(

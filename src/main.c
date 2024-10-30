@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <stb_image.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -14,20 +15,20 @@ static SDL_Window* window;
 static SDL_GPUDevice* device;
 static SDL_GPUTexture* color_texture;
 static SDL_GPUTexture* depth_texture;
-static SDL_GPUGraphicsPipeline* hit_pipeline;
+static SDL_GPUGraphicsPipeline* raycast_pipeline;
 static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* ui_pipeline;
 static SDL_GPUGraphicsPipeline* world_pipeline;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUSampler* atlas_sampler;
 static SDL_Surface* atlas_surface;
+static void* atlas_data;
 static SDL_GPUBuffer* quad_vbo;
 static SDL_GPUBuffer* cube_vbo;
 static uint32_t width;
 static uint32_t height;
 static camera_t camera;
 static block_t hand = BLOCK_GRASS;
-static bool collision = true;
 
 static SDL_GPUShader* load_shader(
     SDL_GPUDevice* device,
@@ -62,30 +63,19 @@ static SDL_GPUShader* load_shader(
     return shader;
 }
 
-static SDL_Surface* load_bmp(const char* file)
-{
-    SDL_Surface* argb32 = SDL_LoadBMP(file);
-    if (!argb32) {
-        SDL_Log("Failed to load %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_Surface* rgba32 = SDL_ConvertSurface(argb32, SDL_PIXELFORMAT_RGBA32);
-    if (!rgba32) {
-        SDL_Log("Failed to convert %s: %s", file, SDL_GetError());
-        return NULL;
-    }
-    SDL_DestroySurface(argb32);
-    return rgba32;
-}
-
 static void load_atlas()
 {
-    atlas_surface = load_bmp("atlas.bmp");
-    if (!atlas_surface) {
+    int w, h, channels;
+    atlas_data = stbi_load("atlas.png", &w, &h, &channels, 4);
+    if (!atlas_data || channels != 4) {
+        SDL_Log("Failed to create atlas image: %s", stbi_failure_reason());
         return;
     }
-    const int w = atlas_surface->w;
-    const int h = atlas_surface->h;
+    atlas_surface = SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_RGBA32, atlas_data, w * 4);
+    if (!atlas_surface) {
+        SDL_Log("Failed to create atlas surface: %s", SDL_GetError());
+        return;
+    }
     SDL_GPUTextureCreateInfo tci = {0};
     tci.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
     tci.type = SDL_GPU_TEXTURETYPE_2D;
@@ -179,30 +169,11 @@ SDL_Surface* get_atlas_icon(const block_t block)
     return icon;
 }
 
-static bool raycast(
-    float* x,
-    float* y,
-    float* z,
-    const bool previous)
-{
-    float a, b, c;
-    camera_get_vector(&camera, &a, &b, &c);
-    float s, t, p;
-    camera_get_position(&camera, &s, &t, &p);
-    if (physics_raycast(&s, &t, &p, a, b, c, 10.0f, previous)) {
-        *x = s;
-        *y = t;
-        *z = p;
-        return true;
-    }
-    return false;
-}
-
-static void load_hit_pipeline()
+static void load_raycast_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
-        .vertex_shader = load_shader(device, "hit.vert", 2, 0),
-        .fragment_shader = load_shader(device, "hit.frag", 0, 0),
+        .vertex_shader = load_shader(device, "raycast.vert", 2, 0),
+        .fragment_shader = load_shader(device, "raycast.frag", 0, 0),
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
@@ -237,9 +208,9 @@ static void load_hit_pipeline()
             .compare_op = SDL_GPU_COMPAREOP_LESS,
         },
     };
-    hit_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
-    if (!hit_pipeline) {
-        SDL_Log("Failed to create hit pipeline: %s", SDL_GetError());
+    raycast_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!raycast_pipeline) {
+        SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -359,10 +330,13 @@ static void load_world_pipeline()
     SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
-static void draw_hit(SDL_GPUCommandBuffer* commands)
+static void draw_raycast(SDL_GPUCommandBuffer* commands)
 {
     float x, y, z;
-    if (!raycast(&x, &y, &z, true)) {
+    float a, b, c;
+    camera_get_position(&camera, &x, &y, &z);
+    camera_get_vector(&camera, &a, &b, &c);
+    if (!physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, true)) {
         return;
     }
     SDL_GPUColorTargetInfo cti = {0};
@@ -379,12 +353,12 @@ static void draw_hit(SDL_GPUCommandBuffer* commands)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    int32_t hit[3] = { x, y, z };
+    int32_t raycast[3] = { x, y, z };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = cube_vbo;
-    SDL_BindGPUGraphicsPipeline(pass, hit_pipeline);
+    SDL_BindGPUGraphicsPipeline(pass, raycast_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(commands, 1, hit, sizeof(hit));
+    SDL_PushGPUVertexUniformData(commands, 1, raycast, sizeof(raycast));
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
     SDL_EndGPURenderPass(pass);
@@ -503,7 +477,7 @@ static void draw()
     draw_sky(commands);
     draw_world(commands);
     draw_ui(commands);
-    draw_hit(commands);
+    draw_raycast(commands);
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
@@ -656,8 +630,6 @@ static bool poll()
                     SDL_SetWindowFullscreen(window, true);
                     SDL_SetWindowRelativeMouseMode(window, true);
                 }
-            } else if (event.key.scancode == SDL_SCANCODE_P) {
-                collision = !collision;
             }
             break;
         }
@@ -670,27 +642,19 @@ static void move()
     float dx = 0.0f;
     float dy = 0.0f;
     float dz = 0.0f;
-    float speed = 0.05f;
+    float speed = 0.2f;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D]) dx++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A]) dx--;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_E]) dy++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Q]) dy--;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W]) dz++;
     if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S]) dz--;
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LCTRL]) speed = 3.0f;
+    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LCTRL]) speed = 1.0f;
+    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Z]) speed = 100.0f;
     dx *= speed;
     dy *= speed;
     dz *= speed;
-
-    float x1, y1, z1;
-    camera_get_position(&camera, &x1, &y1, &z1);
     camera_move(&camera, dx, dy, dz);
-    if (collision) {
-        float x2, y2, z2;
-        camera_get_position(&camera, &x2, &y2, &z2);
-        physics_collide(&x1, &y1, &z1, x2, y2, z2);
-        camera_set_position(&camera, x1, y1, z1);
-    }
 }
 
 int main(int argc, char** argv)
@@ -719,13 +683,21 @@ int main(int argc, char** argv)
         return false;
     }
     load_atlas();
-    load_hit_pipeline();
+    load_raycast_pipeline();
     load_sky_pipeline();
     load_ui_pipeline();
     load_world_pipeline();
     create_vbos();
-    noise_init(NOISE_CUBE);
     database_init("blocks.sqlite3");
+
+    {
+        noise_type_t type;
+        int seed;
+        database_get_noise(&type, &seed);
+        noise_init(type, seed);
+        database_set_noise(noise_type(), noise_seed());
+    }
+
     if (!world_init(device)) {
         return EXIT_FAILURE;
     }
@@ -770,9 +742,10 @@ int main(int argc, char** argv)
     world_free();
     database_free();
     SDL_DestroySurface(atlas_surface);
+    stbi_image_free(atlas_data);
     SDL_ReleaseGPUTexture(device, atlas_texture);
     SDL_ReleaseGPUSampler(device, atlas_sampler);
-    SDL_ReleaseGPUGraphicsPipeline(device, hit_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, world_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
