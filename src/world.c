@@ -376,7 +376,7 @@ static void on_load(
     assert(group);
     group_t* neighbors[DIRECTION_2];
     grid_neighbors2(&grid, x, z, neighbors);
-    group->neighbors = 0;
+    int i = 0;
     for (direction_t d = 0; d < DIRECTION_2; d++) {
         group_t* neighbor = neighbors[d];
         if (!neighbor) {
@@ -386,7 +386,7 @@ static void on_load(
         if (!neighbor->loaded) {
             continue;
         }
-        group->neighbors++;
+        i++;
         if (neighbor->neighbors < DIRECTION_2) {
             continue;
         }
@@ -394,7 +394,9 @@ static void on_load(
         const int32_t b = z + directions[d][2];
         mesh_all(neighbor, a, b);
     }
-    if (group->neighbors >= DIRECTION_2) {
+    if (i >= DIRECTION_2) {
+        // NOTE: intentional
+        group->neighbors = i;
         mesh_all(group, x, z);
     }
 }
@@ -487,9 +489,9 @@ static void render(
     x *= CHUNK_X;
     y *= CHUNK_Y;
     z *= CHUNK_Z;
-    // if (!camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z)) {
-    //     return;
-    // }
+    if (!camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z)) {
+        return;
+    }
     int32_t position[3] = { x, y, z };
     SDL_PushGPUVertexUniformData(commands, 1, position, 12);
     SDL_GPUBufferBinding vbb = {0};
@@ -527,7 +529,7 @@ void world_render_transparent(
     SDL_GPUBufferBinding ibb = {0};
     ibb.buffer = ibo;
     SDL_BindGPUIndexBuffer(pass, &ibb, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-    for (int i = WORLD_CHUNKS - 1; i > 0; --i) {
+    for (int i = 0; i < WORLD_CHUNKS; i++) {
         render(camera, commands, pass, i, false);
     }
 }

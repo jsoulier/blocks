@@ -64,21 +64,17 @@ static void v1(
 {
     for (int a = 0; a < CHUNK_X; a++)
     for (int b = 0; b < CHUNK_Z; b++) {
-        float height = base(x, z, a, b);
+        float height = base(x, z, a, b) + 10;
         for (int h = 0; h <= height; h++) {
             block_t block;
             if (h < 10) {
                 block = BLOCK_SAND;
-            } else if (h > 60.0f) {
-                block = BLOCK_STONE;
-            } else if (h > 40.0f) {
-                block = BLOCK_DIRT;
             } else {
                 block = BLOCK_GRASS;
             }
             group_set_block(group, a, h, b, block);
         }
-        const int sea = 10;
+        const int sea = 15;
         for (int h = height; h < sea; h++) {
             group_set_block(group, a, h, b, BLOCK_WATER);
         }

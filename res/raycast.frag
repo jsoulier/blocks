@@ -7,5 +7,6 @@ layout(location = 0) out vec4 color;
 
 void main()
 {
-    color = vec4(position, ALPHA);
+    const float value = (position.x + position.y + position.z) / 3.0f;
+    color = vec4(value, value, value, ALPHA);
 }

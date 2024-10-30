@@ -18,7 +18,8 @@ static SDL_GPUTexture* depth_texture;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
 static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* ui_pipeline;
-static SDL_GPUGraphicsPipeline* world_pipeline;
+static SDL_GPUGraphicsPipeline* opaque_pipeline;
+static SDL_GPUGraphicsPipeline* transparent_pipeline;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUSampler* atlas_sampler;
 static SDL_Surface* atlas_surface;
@@ -256,15 +257,6 @@ static void load_ui_pipeline()
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
                 .format = SDL_GetGPUSwapchainTextureFormat(device, window),
-                .blend_state = {
-                    .enable_blend = 1,
-                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
-                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
-                },
             }},
         },
         .vertex_input_state = {
@@ -287,7 +279,7 @@ static void load_ui_pipeline()
     SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
-static void load_world_pipeline()
+static void load_opaque_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
         .vertex_shader = load_shader(device, "world.vert", 2, 0),
@@ -296,15 +288,6 @@ static void load_world_pipeline()
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
                 .format = SDL_GetGPUSwapchainTextureFormat(device, window),
-                .blend_state = {
-                    .enable_blend = 1,
-                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
-                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
-                },
             }},
             .has_depth_stencil_target = 1,
             .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
@@ -331,8 +314,60 @@ static void load_world_pipeline()
             .fill_mode = SDL_GPU_FILLMODE_FILL,
         },
     };
-    world_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
-    if (!world_pipeline) {
+    opaque_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!opaque_pipeline) {
+        SDL_Log("Failed to create world pipeline: %s", SDL_GetError());
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+}
+
+static void load_transparent_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info = {
+        .vertex_shader = load_shader(device, "world.vert", 2, 0),
+        .fragment_shader = load_shader(device, "world.frag", 0, 1),
+        .target_info = {
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
+                .format = SDL_GetGPUSwapchainTextureFormat(device, window),
+                .blend_state = {
+                    .enable_blend = 1,
+                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
+                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
+                },
+            }},
+            .has_depth_stencil_target = 1,
+            .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+        },
+        .vertex_input_state = {
+            .num_vertex_attributes = 1,
+            .vertex_attributes = (SDL_GPUVertexAttribute[]) {{
+                .format = SDL_GPU_VERTEXELEMENTFORMAT_UINT,
+            }},
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[]) {{
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                .pitch = 4,
+            }},
+        },
+        .depth_stencil_state = {
+            .enable_depth_test = 1,
+            .enable_depth_write = 0,
+            .compare_op = SDL_GPU_COMPAREOP_LESS,
+        },
+        .rasterizer_state = {
+            .cull_mode = SDL_GPU_CULLMODE_BACK,
+            .front_face = SDL_GPU_FRONTFACE_CLOCKWISE,
+            .fill_mode = SDL_GPU_FILLMODE_FILL,
+        },
+    };
+    transparent_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!transparent_pipeline) {
         SDL_Log("Failed to create world pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
@@ -376,8 +411,7 @@ static void draw_raycast(SDL_GPUCommandBuffer* commands)
 static void draw_sky(SDL_GPUCommandBuffer* commands)
 {
     SDL_GPUColorTargetInfo cti = {0};
-    cti.clear_color = (SDL_FColor) { 1.0f, 0.0f, 1.0f, 1.0f };
-    cti.load_op = SDL_GPU_LOADOP_CLEAR;
+    cti.load_op = SDL_GPU_LOADOP_DONT_CARE;
     cti.store_op = SDL_GPU_STOREOP_STORE;
     cti.texture = color_texture;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
@@ -422,7 +456,7 @@ static void draw_ui(SDL_GPUCommandBuffer* commands)
     SDL_EndGPURenderPass(pass);
 }
 
-static void draw_world(SDL_GPUCommandBuffer* commands)
+static void draw_opaque(SDL_GPUCommandBuffer* commands)
 {
     SDL_GPUColorTargetInfo cti = {0};
     cti.load_op = SDL_GPU_LOADOP_LOAD;
@@ -441,10 +475,34 @@ static void draw_world(SDL_GPUCommandBuffer* commands)
     SDL_GPUTextureSamplerBinding tsb = {0};
     tsb.sampler = atlas_sampler;
     tsb.texture = atlas_texture;
-    SDL_BindGPUGraphicsPipeline(pass, world_pipeline);
+    SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     world_render_opaque(&camera, commands, pass);
+    SDL_EndGPURenderPass(pass);
+}
+
+static void draw_transparent(SDL_GPUCommandBuffer* commands)
+{
+    SDL_GPUColorTargetInfo cti = {0};
+    cti.load_op = SDL_GPU_LOADOP_LOAD;
+    cti.store_op = SDL_GPU_STOREOP_STORE;
+    cti.texture = color_texture;
+    SDL_GPUDepthStencilTargetInfo dsti = {0};
+    dsti.load_op = SDL_GPU_LOADOP_LOAD;
+    dsti.texture = depth_texture;
+    dsti.store_op = SDL_GPU_STOREOP_STORE;
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, &dsti);
+    if (!pass) {
+        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTextureSamplerBinding tsb = {0};
+    tsb.sampler = atlas_sampler;
+    tsb.texture = atlas_texture;
+    SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
+    SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
+    SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     world_render_transparent(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);
 }
@@ -485,9 +543,10 @@ static void draw()
     }
     camera_update(&camera);
     draw_sky(commands);
-    draw_world(commands);
-    draw_ui(commands);
+    draw_opaque(commands);
+    draw_transparent(commands);
     draw_raycast(commands);
+    draw_ui(commands);
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
@@ -617,7 +676,7 @@ static bool poll()
                     float a, b, c;
                     camera_get_position(&camera, &x, &y, &z);
                     camera_get_vector(&camera, &a, &b, &c);
-                    if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, previous)) {
+                    if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, previous) && y >= 1.0f) {
                         world_set_block(x, y, z, block);
                     }
                 }
@@ -696,7 +755,8 @@ int main(int argc, char** argv)
     load_raycast_pipeline();
     load_sky_pipeline();
     load_ui_pipeline();
-    load_world_pipeline();
+    load_opaque_pipeline();
+    load_transparent_pipeline();
     create_vbos();
     database_init("blocks.sqlite3");
 
@@ -756,7 +816,8 @@ int main(int argc, char** argv)
     SDL_ReleaseGPUTexture(device, atlas_texture);
     SDL_ReleaseGPUSampler(device, atlas_sampler);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
-    SDL_ReleaseGPUGraphicsPipeline(device, world_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, opaque_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, transparent_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
     SDL_ReleaseGPUTexture(device, depth_texture);
