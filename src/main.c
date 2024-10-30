@@ -445,6 +445,7 @@ static void draw_world(SDL_GPUCommandBuffer* commands)
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     world_render_opaque(&camera, commands, pass);
+    world_render_transparent(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);
 }
 

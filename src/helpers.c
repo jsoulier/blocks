@@ -19,7 +19,6 @@ const int directions[][3] =
 static thread_local int cx;
 static thread_local int cy;
 static thread_local int cz;
-static thread_local bool is_ascending;
 static thread_local bool is_2d;
 
 static int dot(
@@ -47,9 +46,9 @@ static int compare(const void* a, const void* b)
         d = dot(r[0], r[1], r[2]);
     }
     if (c < d) {
-        return is_ascending ? -1 : 1;
+        return -1;
     } else if (c > d) {
-        return is_ascending ? 1 : -1;
+        return 1;
     } else {
         return 0;
     }
@@ -59,15 +58,13 @@ void sort_2d(
     const int x,
     const int z,
     void* data,
-    const int size,
-    const bool ascending)
+    const int size)
 {
     assert(data);
     assert(size);
     cx = x;
     cy = 0;
     cz = z;
-    is_ascending = ascending;
     is_2d = true;
     qsort(data, size, 8, compare);
 }
@@ -77,15 +74,13 @@ void sort_3d(
     const int y,
     const int z,
     void* data,
-    const int size,
-    const bool ascending)
+    const int size)
 {
     assert(data);
     assert(size);
     cx = x;
     cy = y;
     cz = z;
-    is_ascending = ascending;
     is_2d = false;
     qsort(data, size, 12, compare);
 }

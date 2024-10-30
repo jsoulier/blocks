@@ -7,6 +7,7 @@ Features:
   - OIT?
 
 Bug Fixes:
+- Transparent chunks disappear when you get close?
 - UV sampling sometimes bleeding into neighboring blocks
   - Precision issue?
   - Driver bug?

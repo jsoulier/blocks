@@ -43,15 +43,13 @@ void sort_2d(
     const int x,
     const int z,
     void* data,
-    const int size,
-    const bool ascending);
+    const int size);
 void sort_3d(
     const int x,
     const int y,
     const int z,
     void* data,
-    const int size,
-    const bool ascending);
+    const int size);
 
 typedef struct {
     int a;
