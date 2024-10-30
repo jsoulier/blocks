@@ -31,8 +31,10 @@ typedef struct {
     mtx_t mtx;
     cnd_t cnd;
     const job_t* job;
-    SDL_GPUTransferBuffer* tbo;
-    uint32_t size;
+    struct {
+        SDL_GPUTransferBuffer* tbo;
+        uint32_t size;
+    } opaque, transparent;
 } worker_t;
 
 static SDL_GPUDevice* device;
@@ -93,8 +95,15 @@ static int loop(void* args)
             assert(!chunk->empty);
             chunk_t* neighbors[DIRECTION_3];
             get_neighbors(x, y, z, neighbors);
-            if (voxmesh_vbo(chunk, neighbors, y, device,
-                &worker->tbo, &worker->size)) {
+            if (voxmesh_vbo(
+                chunk,
+                neighbors,
+                y,
+                device,
+                &worker->opaque.tbo,
+                &worker->transparent.tbo,
+                &worker->opaque.size,
+                &worker->transparent.size)) {
                 chunk->renderable = 1;
             }
             break;
@@ -239,7 +248,7 @@ bool world_init(SDL_GPUDevice* handle)
         }
         const int w = WORLD_X / 2;
         const int h = WORLD_Z / 2;
-        sort_3d(w, i, h, sorted[i], WORLD_CHUNKS, true);
+        sort_3d(w, i, h, sorted[i], WORLD_CHUNKS, false);
     }
     grid_init(&grid);
     for (int x = 0; x < WORLD_X; x++) {
@@ -286,9 +295,13 @@ void world_free()
         thrd_join(worker->thrd, NULL);
         mtx_destroy(&worker->mtx);
         cnd_destroy(&worker->cnd);
-        if (worker->tbo) {
-            SDL_ReleaseGPUTransferBuffer(device, worker->tbo);
-            worker->tbo = NULL;
+        if (worker->opaque.tbo) {
+            SDL_ReleaseGPUTransferBuffer(device, worker->opaque.tbo);
+            worker->opaque.tbo = NULL;
+        }
+        if (worker->transparent.tbo) {
+            SDL_ReleaseGPUTransferBuffer(device, worker->transparent.tbo);
+            worker->transparent.tbo = NULL;
         }
     }
     ring_free(&jobs);
@@ -297,9 +310,13 @@ void world_free()
             group_t* group = grid_get(&grid, x, z);
             for (int i = 0; i < GROUP_CHUNKS; i++) {
                 chunk_t* chunk = &group->chunks[i];
-                if (chunk->vbo) {
-                    SDL_ReleaseGPUBuffer(device, chunk->vbo);
-                    chunk->vbo = NULL;
+                if (chunk->opaque.vbo) {
+                    SDL_ReleaseGPUBuffer(device, chunk->opaque.vbo);
+                    chunk->opaque.vbo = NULL;
+                }
+                if (chunk->transparent.vbo) {
+                    SDL_ReleaseGPUBuffer(device, chunk->transparent.vbo);
+                    chunk->transparent.vbo = NULL;
                 }
             }
         }
@@ -413,7 +430,8 @@ void world_update(
             on_load(group, job->x, job->z);
             break;
         case JOB_TYPE_MESH:
-            size = max(size, group->chunks[job->y].size);
+            size = max3(size, group->chunks[job->y].opaque.size,
+                group->chunks[job->y].transparent.size);
             break;
         default:
             assert(0);
@@ -432,7 +450,7 @@ void world_update(
     }
 }
 
-void world_render(
+void world_render_opaque(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
     SDL_GPURenderPass* pass)
@@ -467,10 +485,10 @@ void world_render(
         int32_t position[3] = { x, y, z };
         SDL_PushGPUVertexUniformData(commands, 1, position, 12);
         SDL_GPUBufferBinding vbb = {0};
-        vbb.buffer = chunk->vbo;
+        vbb.buffer = chunk->opaque.vbo;
         SDL_BindGPUVertexBuffers(pass, 0, &vbb, 1);
-        assert(chunk->size <= capacity);
-        SDL_DrawGPUIndexedPrimitives(pass, chunk->size * 6, 1, 0, 0, 0);
+        assert(chunk->opaque.size <= capacity);
+        SDL_DrawGPUIndexedPrimitives(pass, chunk->opaque.size * 6, 1, 0, 0, 0);
     }
 }
 

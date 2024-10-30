@@ -66,15 +66,22 @@ static uint32_t pack(
     return voxel;
 }
 
-static uint32_t fill(
+static void fill(
     const chunk_t* chunk,
     const chunk_t* neighbors[DIRECTION_3],
     const int height,
-    uint32_t* data,
-    const uint32_t capacity)
+    uint32_t* opaque_data,
+    uint32_t* transparent_data,
+    uint32_t* opaque_size,
+    uint32_t* transparent_size,
+    const uint32_t opaque_capacity,
+    const uint32_t transparent_capacity)
 {
     assert(chunk);
-    uint32_t size = 0;
+    assert(opaque_size);
+    assert(transparent_size);
+    *opaque_size = 0;
+    *transparent_size = 0;
     for (int x = 0; x < CHUNK_X; x++)
     for (int y = 0; y < CHUNK_Y; y++)
     for (int z = 0; z < CHUNK_Z; z++) {
@@ -100,16 +107,26 @@ static uint32_t fill(
             } else {
                 b = BLOCK_EMPTY;
             }
-            if ((b != BLOCK_EMPTY && ( block_opaque(a) ||
-                !block_opaque(b))) || ++size > capacity) {
+            if (b != BLOCK_EMPTY && !(block_opaque(a) && !block_opaque(b))) {
                 continue;
             }
-            for (int i = 0; i < 4; i++) {
-                data[(size * 4) - 4 + i] = pack(a, x, y, z, d, i);    
+            if (block_opaque(a)) {
+                if (++(*opaque_size) > opaque_capacity) {
+                    continue;
+                }
+                for (int i = 0; i < 4; i++) {
+                    opaque_data[*opaque_size * 4 - 4 + i] = pack(a, x, y, z, d, i);    
+                }
+            } else {
+                if (++(*transparent_size) > transparent_capacity) {
+                    continue;
+                }
+                for (int i = 0; i < 4; i++) {
+                    transparent_data[*transparent_size * 4 - 4 + i] = pack(a, x, y, z, d, i);    
+                }
             }
         }
     }
-    return size;
 }
 
 bool voxmesh_vbo(
@@ -117,64 +134,131 @@ bool voxmesh_vbo(
     chunk_t* neighbors[DIRECTION_3],
     const int height,
     SDL_GPUDevice* device,
-    SDL_GPUTransferBuffer** tbo,
-    uint32_t* capacity)
+    SDL_GPUTransferBuffer** opaque_tbo,
+    SDL_GPUTransferBuffer** transparent_tbo,
+    uint32_t* opaque_capacity,
+    uint32_t* transparent_capacity)
 {
     assert(chunk);
     assert(device);
-    assert(tbo);
-    assert(capacity);
-    void* data = *tbo;
-    if (data) {
-        data = SDL_MapGPUTransferBuffer(device, *tbo, true);
-        if (!data) {
+    assert(opaque_tbo);
+    assert(transparent_tbo);
+    assert(opaque_capacity);
+    assert(transparent_capacity);
+    void* opaque_data = *opaque_tbo;
+    void* transparent_data = *transparent_tbo;
+    if (opaque_data) {
+        opaque_data = SDL_MapGPUTransferBuffer(device, *opaque_tbo, true);
+        if (!opaque_data) {
             SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
             return false;
         }
     }
-    chunk->size = fill(chunk, neighbors, height, data, *capacity);
-    if (data) {
-        SDL_UnmapGPUTransferBuffer(device, *tbo);
+    if (transparent_data) {
+        transparent_data = SDL_MapGPUTransferBuffer(device, *transparent_tbo, true);
+        if (!transparent_data) {
+            SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
+            return false;
+        }
     }
-    if (!chunk->size) {
+    fill(
+        chunk,
+        neighbors,
+        height,
+        opaque_data,
+        transparent_data,
+        &chunk->opaque.size,
+        &chunk->transparent.size,
+        *opaque_capacity,
+        *transparent_capacity);
+    if (opaque_data) {
+        SDL_UnmapGPUTransferBuffer(device, *opaque_tbo);
+    }
+    if (transparent_data) {
+        SDL_UnmapGPUTransferBuffer(device, *transparent_tbo);
+    }
+    if (!chunk->opaque.size && !chunk->transparent.size) {
         return false;
     }
-    if (chunk->size > *capacity) {
-        if (*tbo) {
-            SDL_ReleaseGPUTransferBuffer(device, *tbo);
-            *capacity = 0;
+    if (chunk->opaque.size > *opaque_capacity || chunk->transparent.size > *transparent_capacity) {
+        if (chunk->opaque.size > *opaque_capacity) {
+            if (*opaque_tbo) {
+                SDL_ReleaseGPUTransferBuffer(device, *opaque_tbo);
+                *opaque_capacity = 0;
+            }
+            SDL_GPUTransferBufferCreateInfo tbci = {0};
+            tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+            tbci.size = chunk->opaque.size * 16;
+            *opaque_tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
+            if (!*opaque_tbo) {
+                SDL_Log("Failed to create tbo buffer: %s", SDL_GetError());
+                return false;
+            }
+            *opaque_capacity = chunk->opaque.size;
         }
-        SDL_GPUTransferBufferCreateInfo tbci = {0};
-        tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-        tbci.size = chunk->size * 16;
-        *tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
-        if (!*tbo) {
-            SDL_Log("Failed to create tbo buffer: %s", SDL_GetError());
-            return false;
+        if (chunk->transparent.size > *transparent_capacity) {
+            if (*transparent_tbo) {
+                SDL_ReleaseGPUTransferBuffer(device, *transparent_tbo);
+                *transparent_capacity = 0;
+            }
+            SDL_GPUTransferBufferCreateInfo tbci = {0};
+            tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+            tbci.size = chunk->transparent.size * 16;
+            *transparent_tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
+            if (!*transparent_tbo) {
+                SDL_Log("Failed to create tbo buffer: %s", SDL_GetError());
+                return false;
+            }
+            *transparent_capacity = chunk->transparent.size;
         }
-        *capacity = chunk->size;
-        data = SDL_MapGPUTransferBuffer(device, *tbo, false);
-        if (!data) {
+        opaque_data = SDL_MapGPUTransferBuffer(device, *opaque_tbo, false);
+        transparent_data = SDL_MapGPUTransferBuffer(device, *transparent_tbo, false);
+        if (!opaque_data || !transparent_data) {
             SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
             return false;
         }
-        chunk->size = fill(chunk, neighbors, height, data, *capacity);
-        SDL_UnmapGPUTransferBuffer(device, *tbo);
+        fill(
+            chunk,
+            neighbors,
+            height,
+            opaque_data,
+            transparent_data,
+            &chunk->opaque.size,
+            &chunk->transparent.size,
+            *opaque_capacity,
+            *transparent_capacity);
+        SDL_UnmapGPUTransferBuffer(device, *opaque_tbo);
+        SDL_UnmapGPUTransferBuffer(device, *transparent_tbo);
     }
-    if (chunk->size > chunk->capacity) {
-        if (chunk->vbo) {
-            SDL_ReleaseGPUBuffer(device, chunk->vbo);
-            chunk->capacity = 0;
+    if (chunk->opaque.size > chunk->opaque.capacity) {
+        if (chunk->opaque.vbo) {
+            SDL_ReleaseGPUBuffer(device, chunk->opaque.vbo);
+            chunk->opaque.capacity = 0;
         }
         SDL_GPUBufferCreateInfo bci = {0};
         bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-        bci.size = chunk->size * 16;
-        chunk->vbo = SDL_CreateGPUBuffer(device, &bci);
-        if (!chunk->vbo) {
+        bci.size = chunk->opaque.size * 16;
+        chunk->opaque.vbo = SDL_CreateGPUBuffer(device, &bci);
+        if (!chunk->opaque.vbo) {
             SDL_Log("Failed to create vertex buffer: %s", SDL_GetError());
             return false;
         }
-        chunk->capacity = chunk->size;
+        chunk->opaque.capacity = chunk->opaque.size;
+    }
+    if (chunk->transparent.size > chunk->transparent.capacity) {
+        if (chunk->transparent.vbo) {
+            SDL_ReleaseGPUBuffer(device, chunk->transparent.vbo);
+            chunk->transparent.capacity = 0;
+        }
+        SDL_GPUBufferCreateInfo bci = {0};
+        bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+        bci.size = chunk->transparent.size * 16;
+        chunk->transparent.vbo = SDL_CreateGPUBuffer(device, &bci);
+        if (!chunk->transparent.vbo) {
+            SDL_Log("Failed to create vertex buffer: %s", SDL_GetError());
+            return false;
+        }
+        chunk->transparent.capacity = chunk->transparent.size;
     }
     SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
     if (!commands) {
@@ -187,11 +271,19 @@ bool voxmesh_vbo(
         return false;
     }
     SDL_GPUTransferBufferLocation location = {0};
-    location.transfer_buffer = *tbo;
     SDL_GPUBufferRegion region = {0};
-    region.size = chunk->size * 16;
-    region.buffer = chunk->vbo;
-    SDL_UploadToGPUBuffer(pass, &location, &region, 1);
+    if (chunk->opaque.size) {
+        location.transfer_buffer = *opaque_tbo;
+        region.size = chunk->opaque.size * 16;
+        region.buffer = chunk->opaque.vbo;
+        SDL_UploadToGPUBuffer(pass, &location, &region, 1);
+    }
+    if (chunk->transparent.size) {
+        location.transfer_buffer = *transparent_tbo;
+        region.size = chunk->transparent.size * 16;
+        region.buffer = chunk->transparent.vbo;
+        SDL_UploadToGPUBuffer(pass, &location, &region, 1);
+    }
     SDL_EndGPUCopyPass(pass);
     SDL_SubmitGPUCommandBuffer(commands);
     return true;

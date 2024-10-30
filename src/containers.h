@@ -25,9 +25,11 @@ bool ring_remove(ring_t* ring, void* item);
 typedef struct {
     tag_t tag;
     block_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
-    SDL_GPUBuffer* vbo;
-    uint32_t size;
-    uint32_t capacity;
+    struct {
+        SDL_GPUBuffer* vbo;
+        uint32_t size;
+        uint32_t capacity;
+    } opaque, transparent;
     bool renderable;
     bool empty;
 } chunk_t;

@@ -295,7 +295,16 @@ static void load_world_pipeline()
         .target_info = {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[]) {{
-                .format = SDL_GetGPUSwapchainTextureFormat(device, window)
+                .format = SDL_GetGPUSwapchainTextureFormat(device, window),
+                .blend_state = {
+                    .enable_blend = 1,
+                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
+                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
+                },
             }},
             .has_depth_stencil_target = 1,
             .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
@@ -435,7 +444,7 @@ static void draw_world(SDL_GPUCommandBuffer* commands)
     SDL_BindGPUGraphicsPipeline(pass, world_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
-    world_render(&camera, commands, pass);
+    world_render_opaque(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);
 }
 
