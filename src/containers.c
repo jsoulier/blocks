@@ -1,82 +1,90 @@
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "containers.h"
 #include "helpers.h"
 
-void ring_init(
-    ring_t* ring,
+void queue_init(
+    queue_t* queue,
     const int size,
     const int stride)
 {
-    assert(ring);
+    assert(queue);
     assert(size);
     assert(stride);
-    ring->size = size + 1;
-    ring->stride = stride;
-    ring->head = 0;
-    ring->tail = 0;
-    ring->data = malloc(stride * ring->size);
-    assert(ring->data);
+    queue->size = size + 1;
+    queue->stride = stride;
+    queue->head = 0;
+    queue->tail = 0;
+    queue->data = malloc(stride * queue->size);
+    assert(queue->data);
 }
 
-void ring_free(ring_t* ring)
+void queue_free(queue_t* queue)
 {
-    assert(ring);
-    free(ring->data);
-    ring->data = NULL;
+    assert(queue);
+    free(queue->data);
+    queue->data = NULL;
 }
 
-bool ring_add(
-    ring_t* ring,
+bool queue_add(
+    queue_t* queue,
     const void* item,
     const bool priority)
 {
-    assert(ring);
-    assert(ring->data);
+    assert(queue);
+    assert(queue->data);
     assert(item);
-    if ((ring->tail + 1) % ring->size == ring->head) {
+    if ((queue->tail + 1) % queue->size == queue->head)
+    {
         return false;
     }
-    if (priority) {
-        ring->head = (ring->head - 1 + ring->size) % ring->size;
-        memcpy(ring->data + ring->head * ring->stride, item, ring->stride);
-    } else {
-        memcpy(ring->data + ring->tail * ring->stride, item, ring->stride);
-        ring->tail = (ring->tail + 1) % ring->size;
+    if (priority)
+    {
+        queue->head = (queue->head - 1 + queue->size) % queue->size;
+        memcpy(queue->data + queue->head * queue->stride, item, queue->stride);
+    }
+    else
+    {
+        memcpy(queue->data + queue->tail * queue->stride, item, queue->stride);
+        queue->tail = (queue->tail + 1) % queue->size;
     }
     return true;
 }
 
-bool ring_remove(ring_t* ring, void* item)
+bool queue_remove(queue_t* queue, void* item)
 {
-    assert(ring);
-    assert(ring->data);
+    assert(queue);
+    assert(queue->data);
     assert(item);
-    if (ring->head == ring->tail) {
+    if (queue->head == queue->tail)
+    {
         return false;
     }
-    memcpy(item, ring->data + ring->head * ring->stride, ring->stride);
-    ring->head = (ring->head + 1) % ring->size;
+    memcpy(item, queue->data + queue->head * queue->stride, queue->stride);
+    queue->head = (queue->head + 1) % queue->size;
     return true;
 }
 
-int chunk_wrap_x(const int x)
+void chunk_wrap(
+    int* x,
+    int* y,
+    int* z)
 {
-    return (x % CHUNK_X + CHUNK_X) % CHUNK_X;
-}
-
-int chunk_wrap_z(const int z)
-{
-    return (z % CHUNK_Z + CHUNK_Z) % CHUNK_Z;
+    assert(x);
+    assert(y);
+    assert(z);
+    *x = (*x % CHUNK_X + CHUNK_X) % CHUNK_X;
+    *y = (*y % CHUNK_Y + CHUNK_Y) % CHUNK_Y;
+    *z = (*z % CHUNK_Z + CHUNK_Z) % CHUNK_Z;
 }
 
 bool chunk_in(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z)
+    const int x,
+    const int y,
+    const int z)
 {
     return
         x >= 0 &&
@@ -96,9 +104,9 @@ block_t group_get_group(
     assert(group);
     const int a = y / CHUNK_Y;
     const int b = y - a * CHUNK_Y;
+    assert(a < GROUP_CHUNKS);
     const chunk_t* chunk = &group->chunks[a];
-    assert(x < CHUNK_X);
-    assert(z < CHUNK_Z);
+    assert(chunk_in(x, b, z));
     return chunk->blocks[x][b][z];
 }
 
@@ -112,165 +120,184 @@ void group_set_block(
     assert(group);
     const int a = y / CHUNK_Y;
     const int b = y - a * CHUNK_Y;
+    assert(a < GROUP_CHUNKS);
     chunk_t* chunk = &group->chunks[a];
+    assert(chunk_in(x, b, z));
     chunk->blocks[x][b][z] = block;
     chunk->empty = false;
 }
 
-void grid_init(grid_t* grid)
+void terrain_init(terrain_t* terrain)
 {
-    assert(grid);
-    grid->x = INT32_MAX;
-    grid->y = INT32_MAX;
-    for (int x = 0; x < WORLD_X; x++) {
-        for (int y = 0; y < WORLD_Z; y++) {
-            grid->groups[x][y] = calloc(1, sizeof(group_t));
-            assert(grid->groups[x][y]);
+    assert(terrain);
+    terrain->x = INT_MAX;
+    terrain->z = INT_MAX;
+    for (int x = 0; x < WORLD_X; x++)
+    {
+        for (int z = 0; z < WORLD_Z; z++)
+        {
+            terrain->groups[x][z] = calloc(1, sizeof(group_t));
+            assert(terrain->groups[x][z]);
         }
     }
 }
 
-void grid_free(grid_t* grid)
+void terrain_free(terrain_t* terrain)
 {
-    assert(grid);
-    for (int x = 0; x < WORLD_X; x++) {
-        for (int y = 0; y < WORLD_Z; y++) {
-            free(grid->groups[x][y]);
-            grid->groups[x][y] = NULL;
+    assert(terrain);
+    for (int x = 0; x < WORLD_X; x++)
+    {
+        for (int z = 0; z < WORLD_Z; z++)
+        {
+            free(terrain->groups[x][z]);
+            terrain->groups[x][z] = NULL;
         }
     }
 }
 
-void* grid_get(
-    const grid_t* grid,
+group_t* terrain_get(
+    const terrain_t* terrain,
     const int x,
-    const int y)
+    const int z)
 {
-    assert(grid);
-    assert(grid_in(grid, x, y));
-    assert(grid->groups[x][y]);
-    return grid->groups[x][y];
+    assert(terrain);
+    assert(terrain_in(terrain, x, z));
+    assert(terrain->groups[x][z]);
+    return terrain->groups[x][z];
 }
 
-void* grid_get2(
-    const grid_t* grid,
-    const int32_t x,
-    const int32_t y)
-{
-    assert(grid);
-    const int32_t a = x - grid->x;
-    const int32_t b = y - grid->y;
-    return grid_get(grid, a, b);
-}
-
-bool grid_in(
-    const grid_t* grid,
+bool terrain_in(
+    const terrain_t* terrain,
     const int x,
-    const int y)
+    const int z)
 {
-    assert(grid);
+    assert(terrain);
     return
         x >= 0 &&
-        y >= 0 &&
+        z >= 0 &&
         x < WORLD_X &&
-        y < WORLD_Z;
+        z < WORLD_Z;
 }
 
-bool grid_border(
-    const grid_t* grid,
+bool terrain_border(
+    const terrain_t* terrain,
     const int x,
-    const int y)
+    const int z)
 {
-    assert(grid);
+    assert(terrain);
     return
         x == 0 ||
-        y == 0 ||
+        z == 0 ||
         x == WORLD_X - 1 ||
-        y == WORLD_Z - 1;
+        z == WORLD_Z - 1;
 }
 
-bool grid_in2(
-    const grid_t* grid,
-    const int32_t x,
-    const int32_t y)
+group_t* terrain_get2(
+    const terrain_t* terrain,
+    const int x,
+    const int z)
 {
-    assert(grid);
-    const int32_t a = x - grid->x;
-    const int32_t b = y - grid->y;
-    return grid_in(grid, a, b);
+    assert(terrain);
+    const int a = x - terrain->x;
+    const int b = z - terrain->z;
+    return terrain_get(terrain, a, b);
 }
 
-bool grid_border2(
-    const grid_t* grid,
-    const int32_t x,
-    const int32_t y)
+bool terrain_in2(
+    const terrain_t* terrain,
+    const int x,
+    const int z)
 {
-    assert(grid);
-    const int32_t a = x - grid->x;
-    const int32_t b = y - grid->y;
-    return grid_border(grid, a, b);
+    assert(terrain);
+    const int a = x - terrain->x;
+    const int b = z - terrain->z;
+    return terrain_in(terrain, a, b);
 }
 
-void grid_neighbors2(
-    grid_t* grid,
-    const int32_t x,
-    const int32_t y,
+bool terrain_border2(
+    const terrain_t* terrain,
+    const int x,
+    const int z)
+{
+    assert(terrain);
+    const int a = x - terrain->x;
+    const int b = z - terrain->z;
+    return terrain_border(terrain, a, b);
+}
+
+void terrain_neighbors2(
+    terrain_t* terrain,
+    const int x,
+    const int z,
     void* neighbors[DIRECTION_2])
 {
-    assert(grid);
-    assert(grid_in2(grid, x, y));
-    for (direction_t d = 0; d < DIRECTION_2; d++) {
+    assert(terrain);
+    assert(terrain_in2(terrain, x, z));
+    for (direction_t d = 0; d < DIRECTION_2; d++)
+    {
         const int a = x + directions[d][0];
-        const int b = y + directions[d][2];
-        if (grid_in2(grid, a, b)) {
-            neighbors[d] = grid_get2(grid, a, b);
-        } else {
+        const int b = z + directions[d][2];
+        if (terrain_in2(terrain, a, b))
+        {
+            neighbors[d] = terrain_get2(terrain, a, b);
+        }
+        else
+        {
             neighbors[d] = NULL;
         }
     }
 }
 
-int* grid_move(
-    grid_t* grid,
-    const int32_t x,
-    const int32_t y,
+int* terrain_move(
+    terrain_t* terrain,
+    const int x,
+    const int z,
     int* size)
 {
-    assert(grid);
+    assert(terrain);
     assert(size);
     *size = 0;
-    const int a = x - grid->x;
-    const int b = y - grid->y;
-    if (!a && !b) {
+    const int a = x - terrain->x;
+    const int b = z - terrain->z;
+    if (!a && !b)
+    {
         return NULL;
     }
-    grid->x = x;
-    grid->y = y;
+    terrain->x = x;
+    terrain->z = z;
     group_t* groups1[WORLD_X][WORLD_Z] = {0};
     group_t* groups2[WORLD_GROUPS];
     int* indices = malloc(WORLD_GROUPS * 2 * sizeof(int));
     assert(indices);
-    for (int i = 0; i < WORLD_X; i++) {
-        for (int j = 0; j < WORLD_Z; j++) {
+    for (int i = 0; i < WORLD_X; i++)
+    {
+        for (int j = 0; j < WORLD_Z; j++)
+        {
             const int c = i - a;
             const int d = j - b;
-            if (grid_in(grid, c, d)) {
-                groups1[c][d] = grid_get(grid, i, j);
-            } else {
-                groups2[(*size)++] = grid_get(grid, i, j);
+            if (terrain_in(terrain, c, d))
+            {
+                groups1[c][d] = terrain_get(terrain, i, j);
             }
-            grid->groups[i][j] = NULL;
+            else
+            {
+                groups2[(*size)++] = terrain_get(terrain, i, j);
+            }
+            terrain->groups[i][j] = NULL;
         }
     }
-    memcpy(grid->groups, groups1, sizeof(groups1));
+    memcpy(terrain->groups, groups1, sizeof(groups1));
     int n = *size;
-    for (int i = 0; i < WORLD_X; i++) {
-        for (int j = 0; j < WORLD_Z; j++) {
-            if (grid->groups[i][j]) {
+    for (int i = 0; i < WORLD_X; i++)
+    {
+        for (int j = 0; j < WORLD_Z; j++)
+        {
+            if (terrain->groups[i][j])
+            {
                 continue;
             }
             --n;
-            grid->groups[i][j] = groups2[n];
+            terrain->groups[i][j] = groups2[n];
             indices[n * 2 + 0] = i;
             indices[n * 2 + 1] = j;
         }

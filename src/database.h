@@ -30,13 +30,13 @@ bool database_get_player(
     float* pitch,
     float* yaw);
 void database_set_block(
-    const int32_t a,
-    const int32_t c,
-    const int32_t x,
-    const int32_t y,
-    const int32_t z,
+    const int a,
+    const int c,
+    const int x,
+    const int y,
+    const int z,
     const block_t block);
 void database_get_blocks(
     group_t* group,
-    const int32_t a,
-    const int32_t c);
+    const int a,
+    const int c);

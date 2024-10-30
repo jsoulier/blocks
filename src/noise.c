@@ -14,17 +14,23 @@ static int seed;
 
 static void cube(
     group_t* group,
-    const int32_t x,
-    const int32_t z)
+    const int x,
+    const int z)
 {
     for (int a = 1; a < CHUNK_X - 1; a++)
     for (int b = 1; b < CHUNK_Z - 1; b++)
-    for (int y = 1; y < CHUNK_Y - 1; y++) {
-        if (y >= CHUNK_Y - 2) {
+    for (int y = 1; y < CHUNK_Y - 1; y++)
+    {
+        if (y >= CHUNK_Y - 2)
+        {
             group_set_block(group, a, y, b, BLOCK_GRASS);
-        } else if (y >= CHUNK_Y - 5) {
+        }
+        else if (y >= CHUNK_Y - 5)
+        {
             group_set_block(group, a, y, b, BLOCK_DIRT);
-        } else {
+        }
+        else
+        {
             group_set_block(group, a, y, b, BLOCK_STONE);
         }
     }
@@ -32,11 +38,12 @@ static void cube(
 
 static void flat(
     group_t* group,
-    const int32_t x,
-    const int32_t z)
+    const int x,
+    const int z)
 {
     for (int a = 0; a < CHUNK_X; a++)
-    for (int b = 0; b < CHUNK_Z; b++) {
+    for (int b = 0; b < CHUNK_Z; b++)
+    {
         group_set_block(group, a, 0, b, BLOCK_STONE);
         group_set_block(group, a, 1, b, BLOCK_DIRT);
         group_set_block(group, a, 2, b, BLOCK_GRASS);
@@ -44,38 +51,44 @@ static void flat(
 }
 
 static float base(
-    const int32_t x,
-    const int32_t z,
-    const int32_t a,
-    const int32_t b)
+    const int x,
+    const int z,
+    const int a,
+    const int b)
 {
-    const int32_t c = x * CHUNK_X + a;
-    const int32_t d = z * CHUNK_Z + b;
+    const int c = x * CHUNK_X + a;
+    const int d = z * CHUNK_Z + b;
     const float f = 0.005f;
     const float amplitude = 50.0f;
     const float h = stb_perlin_noise3_seed(c * f, 0.0f, d * f, 0, 0, 0, seed);
     return abs(h) * amplitude;
 }
 
-static void v1(
+static void terrain_v1(
     group_t* group,
-    const int32_t x,
-    const int32_t z)
+    const int x,
+    const int z)
 {
     for (int a = 0; a < CHUNK_X; a++)
-    for (int b = 0; b < CHUNK_Z; b++) {
+    for (int b = 0; b < CHUNK_Z; b++)
+    {
         float height = base(x, z, a, b) + 10;
-        for (int h = 0; h <= height; h++) {
+        for (int h = 0; h <= height; h++)
+        {
             block_t block;
-            if (h < 10) {
+            if (h < 10)
+            {
                 block = BLOCK_SAND;
-            } else {
+            }
+            else
+            {
                 block = BLOCK_GRASS;
             }
             group_set_block(group, a, h, b, block);
         }
         const int sea = 15;
-        for (int h = height; h < sea; h++) {
+        for (int h = height; h < sea; h++)
+        {
             group_set_block(group, a, h, b, BLOCK_WATER);
         }
     }
@@ -86,42 +99,47 @@ void noise_init(
     const int s)
 {
     type = t;
-    if (!s) {
+    if (!s)
+    {
         srand(time(NULL));
         seed = rand() % 64;
-        if (!seed) {
+        if (!seed)
+        {
             seed = 1;
         }
-    } else {
+    }
+    else
+    {
         seed = s;
     }
 }
 
-noise_type_t noise_type()
+void noise_data(
+    noise_type_t* t,
+    int* s)
 {
-    return type;
-}
-
-int noise_seed()
-{
-    return seed;
+    assert(t);
+    assert(s);
+    *t = type;
+    *s = seed;
 }
 
 void noise_generate(
     group_t* group,
-    const int32_t x,
-    const int32_t z)
+    const int x,
+    const int z)
 {
     assert(group);
-    switch (type) {
+    switch (type)
+    {
     case NOISE_TYPE_CUBE:
         cube(group, x, z);
         break;
     case NOISE_TYPE_FLAT:
         flat(group, x, z);
         break;
-    case NOISE_TYPE_V1:
-        v1(group, x, z);
+    case NOISE_TYPE_TERRAIN_V1:
+        terrain_v1(group, x, z);
         break;
     default:
         assert(0);

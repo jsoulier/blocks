@@ -2,20 +2,31 @@
 
 #include <stdbool.h>
 
-typedef struct {
+typedef struct
+{
     float view[4][4];
     float proj[4][4];
     float matrix[4][4];
-    float x, y, z;
-    float pitch, yaw;
-    float width, height;
+    float x;
+    float y;
+    float z;
+    float pitch;
+    float yaw;
+    float width;
+    float height;
     float fov;
-    float near, far;
+    float near;
+    float far;
     bool dirty;
-} camera_t;
+}
+camera_t;
 
 void camera_init(camera_t* camera);
 void camera_update(camera_t* camera);
+void camera_viewport(
+    camera_t* camera,
+    const int width,
+    const int height);
 void camera_move(
     camera_t* camera,
     const float x,
@@ -25,10 +36,6 @@ void camera_rotate(
     camera_t* camera,
     const float pitch,
     const float yaw);
-void camera_set_size(
-    camera_t* camera,
-    const int width,
-    const int height);
 void camera_set_position(
     camera_t* camera,
     const float x,
@@ -44,10 +51,10 @@ void camera_set_rotation(
     const float pitch,
     const float yaw);
 void camera_get_rotation(
-    camera_t* camera,
+    const camera_t* camera,
     float* pitch,
     float* yaw);
-void camera_get_vector(
+void camera_vector(
     const camera_t* camera,
     float* x,
     float* y,

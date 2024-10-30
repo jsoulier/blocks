@@ -26,7 +26,8 @@
 #define assert(e)
 #endif
 
-typedef enum {
+typedef enum
+{
     DIRECTION_N,
     DIRECTION_S,
     DIRECTION_E,
@@ -35,7 +36,8 @@ typedef enum {
     DIRECTION_D,
     DIRECTION_2 = 4,
     DIRECTION_3 = 6,
-} direction_t;
+}
+direction_t;
 
 extern const int directions[][3];
 
@@ -51,10 +53,12 @@ void sort_3d(
     void* data,
     const int size);
 
-typedef struct {
+typedef struct
+{
     int a;
     int b;
-} tag_t;
+}
+tag_t;
 
 void tag_init(tag_t* tag);
 void tag_invalidate(tag_t* tag);

@@ -12,9 +12,9 @@ bool voxmesh_vbo(
     const int height,
     SDL_GPUDevice* device,
     SDL_GPUTransferBuffer** opaque_tbo,
-    SDL_GPUTransferBuffer** transparent_tbo,
+    SDL_GPUTransferBuffer** transp_tbo,
     uint32_t* opaque_capacity,
-    uint32_t* transparent_capacity);
+    uint32_t* transp_capacity);
 bool voxmesh_ibo(
     SDL_GPUDevice* device,
     SDL_GPUBuffer** ibo,

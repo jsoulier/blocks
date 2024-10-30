@@ -9,8 +9,10 @@ static void multiply(
     const float b[4][4])
 {
     float c[4][4];
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
             c[i][j] = 0.0f;
             c[i][j] += a[0][j] * b[i][0];
             c[i][j] += a[1][j] * b[i][1];
@@ -18,8 +20,10 @@ static void multiply(
             c[i][j] += a[3][j] * b[i][3];
         }
     }
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
             matrix[i][j] = c[i][j];
         }
     }
@@ -122,18 +126,34 @@ void camera_init(camera_t* camera)
 void camera_update(camera_t* camera)
 {
     assert(camera);
-    if (!camera->dirty) {
+    if (!camera->dirty)
+    {
         return;
     }
-    const float aspect = camera->width / camera->height;
+    const float s = sinf(camera->yaw);
+    const float c = cosf(camera->yaw);
+    const float a = camera->width / camera->height;
     translate(camera->view, -camera->x, -camera->y, -camera->z);
-    rotate(camera->proj, cosf(camera->yaw), 0.0f, sinf(camera->yaw), camera->pitch);
+    rotate(camera->proj, c, 0.0f, s, camera->pitch);
     multiply(camera->view, camera->proj, camera->view);
     rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
     multiply(camera->view, camera->proj, camera->view);
-    perspective(camera->proj, aspect, camera->fov, camera->near, camera->far);
+    perspective(camera->proj, a, camera->fov, camera->near, camera->far);
     multiply(camera->matrix, camera->proj, camera->view);
     camera->dirty = false;
+}
+
+void camera_viewport(
+    camera_t* camera,
+    const int width,
+    const int height)
+{
+    assert(camera);
+    assert(width > 0.0f);
+    assert(height > 0.0f);
+    camera->width = width;
+    camera->height = height;
+    camera->dirty = true;
 }
 
 void camera_move(
@@ -143,12 +163,13 @@ void camera_move(
     const float z)
 {
     assert(camera);
-    if (!x && !y && !z) {
+    if (!x && !y && !z)
+    {
         return;
     }
+    const float s = sinf(camera->yaw);
     const float c = cosf(camera->yaw);
     const float a = sinf(camera->pitch);
-    const float s = sinf(camera->yaw);
     camera->x += s * z + c * x;
     camera->y += y + z * a;
     camera->z -= c * z - s * x;
@@ -161,25 +182,13 @@ void camera_rotate(
     const float yaw)
 {
     assert(camera);
-    if (!pitch && !yaw) {
+    if (!pitch && !yaw)
+    {
         return;
     }
     const float a = camera->pitch + rad(pitch);
     const float b = camera->yaw + rad(yaw);
     camera_set_rotation(camera, a, b);
-}
-
-void camera_set_size(
-    camera_t* camera,
-    const int width,
-    const int height)
-{
-    assert(camera);
-    assert(width > 0.0f);
-    assert(height > 0.0f);
-    camera->width = width;
-    camera->height = height;
-    camera->dirty = true;
 }
 
 void camera_set_position(
@@ -223,7 +232,7 @@ void camera_set_rotation(
 }
 
 void camera_get_rotation(
-    camera_t* camera,
+    const camera_t* camera,
     float* pitch,
     float* yaw)
 {
@@ -234,7 +243,7 @@ void camera_get_rotation(
     *yaw = camera->yaw;
 }
 
-void camera_get_vector(
+void camera_vector(
     const camera_t* camera,
     float* x,
     float* y,
@@ -244,9 +253,10 @@ void camera_get_vector(
     assert(x);
     assert(y);
     assert(z);
-    *x = cosf(camera->yaw - rad(90)) * cosf(camera->pitch);
+    const float c = cosf(camera->pitch);
+    *x = cosf(camera->yaw - rad(90)) * c;
     *y = sinf(camera->pitch);
-    *z = sinf(camera->yaw - rad(90)) * cosf(camera->pitch);
+    *z = sinf(camera->yaw - rad(90)) * c;
 }
 
 bool camera_test(
@@ -259,7 +269,8 @@ bool camera_test(
     const float c)
 {
     assert(camera);
-    const float points[][3] = {
+    const float points[][3] =
+    {
         { x,     y,     z     },
         { x + a, y,     z     },
         { x,     y + b, z     },
@@ -270,20 +281,23 @@ bool camera_test(
         { x + a, y + b, z + c },
     };
     float d, e, f;
-    camera_get_vector(camera, &d, &e, &f);
-    for (int i = 0; i < 8; i++) {
+    camera_vector(camera, &d, &e, &f);
+    for (int i = 0; i < 8; i++)
+    {
         float s = points[i][0] - camera->x;
         float t = points[i][1] - camera->y;
         float p = points[i][2] - camera->z;
         const float length = sqrtf(s * s + t * t + p * p);
-        if (length < max3(a, b, c)) {
+        if (length < max3(a, b, c))
+        {
             return true;
         }
         s /= length;
         t /= length;
         p /= length;
         const float dot = d * s + e * t + f * p;
-        if (acos(dot) < camera->fov / 1.25) {
+        if (acos(dot) < camera->fov / 1.25)
+        {
             return true;
         }
     }

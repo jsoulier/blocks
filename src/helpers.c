@@ -8,12 +8,12 @@
 
 const int directions[][3] =
 {
-    { 0, 0, 1 },
-    { 0, 0,-1 },
-    { 1, 0, 0 },
-    {-1, 0, 0 },
-    { 0, 1, 0 },
-    { 0,-1, 0 },
+    [DIRECTION_N] = { 0, 0, 1 },
+    [DIRECTION_S] = { 0, 0,-1 },
+    [DIRECTION_E] = { 1, 0, 0 },
+    [DIRECTION_W] = {-1, 0, 0 },
+    [DIRECTION_U] = { 0, 1, 0 },
+    [DIRECTION_D] = { 0,-1, 0 },
 };
 
 static thread_local int cx;
@@ -32,24 +32,34 @@ static int dot(
     return dx * dx + dy * dy + dz * dz;
 }
 
-static int compare(const void* a, const void* b)
+static int compare(
+    const void* a,
+    const void* b)
 {
     const int* l = a;
     const int* r = b;
     int c;
     int d;
-    if (is_2d) {
+    if (is_2d)
+    {
         c = dot(l[0], 0, l[1]);
         d = dot(r[0], 0, r[1]);
-    } else {
+    }
+    else
+    {
         c = dot(l[0], l[1], l[2]);
         d = dot(r[0], r[1], r[2]);
     }
-    if (c < d) {
+    if (c < d)
+    {
         return -1;
-    } else if (c > d) {
+    }
+    else if (c > d)
+    {
         return 1;
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }

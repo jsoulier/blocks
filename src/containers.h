@@ -5,48 +5,59 @@
 #include "block.h"
 #include "helpers.h"
 
-typedef struct {
+typedef struct
+{
     uint8_t* data;
-    int size, stride;
-    int head, tail;
-} ring_t;
+    int size;
+    int stride;
+    int head;
+    int tail;
+}
+queue_t;
 
-void ring_init(
-    ring_t* ring,
+void queue_init(
+    queue_t* queue,
     const int size,
     const int stride);
-void ring_free(ring_t* ring);
-bool ring_add(
-    ring_t* ring,
+void queue_free(queue_t* queue);
+bool queue_add(
+    queue_t* queue,
     const void* item,
     const bool priority);
-bool ring_remove(ring_t* ring, void* item);
+bool queue_remove(queue_t* queue, void* item);
 
-typedef struct {
+typedef struct
+{
     tag_t tag;
     block_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
-    struct {
-        SDL_GPUBuffer* vbo;
-        uint32_t size;
-        uint32_t capacity;
-    } opaque, transparent;
+    SDL_GPUBuffer* opaque_vbo;
+    SDL_GPUBuffer* transp_vbo;
+    uint32_t opaque_size;
+    uint32_t transp_size;
+    uint32_t opaque_capacity;
+    uint32_t transp_capacity;
     bool renderable;
     bool empty;
-} chunk_t;
+}
+chunk_t;
 
-int chunk_wrap_x(const int x);
-int chunk_wrap_z(const int z);
+void chunk_wrap(
+    int* x,
+    int* y,
+    int* z);
 bool chunk_in(
-    const int32_t x,
-    const int32_t y,
-    const int32_t z);
+    const int x,
+    const int y,
+    const int z);
 
-typedef struct {
+typedef struct
+{
     tag_t tag;
     chunk_t chunks[GROUP_CHUNKS];
     direction_t neighbors;
     bool loaded;
-} group_t;
+}
+group_t;
 
 block_t group_get_group(
     const group_t* group,
@@ -60,44 +71,47 @@ void group_set_block(
     const int z,
     const block_t block);
 
-typedef struct {
+typedef struct
+{
     group_t* groups[WORLD_X][WORLD_Z];
-    int32_t x, y;
-} grid_t;
+    int x;
+    int z;
+}
+terrain_t;
 
-void grid_init(grid_t* grid);
-void grid_free(grid_t* grid);
-void* grid_get(
-    const grid_t* grid,
+void terrain_init(terrain_t* terrain);
+void terrain_free(terrain_t* terrain);
+group_t* terrain_get(
+    const terrain_t* terrain,
     const int x,
-    const int y);
-void* grid_get2(
-    const grid_t* grid,
-    const int32_t x,
-    const int32_t y);
-bool grid_in(
-    const grid_t* grid,
+    const int z);
+bool terrain_in(
+    const terrain_t* terrain,
     const int x,
-    const int y);
-bool grid_border(
-    const grid_t* grid,
+    const int z);
+bool terrain_border(
+    const terrain_t* terrain,
     const int x,
-    const int y);
-bool grid_in2(
-    const grid_t* grid,
-    const int32_t x,
-    const int32_t y);
-bool grid_border2(
-    const grid_t* grid,
-    const int32_t x,
-    const int32_t y);
-void grid_neighbors2(
-    grid_t* grid,
-    const int32_t x,
-    const int32_t y,
+    const int z);
+group_t* terrain_get2(
+    const terrain_t* terrain,
+    const int x,
+    const int z);
+bool terrain_in2(
+    const terrain_t* terrain,
+    const int x,
+    const int z);
+bool terrain_border2(
+    const terrain_t* terrain,
+    const int x,
+    const int z);
+void terrain_neighbors2(
+    terrain_t* terrain,
+    const int x,
+    const int z,
     void* neighbors[DIRECTION_2]);
-int* grid_move(
-    grid_t* grid,
-    const int32_t x,
-    const int32_t y,
+int* terrain_move(
+    terrain_t* terrain,
+    const int x,
+    const int z,
     int* size);

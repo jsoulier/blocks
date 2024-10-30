@@ -17,7 +17,10 @@
 #define WORLD_CHUNKS (WORLD_Y * WORLD_GROUPS)
 #define WORLD_MAX_JOBS 3000
 #define WORLD_MAX_WORKERS 4
+
 #define DATABASE_MAX_JOBS 100
+#define DATABASE_PATH "blocks.sqlite3"
+
 #define VOXEL_X_BITS 5
 #define VOXEL_Y_BITS 5
 #define VOXEL_Z_BITS 5
@@ -36,6 +39,7 @@
 #define VOXEL_U_MASK ((1 << VOXEL_U_BITS) - 1)
 #define VOXEL_V_MASK ((1 << VOXEL_V_BITS) - 1)
 #define VOXEL_DIRECTION_MASK ((1 << VOXEL_DIRECTION_BITS) - 1)
+
 #define RAYCAST_STEP 0.1f
 #define RAYCAST_LENGTH 10.0f
 

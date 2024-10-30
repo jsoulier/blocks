@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdbool.h>
-#include "helpers.h"
 
 bool physics_raycast(
     float* x,

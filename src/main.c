@@ -19,7 +19,7 @@ static SDL_GPUGraphicsPipeline* raycast_pipeline;
 static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* ui_pipeline;
 static SDL_GPUGraphicsPipeline* opaque_pipeline;
-static SDL_GPUGraphicsPipeline* transparent_pipeline;
+static SDL_GPUGraphicsPipeline* transp_pipeline;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUSampler* atlas_sampler;
 static SDL_Surface* atlas_surface;
@@ -322,7 +322,7 @@ static void load_opaque_pipeline()
     SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
-static void load_transparent_pipeline()
+static void load_transp_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info = {
         .vertex_shader = load_shader(device, "world.vert", 3, 0),
@@ -366,8 +366,8 @@ static void load_transparent_pipeline()
             .fill_mode = SDL_GPU_FILLMODE_FILL,
         },
     };
-    transparent_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
-    if (!transparent_pipeline) {
+    transp_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    if (!transp_pipeline) {
         SDL_Log("Failed to create world pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
@@ -379,7 +379,7 @@ static void draw_raycast(SDL_GPUCommandBuffer* commands)
     float x, y, z;
     float a, b, c;
     camera_get_position(&camera, &x, &y, &z);
-    camera_get_vector(&camera, &a, &b, &c);
+    camera_vector(&camera, &a, &b, &c);
     if (!physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, true)) {
         return;
     }
@@ -485,7 +485,7 @@ static void draw_opaque(SDL_GPUCommandBuffer* commands)
     SDL_EndGPURenderPass(pass);
 }
 
-static void draw_transparent(SDL_GPUCommandBuffer* commands)
+static void draw_transp(SDL_GPUCommandBuffer* commands)
 {
     SDL_GPUColorTargetInfo cti = {0};
     cti.load_op = SDL_GPU_LOADOP_LOAD;
@@ -505,11 +505,11 @@ static void draw_transparent(SDL_GPUCommandBuffer* commands)
     SDL_GPUTextureSamplerBinding tsb = {0};
     tsb.sampler = atlas_sampler;
     tsb.texture = atlas_texture;
-    SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
+    SDL_BindGPUGraphicsPipeline(pass, transp_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
     SDL_PushGPUVertexUniformData(commands, 1, position, sizeof(position));
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
-    world_render_transparent(&camera, commands, pass);
+    world_render_transp(&camera, commands, pass);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -550,7 +550,7 @@ static void draw()
     camera_update(&camera);
     draw_sky(commands);
     draw_opaque(commands);
-    draw_transparent(commands);
+    draw_transp(commands);
     draw_raycast(commands);
     draw_ui(commands);
     SDL_SubmitGPUCommandBuffer(commands);
@@ -656,7 +656,7 @@ static bool poll()
         case SDL_EVENT_QUIT:
             return false;
         case SDL_EVENT_WINDOW_RESIZED:
-            camera_set_size(&camera, event.window.data1, event.window.data2);
+            camera_viewport(&camera, event.window.data1, event.window.data2);
             break;
         case SDL_EVENT_MOUSE_MOTION:
             if (SDL_GetWindowRelativeMouseMode(window)) {
@@ -681,7 +681,7 @@ static bool poll()
                     float x, y, z;
                     float a, b, c;
                     camera_get_position(&camera, &x, &y, &z);
-                    camera_get_vector(&camera, &a, &b, &c);
+                    camera_vector(&camera, &a, &b, &c);
                     if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, previous) && y >= 1.0f) {
                         world_set_block(x, y, z, block);
                     }
@@ -762,16 +762,17 @@ int main(int argc, char** argv)
     load_sky_pipeline();
     load_ui_pipeline();
     load_opaque_pipeline();
-    load_transparent_pipeline();
+    load_transp_pipeline();
     create_vbos();
-    database_init("blocks.sqlite3");
+    database_init(DATABASE_PATH);
 
     {
         noise_type_t type;
         int seed;
         database_get_noise(&type, &seed);
         noise_init(type, seed);
-        database_set_noise(noise_type(), noise_seed());
+        noise_data(&type, &seed);
+        database_set_noise(type, seed);
     }
 
     if (!world_init(device)) {
@@ -783,7 +784,7 @@ int main(int argc, char** argv)
     SDL_DestroySurface(icon);
     camera_init(&camera);
     camera_move(&camera, 0, 30, 0);
-    camera_set_size(&camera, 1024, 764);
+    camera_viewport(&camera, 1024, 764);
 
     float x, y, z;
     float pitch, yaw;
@@ -823,7 +824,7 @@ int main(int argc, char** argv)
     SDL_ReleaseGPUSampler(device, atlas_sampler);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, opaque_pipeline);
-    SDL_ReleaseGPUGraphicsPipeline(device, transparent_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, transp_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
     SDL_ReleaseGPUTexture(device, depth_texture);
