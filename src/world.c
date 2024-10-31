@@ -39,9 +39,9 @@ typedef struct
     cnd_t cnd;
     const job_t* job;
     SDL_GPUTransferBuffer* opaque_tbo;
-    SDL_GPUTransferBuffer* transp_tbo;
+    SDL_GPUTransferBuffer* transparent_tbo;
     uint32_t opaque_size;
-    uint32_t transp_size;
+    uint32_t transparent_size;
 }
 worker_t;
 
@@ -120,9 +120,9 @@ static int loop(void* args)
                     y,
                     device,
                     &worker->opaque_tbo,
-                    &worker->transp_tbo,
+                    &worker->transparent_tbo,
                     &worker->opaque_size,
-                    &worker->transp_size))
+                    &worker->transparent_size))
                 {
                     chunk->renderable = 1;
                 }
@@ -349,10 +349,10 @@ void world_free()
             SDL_ReleaseGPUTransferBuffer(device, worker->opaque_tbo);
             worker->opaque_tbo = NULL;
         }
-        if (worker->transp_tbo)
+        if (worker->transparent_tbo)
         {
-            SDL_ReleaseGPUTransferBuffer(device, worker->transp_tbo);
-            worker->transp_tbo = NULL;
+            SDL_ReleaseGPUTransferBuffer(device, worker->transparent_tbo);
+            worker->transparent_tbo = NULL;
         }
     }
     queue_free(&queue);
@@ -369,10 +369,10 @@ void world_free()
                     SDL_ReleaseGPUBuffer(device, chunk->opaque_vbo);
                     chunk->opaque_vbo = NULL;
                 }
-                if (chunk->transp_vbo)
+                if (chunk->transparent_vbo)
                 {
-                    SDL_ReleaseGPUBuffer(device, chunk->transp_vbo);
-                    chunk->transp_vbo = NULL;
+                    SDL_ReleaseGPUBuffer(device, chunk->transparent_vbo);
+                    chunk->transparent_vbo = NULL;
                 }
             }
         }
@@ -507,7 +507,7 @@ void world_update(
             size = max3(
                 size,
                 group->chunks[job->y].opaque_size,
-                group->chunks[job->y].transp_size);
+                group->chunks[job->y].transparent_size);
             break;
         default:
             assert(0);
@@ -563,8 +563,8 @@ static void render(
     }
     else
     {
-        vbo = chunk->transp_vbo;
-        size = chunk->transp_size;
+        vbo = chunk->transparent_vbo;
+        size = chunk->transparent_size;
     }
     if (!size)
     {
@@ -604,7 +604,7 @@ void world_render_opaque(
     }
 }
 
-void world_render_transp(
+void world_render_transparent(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
     SDL_GPURenderPass* pass)

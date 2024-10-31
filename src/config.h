@@ -3,6 +3,28 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define APP_NAME "blocks"
+#define APP_VERSION "0.0.1"
+#define APP_ICON BLOCK_GRASS
+#define APP_VALIDATION 1
+#define WINDOW_WIDTH 1024
+#define WINDOW_HEIGHT 764
+#define WINDOW_TITLE "blocks"
+
+#define PLAYER_SPEED 0.2f
+#define PLAYER_SUPER_SPEED 1.0f
+#define PLAYER_SENSITIVITY 0.1f
+#define PLAYER_X 0
+#define PLAYER_Y 30
+#define PLAYER_Z 0
+
+#define ATLAS_WIDTH 240.0
+#define ATLAS_HEIGHT 240.0
+#define ATLAS_FACE_WIDTH 16.0
+#define ATLAS_FACE_HEIGHT 16.0
+#define ATLAS_X_FACES 15.0
+#define ATLAS_Y_FACES 15.0
+
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30
@@ -20,6 +42,7 @@
 
 #define DATABASE_MAX_JOBS 100
 #define DATABASE_PATH "blocks.sqlite3"
+#define DATABASE_TIME 1000
 
 #define VOXEL_X_BITS 5
 #define VOXEL_Y_BITS 5
@@ -40,7 +63,7 @@
 #define VOXEL_V_MASK ((1 << VOXEL_V_BITS) - 1)
 #define VOXEL_DIRECTION_MASK ((1 << VOXEL_DIRECTION_BITS) - 1)
 
-#define RAYCAST_STEP 0.1f
+#define RAYCAST_STEP 0.02f
 #define RAYCAST_LENGTH 10.0f
 
 #endif

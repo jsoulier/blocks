@@ -35,7 +35,9 @@ function(shader FILE)
     set(OUTPUT ${BINARY_DIR}/${FILE})
     add_custom_target(${NAME} ALL
         COMMAND glslc ${SOURCE} -o ${OUTPUT} -I ${CMAKE_SOURCE_DIR}/src
-        DEPENDS ${SOURCE} BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
+        DEPENDS ${SOURCE} ${CMAKE_SOURCE_DIR}/res/config.glsl
+            ${CMAKE_SOURCE_DIR}/src/config.h
+        BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
 endfunction()
 shader(raycast.frag)
 shader(raycast.vert)

@@ -2,12 +2,16 @@
 
 layout(location = 0) in vec3 position;
 layout(location = 0) out vec3 coord;
-layout(set = 1, binding = 0) uniform view_t {
+layout(set = 1, binding = 0) uniform view_t
+{
     mat4 matrix;
-} view;
-layout(set = 1, binding = 1) uniform proj_t {
+}
+view;
+layout(set = 1, binding = 1) uniform proj_t
+{
     mat4 matrix; 
-} proj;
+}
+proj;
 
 void main()
 {

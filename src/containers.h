@@ -31,11 +31,11 @@ typedef struct
     tag_t tag;
     block_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
     SDL_GPUBuffer* opaque_vbo;
-    SDL_GPUBuffer* transp_vbo;
+    SDL_GPUBuffer* transparent_vbo;
     uint32_t opaque_size;
-    uint32_t transp_size;
+    uint32_t transparent_size;
     uint32_t opaque_capacity;
-    uint32_t transp_capacity;
+    uint32_t transparent_capacity;
     bool renderable;
     bool empty;
 }

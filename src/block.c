@@ -130,12 +130,12 @@ const int blocks[][DIRECTION_3][2] =
     },
     [BLOCK_TULIP] =
     {
-        [DIRECTION_E] = { 4, 0 },
-        [DIRECTION_W] = { 4, 0 },
-        [DIRECTION_N] = { 4, 0 },
-        [DIRECTION_S] = { 4, 0 },
-        [DIRECTION_U] = { 4, 0 },
-        [DIRECTION_D] = { 4, 0 },
+        [DIRECTION_E] = { 0, 0 },
+        [DIRECTION_W] = { 0, 0 },
+        [DIRECTION_N] = { 0, 0 },
+        [DIRECTION_S] = { 0, 0 },
+        [DIRECTION_U] = { 0, 0 },
+        [DIRECTION_D] = { 0, 0 },
     },
     [BLOCK_WATER] =
     {

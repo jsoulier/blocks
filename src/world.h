@@ -16,7 +16,7 @@ void world_render_opaque(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
     SDL_GPURenderPass* pass);
-void world_render_transp(
+void world_render_transparent(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
     SDL_GPURenderPass* pass);
