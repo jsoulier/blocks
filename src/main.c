@@ -29,7 +29,7 @@ static SDL_GPUBuffer* cube_vbo;
 static uint32_t width;
 static uint32_t height;
 static camera_t camera;
-static block_t selection = BLOCK_GRASS;
+static block_t selection = BLOCK_ROSE;
 static void* atlas_data;
 
 static SDL_GPUShader* load_shader(
@@ -324,8 +324,6 @@ static void load_transparent_pipeline()
         },
         .rasterizer_state =
         {
-            .cull_mode = SDL_GPU_CULLMODE_BACK,
-            .front_face = SDL_GPU_FRONTFACE_CLOCKWISE,
             .fill_mode = SDL_GPU_FILLMODE_FILL,
         },
     };
@@ -817,47 +815,45 @@ static bool poll()
             if (!SDL_GetWindowRelativeMouseMode(window))
             {
                 SDL_SetWindowRelativeMouseMode(window, true);
+                break;
             }
-            else
+            if (event.button.button == BUTTON_PLACE ||
+                event.button.button == BUTTON_BREAK)
             {
-                if (event.button.button == SDL_BUTTON_LEFT ||
-                    event.button.button == SDL_BUTTON_RIGHT)
+                bool previous = true;
+                block_t block = selection;
+                if (event.button.button == BUTTON_BREAK)
                 {
-                    bool previous = true;
-                    block_t block = selection;
-                    if (event.button.button == SDL_BUTTON_LEFT)
-                    {
-                        previous = false;
-                        block = BLOCK_EMPTY;
-                    }
-                    float x;
-                    float y;
-                    float z;
-                    float a;
-                    float b;
-                    float c;
-                    camera_get_position(&camera, &x, &y, &z);
-                    camera_vector(&camera, &a, &b, &c);
-                    if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH,
-                        previous) && y >= 1.0f)
-                    {
-                        world_set_block(x, y, z, block);
-                    }
+                    previous = false;
+                    block = BLOCK_EMPTY;
+                }
+                float x;
+                float y;
+                float z;
+                float a;
+                float b;
+                float c;
+                camera_get_position(&camera, &x, &y, &z);
+                camera_vector(&camera, &a, &b, &c);
+                if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH,
+                    previous) && y >= 1.0f)
+                {
+                    world_set_block(x, y, z, block);
                 }
             }
             break;
         case SDL_EVENT_KEY_DOWN:
-            if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+            if (event.key.scancode == BUTTON_PAUSE)
             {
                 SDL_SetWindowRelativeMouseMode(window, false);
                 SDL_SetWindowFullscreen(window, false);
             }
-            else if (event.key.scancode == SDL_SCANCODE_B)
+            else if (event.key.scancode == BUTTON_BLOCK)
             {
                 selection = (selection + 1) % BLOCK_COUNT;
                 selection = clamp(selection, BLOCK_EMPTY + 1, BLOCK_COUNT - 1);
             }
-            else if (event.key.scancode == SDL_SCANCODE_F11)
+            else if (event.key.scancode == BUTTON_FULLSCREEN)
             {
                 if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
                 {
@@ -882,31 +878,31 @@ static void move()
     float y = 0.0f;
     float z = 0.0f;
     float speed = PLAYER_SPEED;
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_D])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_RIGHT])
     {
         x++;
     }
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_A])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_LEFT])
     {
         x--;
     }
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_E])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_UP])
     {
         y++;
     }
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_Q])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_DOWN])
     {
         y--;
     }
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_W])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_FORWARD])
     {
         z++;
     }
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_S])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_BACKWARD])
     {
         z--;
     }
-    if (SDL_GetKeyboardState(NULL)[SDL_SCANCODE_LCTRL])
+    if (SDL_GetKeyboardState(NULL)[BUTTON_SPRINT])
     {
         speed = PLAYER_SUPER_SPEED;
     }
@@ -916,11 +912,23 @@ static void move()
     camera_move(&camera, x, y, z);
 }
 
+static void commit()
+{
+    float x;
+    float y;
+    float z;
+    float pitch;
+    float yaw;
+    camera_get_position(&camera, &x, &y, &z);
+    camera_get_rotation(&camera, &pitch, &yaw);
+    database_set_player(0, x, y, z, pitch, yaw);
+    database_commit();
+}
+
 int main(int argc, char** argv)
 {
     (void) argc;
     (void) argv;
-
     SDL_SetAppMetadata(APP_NAME, APP_VERSION, NULL);
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -944,7 +952,6 @@ int main(int argc, char** argv)
         SDL_Log("Failed to create swapchain: %s", SDL_GetError());
         return false;
     }
-
     load_atlas();
     load_raycast_pipeline();
     load_sky_pipeline();
@@ -953,14 +960,12 @@ int main(int argc, char** argv)
     load_transparent_pipeline();
     create_samplers();
     create_vbos();
-
     {
         SDL_SetWindowResizable(window, true);
         SDL_Surface* icon = create_icon(APP_ICON);
         SDL_SetWindowIcon(window, icon);
         SDL_DestroySurface(icon);
     }
-
     if (!database_init(DATABASE_PATH))
     {
         SDL_Log("Failed to create database");
@@ -975,13 +980,11 @@ int main(int argc, char** argv)
         noise_data(&type, &seed);
         database_set_noise(type, seed);
     }
-
     if (!world_init(device))
     {
         SDL_Log("Failed to create world");
         return EXIT_FAILURE;
     }
-
     float x;
     float y;
     float z;
@@ -995,7 +998,6 @@ int main(int argc, char** argv)
         camera_set_position(&camera, x, y, z);
         camera_set_rotation(&camera, pitch, yaw);
     }
-
     int cooldown = 0;
     int time = DATABASE_TIME;
     int loop = 1;
@@ -1011,14 +1013,12 @@ int main(int argc, char** argv)
         draw();
         if (cooldown++ > time)
         {
-            camera_get_position(&camera, &x, &y, &z);
-            camera_get_rotation(&camera, &pitch, &yaw);
-            database_set_player(0, x, y, z, pitch, yaw);
-            database_commit();
+            commit();
             cooldown = 0;
         }
     }
     world_free();
+    commit();
     database_free();
     if (atlas_surface)
     {

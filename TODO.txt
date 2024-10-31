@@ -1,19 +1,26 @@
-Features:
+Features
 - Collision
 - Lighting
 - Noise
 - Transparency
   - Sorting within chunks
     - Probably need to increase job queue size for a new sort job
+- Multisampling
+  - Gonna have to fix texture bleeding
+  - Also mipmaps
 
 Memory Optimizations
 - Chunk Paging
   - Kinda an obvious one. Free empty chunks
 
 Bug Fixes
-- Had to increase the near plane to avoid depth precision issues but now
-  it's clipping into the raycast
+- Near plane clipping
+  - Had to increase the near planes to avoid depth buffer precision issues
+  - Blocks are getting clipped too often
   - Add support for changing the camera z planes
+- Texture bleeding
+  - Maybe blit each block face into a texture array?
+  - Migrate uvs to texture index and vertex number
 
 Potential Database Race:
 - If you write to the database queue, then unload and reload the chunk

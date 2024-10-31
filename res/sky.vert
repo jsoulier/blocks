@@ -1,7 +1,7 @@
 #version 450
 
 layout(location = 0) in vec3 position;
-layout(location = 0) out vec3 coord;
+layout(location = 0) out vec3 p;
 layout(set = 1, binding = 0) uniform view_t
 {
     mat4 matrix;
@@ -20,5 +20,5 @@ void main()
     rotation[3][1] = 0.0;
     rotation[3][2] = 0.0;
     gl_Position = proj.matrix  * rotation * vec4(position, 1.0);
-    coord = position;
+    p = position;
 }

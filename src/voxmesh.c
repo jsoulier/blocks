@@ -13,26 +13,6 @@ static_assert(VOXEL_U_OFFSET + VOXEL_U_BITS <= 32, "");
 static_assert(VOXEL_V_OFFSET + VOXEL_V_BITS <= 32, "");
 static_assert(VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32, "");
 
-static const int positions[][4][3] =
-{
-    [DIRECTION_N] = {{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}},
-    [DIRECTION_S] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}},
-    [DIRECTION_E] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}},
-    [DIRECTION_W] = {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 1}},
-    [DIRECTION_U] = {{0, 1, 0}, {1, 1, 0}, {0, 1, 1}, {1, 1, 1}},
-    [DIRECTION_D] = {{0, 0, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 1}},
-};
-
-static const int uvs[][4][2] =
-{
-    [DIRECTION_N] = {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
-    [DIRECTION_S] = {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
-    [DIRECTION_E] = {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
-    [DIRECTION_W] = {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
-    [DIRECTION_U] = {{0, 0}, {1, 0}, {0, 1}, {1, 1}},
-    [DIRECTION_D] = {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-};
-
 static uint32_t pack(
     const block_t block,
     const int x,
@@ -45,6 +25,24 @@ static uint32_t pack(
     assert(block < BLOCK_COUNT);
     assert(direction < DIRECTION_3);
     assert(i < 4);
+    static const int positions[][4][3] =
+    {
+        {{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}},
+        {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}},
+        {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}},
+        {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 1}},
+        {{0, 1, 0}, {1, 1, 0}, {0, 1, 1}, {1, 1, 1}},
+        {{0, 0, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 1}},
+    };
+    static const int uvs[][4][2] =
+    {
+        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
+        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
+        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
+        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
+        {{0, 0}, {1, 0}, {0, 1}, {1, 1}},
+        {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+    };
     const int a = positions[direction][i][0] + x;
     const int b = positions[direction][i][1] + y;
     const int c = positions[direction][i][2] + z;
@@ -63,6 +61,51 @@ static uint32_t pack(
     voxel |= d << VOXEL_U_OFFSET;
     voxel |= e << VOXEL_V_OFFSET;
     voxel |= direction << VOXEL_DIRECTION_OFFSET;
+    return voxel;
+}
+
+static uint32_t pack_sprite(
+    const block_t block,
+    const int x,
+    const int y,
+    const int z,
+    const int direction,
+    const int i)
+{
+    assert(block > BLOCK_EMPTY);
+    assert(block < BLOCK_COUNT);
+    assert(direction < 4);
+    assert(i < 4);
+    static const int positions[][4][3] =
+    {
+        {{0, 0, 0}, {0, 1, 0}, {1, 0, 1}, {1, 1, 1}},
+        {{0, 0, 0}, {1, 0, 1}, {0, 1, 0}, {1, 1, 1}},
+        {{0, 0, 1}, {1, 0, 0}, {0, 1, 1}, {1, 1, 0}},
+        {{0, 0, 1}, {0, 1, 1}, {1, 0, 0}, {1, 1, 0}},
+    };
+    static const int uvs[][4][2] =
+    {
+        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
+        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
+        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
+        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
+    };
+    const int a = positions[direction][i][0] + x;
+    const int b = positions[direction][i][1] + y;
+    const int c = positions[direction][i][2] + z;
+    const int d = uvs[direction][i][0] + blocks[block][DIRECTION_N][0];
+    const int e = uvs[direction][i][1] + blocks[block][DIRECTION_N][1];
+    assert(a <= VOXEL_X_MASK);
+    assert(b <= VOXEL_Y_MASK);
+    assert(c <= VOXEL_Z_MASK);
+    assert(d <= VOXEL_U_MASK);
+    assert(e <= VOXEL_V_MASK);
+    uint32_t voxel = 0;
+    voxel |= a << VOXEL_X_OFFSET;
+    voxel |= b << VOXEL_Y_OFFSET;
+    voxel |= c << VOXEL_Z_OFFSET;
+    voxel |= d << VOXEL_U_OFFSET;
+    voxel |= e << VOXEL_V_OFFSET;
     return voxel;
 }
 
@@ -91,6 +134,37 @@ static void fill(
         {
             continue;
         }
+        uint32_t* data;
+        uint32_t* size;
+        uint32_t capacity;
+        if (block_opaque(a))
+        {
+            data = opaque_data;
+            size = opaque_size;
+            capacity = opaque_capacity;
+        }
+        else
+        {
+            data = transparent_data;
+            size = transparent_size;
+            capacity = transparent_capacity;
+        }
+        if (block_sprite(a))
+        {
+            *size += 4;
+            if (*size > capacity)
+            {
+                continue;
+            }
+            for (int direction = 0; direction < 4; direction++)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    data[*size * 4 - 4 * (direction + 1) + i] = pack_sprite(a, x, y, z, direction, i);
+                }            
+            }
+            continue;
+        }
         for (direction_t d = 0; d < DIRECTION_3; d++)
         {
             if (height == 0 && y == 0 && d != DIRECTION_U)
@@ -114,24 +188,9 @@ static void fill(
             {
                 b = BLOCK_EMPTY;
             }
-            if (b != BLOCK_EMPTY && !(block_opaque(a) && !block_opaque(b)))
+            if (b != BLOCK_EMPTY && !block_sprite(b) && !(block_opaque(a) && !block_opaque(b)))
             {
                 continue;
-            }
-            uint32_t* data;
-            uint32_t* size;
-            uint32_t capacity;
-            if (block_opaque(a))
-            {
-                data = opaque_data;
-                size = opaque_size;
-                capacity = opaque_capacity;
-            }
-            else
-            {
-                data = transparent_data;
-                size = transparent_size;
-                capacity = transparent_capacity;
             }
             if (++(*size) > capacity)
             {

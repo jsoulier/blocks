@@ -10,8 +10,6 @@ bool block_opaque(const block_t block)
     case BLOCK_EMPTY:
     case BLOCK_GLASS:
     case BLOCK_WATER:
-    case BLOCK_ROSE:
-    case BLOCK_TULIP:
         return 0;
     }
     return 1;
@@ -40,9 +38,9 @@ bool block_sprite(const block_t block)
     {
     case BLOCK_ROSE:
     case BLOCK_TULIP:
-        return 0;
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 const int blocks[][DIRECTION_3][2] =
@@ -94,12 +92,12 @@ const int blocks[][DIRECTION_3][2] =
     },
     [BLOCK_ROSE] =
     {
-        [DIRECTION_E] = { 0, 0 },
-        [DIRECTION_W] = { 0, 0 },
-        [DIRECTION_N] = { 0, 0 },
-        [DIRECTION_S] = { 0, 0 },
-        [DIRECTION_U] = { 0, 0 },
-        [DIRECTION_D] = { 0, 0 },
+        [DIRECTION_E] = { 0, 2 },
+        [DIRECTION_W] = { 0, 2 },
+        [DIRECTION_N] = { 0, 2 },
+        [DIRECTION_S] = { 0, 2 },
+        [DIRECTION_U] = { 0, 2 },
+        [DIRECTION_D] = { 0, 2 },
     },
     [BLOCK_SAND] =
     {

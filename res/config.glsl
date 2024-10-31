@@ -14,5 +14,8 @@ const float world_fog_distance = 400.0;
 const float world_fog_factor = 2.5;
 const float raycast_size = 1.05;
 const float raycast_alpha = 0.2;
+const vec3 light_direction = normalize(vec3(-1.0, -1.0, -1.0));
+const vec3 light_color = vec3(1.0, 1.0, 1.0);
+const vec3 ambient_color = vec3(0.2, 0.2, 0.25);
 
 #endif
