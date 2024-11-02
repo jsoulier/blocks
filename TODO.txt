@@ -1,34 +1,12 @@
-Features
-- Collision
 - Lighting
-- Noise
-- Transparency
-  - Sorting within chunks
-    - Probably need to increase job queue size for a new sort job
+- Collision
+- Transparency within chunks
 - Multisampling
-  - Gonna have to fix texture bleeding
-  - Also mipmaps
-
-Memory Optimizations
-- Chunk Paging
-  - Kinda an obvious one. Free empty chunks
-
-Bug Fixes
-- Near plane clipping
-  - Had to increase the near planes to avoid depth buffer precision issues
-  - Blocks are getting clipped too often
-  - Add support for changing the camera z planes
-- Texture bleeding
-  - Maybe blit each block face into a texture array?
-  - Migrate uvs to texture index and vertex number
-
-Potential Database Race:
-- If you write to the database queue, then unload and reload the chunk
-  before the queue flushes the write, the chunk won't load the changes
-- To fix
-  1. Make database writes synchronous
-  2. Mark dirty chunk positions
-     - When the dirty chunk position is referenced for a read, the
-       database has to flush it's queue before reading into the chunk
-  3. Search through the database jobs on reads for any block writes
-- NOTE: While it's possible, I've never reproduced it myself
+- Chunk paging
+  - Free empty chunks
+- Fix near plane clipping
+- Fix texture bleeding
+- Fix database race?
+  - If you write to the database queue then unload and reload the chunk before
+    the queue flushes the write, the chunk won't load the changes
+  - It is probably possible but never managed to make it happen

@@ -29,7 +29,7 @@ static SDL_GPUBuffer* cube_vbo;
 static uint32_t width;
 static uint32_t height;
 static camera_t camera;
-static block_t selection = BLOCK_ROSE;
+static block_t selection = BLOCK_GRASS;
 static void* atlas_data;
 
 static SDL_GPUShader* load_shader(
@@ -666,7 +666,8 @@ static void draw_opaque()
     dsti.texture = depth_texture;
     dsti.store_op = SDL_GPU_STOREOP_STORE;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, &dsti);
-    if (!pass) {
+    if (!pass)
+    {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
@@ -700,7 +701,8 @@ static void draw_transparent()
     dsti.texture = depth_texture;
     dsti.store_op = SDL_GPU_STOREOP_STORE;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, &dsti);
-    if (!pass) {
+    if (!pass)
+    {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
@@ -921,7 +923,7 @@ static void commit()
     float yaw;
     camera_get_position(&camera, &x, &y, &z);
     camera_get_rotation(&camera, &pitch, &yaw);
-    database_set_player(0, x, y, z, pitch, yaw);
+    database_set_player(DATABASE_PLAYER, x, y, z, pitch, yaw);
     database_commit();
 }
 
@@ -993,7 +995,7 @@ int main(int argc, char** argv)
     camera_init(&camera);
     camera_move(&camera, PLAYER_X, PLAYER_Y, PLAYER_Z);
     camera_viewport(&camera, WINDOW_WIDTH, WINDOW_HEIGHT);
-    if (database_get_player(0, &x, &y, &z, &pitch, &yaw))
+    if (database_get_player(DATABASE_PLAYER, &x, &y, &z, &pitch, &yaw))
     {
         camera_set_position(&camera, x, y, z);
         camera_set_rotation(&camera, pitch, yaw);

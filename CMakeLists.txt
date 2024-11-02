@@ -8,35 +8,36 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
+make_directory(${BINARY_DIR})
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/lib/SDL)
+add_subdirectory(lib/SDL)
 add_executable(${PROJECT_NAME} WIN32
-    ${CMAKE_SOURCE_DIR}/lib/sqlite3/sqlite3.c
-    ${CMAKE_SOURCE_DIR}/lib/stb/stb.c
-    ${CMAKE_SOURCE_DIR}/src/block.c
-    ${CMAKE_SOURCE_DIR}/src/camera.c
-    ${CMAKE_SOURCE_DIR}/src/containers.c
-    ${CMAKE_SOURCE_DIR}/src/database.c
-    ${CMAKE_SOURCE_DIR}/src/helpers.c
-    ${CMAKE_SOURCE_DIR}/src/main.c
-    ${CMAKE_SOURCE_DIR}/src/noise.c
-    ${CMAKE_SOURCE_DIR}/src/physics.c
-    ${CMAKE_SOURCE_DIR}/src/voxmesh.c
-    ${CMAKE_SOURCE_DIR}/src/world.c
+    lib/sqlite3/sqlite3.c
+    lib/stb/stb.c
+    src/block.c
+    src/camera.c
+    src/containers.c
+    src/database.c
+    src/helpers.c
+    src/main.c
+    src/noise.c
+    src/physics.c
+    src/voxmesh.c
+    src/world.c
 )
-target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/lib/sqlite3)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/lib/stb)
-set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 11)
+target_link_libraries(blocks PUBLIC SDL3::SDL3)
+target_include_directories(blocks PUBLIC lib/sqlite3)
+target_include_directories(blocks PUBLIC lib/stb)
+set_target_properties(blocks PROPERTIES C_STANDARD 11)
 
 function(shader FILE)
     string(REPLACE . _ NAME ${FILE})
-    set(SOURCE ${CMAKE_SOURCE_DIR}/res/${FILE})
+    set(SOURCE shaders/${FILE})
     set(OUTPUT ${BINARY_DIR}/${FILE})
     add_custom_target(${NAME} ALL
-        COMMAND glslc ${SOURCE} -o ${OUTPUT} -I ${CMAKE_SOURCE_DIR}/src
-        DEPENDS ${SOURCE} ${CMAKE_SOURCE_DIR}/res/config.glsl
-            ${CMAKE_SOURCE_DIR}/src/config.h
+        COMMAND glslc ${SOURCE} -o ${OUTPUT} -I src
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        DEPENDS ${SOURCE} res/config.glsl src/config.h
         BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
 endfunction()
 shader(raycast.frag)
@@ -48,4 +49,4 @@ shader(ui.vert)
 shader(world.frag)
 shader(world.vert)
 
-configure_file(${CMAKE_SOURCE_DIR}/res/atlas.png ${BINARY_DIR} COPYONLY)
+configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)

@@ -12,7 +12,7 @@
 #define WINDOW_TITLE "blocks"
 
 #define PLAYER_SPEED 0.2f
-#define PLAYER_SUPER_SPEED 1.0f
+#define PLAYER_SUPER_SPEED 2.0f
 #define PLAYER_SENSITIVITY 0.1f
 #define PLAYER_X 0
 #define PLAYER_Y 30
@@ -43,6 +43,7 @@
 #define DATABASE_MAX_JOBS 100
 #define DATABASE_PATH "blocks.sqlite3"
 #define DATABASE_TIME 1000
+#define DATABASE_PLAYER 0
 
 #define VOXEL_X_BITS 5
 #define VOXEL_Y_BITS 5
