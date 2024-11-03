@@ -16,6 +16,8 @@ static SDL_GPUDevice* device;
 static SDL_GPUCommandBuffer* commands;
 static SDL_GPUTexture* color_texture;
 static SDL_GPUTexture* depth_texture;
+static SDL_GPUTexture* shadow_texture;
+static SDL_GPUGraphicsPipeline* shadow_pipeline;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
 static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* ui_pipeline;
@@ -23,12 +25,14 @@ static SDL_GPUGraphicsPipeline* opaque_pipeline;
 static SDL_GPUGraphicsPipeline* transparent_pipeline;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUSampler* atlas_sampler;
+static SDL_GPUSampler* shadow_sampler;
 static SDL_Surface* atlas_surface;
 static SDL_GPUBuffer* quad_vbo;
 static SDL_GPUBuffer* cube_vbo;
 static uint32_t width;
 static uint32_t height;
-static camera_t camera;
+static camera_t player_camera;
+static camera_t shadow_camera;
 static block_t selection = BLOCK_GRASS;
 static void* atlas_data;
 
@@ -68,6 +72,56 @@ static SDL_GPUShader* load_shader(
         return NULL;
     }
     return shader;
+}
+
+static void load_shadow_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info =
+    {
+        .vertex_shader = load_shader(device, "shadow.vert", 3, 0),
+        .fragment_shader = load_shader(device, "shadow.frag", 0, 0),
+        .target_info =
+        {
+            .has_depth_stencil_target = 1,
+            .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
+        },
+        .vertex_input_state =
+        {
+            .num_vertex_attributes = 1,
+            .vertex_attributes = (SDL_GPUVertexAttribute[])
+            {{
+                .format = SDL_GPU_VERTEXELEMENTFORMAT_UINT,
+            }},
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[])
+            {{
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                .pitch = 4,
+            }},
+        },
+        .depth_stencil_state =
+        {
+            .enable_depth_test = 1,
+            .enable_depth_write = 1,
+            .compare_op = SDL_GPU_COMPAREOP_LESS,
+        },
+        .rasterizer_state =
+        {
+            .cull_mode = SDL_GPU_CULLMODE_BACK,
+            .front_face = SDL_GPU_FRONTFACE_CLOCKWISE,
+            .fill_mode = SDL_GPU_FILLMODE_FILL,
+        },
+    };
+    if (info.vertex_shader && info.fragment_shader)
+    {
+        shadow_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    }
+    if (!shadow_pipeline)
+    {
+        SDL_Log("Failed to create shadow pipeline: %s", SDL_GetError());
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
 static void load_raycast_pipeline()
@@ -225,8 +279,8 @@ static void load_opaque_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "world.vert", 3, 0),
-        .fragment_shader = load_shader(device, "world.frag", 0, 1),
+        .vertex_shader = load_shader(device, "world.vert", 5, 0),
+        .fragment_shader = load_shader(device, "world.frag", 0, 2),
         .target_info =
         {
             .num_color_targets = 1,
@@ -270,7 +324,7 @@ static void load_opaque_pipeline()
     }
     if (!opaque_pipeline)
     {
-        SDL_Log("Failed to create world pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to create opaque pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -280,8 +334,8 @@ static void load_transparent_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "world.vert", 3, 0),
-        .fragment_shader = load_shader(device, "world.frag", 0, 1),
+        .vertex_shader = load_shader(device, "world.vert", 5, 0),
+        .fragment_shader = load_shader(device, "world.frag", 0, 2),
         .target_info =
         {
             .num_color_targets = 1,
@@ -333,7 +387,7 @@ static void load_transparent_pipeline()
     }
     if (!transparent_pipeline)
     {
-        SDL_Log("Failed to create world pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to create transparent pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -427,6 +481,30 @@ static void create_samplers()
         SDL_Log("Failed to create atlas sampler: %s", SDL_GetError());
         return;
     }
+    shadow_sampler = SDL_CreateGPUSampler(device, &sci);
+    if (!shadow_sampler)
+    {
+        SDL_Log("Failed to create shadow sampler: %s", SDL_GetError());
+        return;
+    }
+}
+
+static void create_textures()
+{
+    SDL_GPUTextureCreateInfo tci = {0};
+    tci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    tci.type = SDL_GPU_TEXTURETYPE_2D;
+    tci.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+    tci.width = SHADOW_SIZE;
+    tci.height = SHADOW_SIZE;
+    tci.layer_count_or_depth = 1;
+    tci.num_levels = 1;
+    shadow_texture = SDL_CreateGPUTexture(device, &tci);
+    if (!shadow_texture)
+    {
+        SDL_Log("Failed to create shadow texture: %s", SDL_GetError());
+        return;
+    }
 }
 
 SDL_Surface* create_icon(const block_t block)
@@ -475,18 +553,18 @@ static void create_vbos()
     };
     const float cube[][3] =
     {
-        {-1, -1, -1 }, { 1, -1, -1 }, { 1,  1, -1},
-        {-1, -1, -1 }, { 1,  1, -1 }, {-1,  1, -1},
-        { 1, -1,  1 }, { 1,  1,  1 }, {-1,  1,  1},
-        { 1, -1,  1 }, {-1,  1,  1 }, {-1, -1,  1},
-        {-1, -1, -1 }, {-1,  1, -1 }, {-1,  1,  1},
-        {-1, -1, -1 }, {-1,  1,  1 }, {-1, -1,  1},
-        { 1, -1, -1 }, { 1, -1,  1 }, { 1,  1,  1},
-        { 1, -1, -1 }, { 1,  1,  1 }, { 1,  1, -1},
-        {-1,  1, -1 }, { 1,  1, -1 }, { 1,  1,  1},
-        {-1,  1, -1 }, { 1,  1,  1 }, {-1,  1,  1},
-        {-1, -1, -1 }, {-1, -1,  1 }, { 1, -1,  1},
-        {-1, -1, -1 }, { 1, -1,  1 }, { 1, -1, -1},
+        {-1, -1, -1 }, { 1, -1, -1 }, { 1,  1, -1 },
+        {-1, -1, -1 }, { 1,  1, -1 }, {-1,  1, -1 },
+        { 1, -1,  1 }, { 1,  1,  1 }, {-1,  1,  1 },
+        { 1, -1,  1 }, {-1,  1,  1 }, {-1, -1,  1 },
+        {-1, -1, -1 }, {-1,  1, -1 }, {-1,  1,  1 },
+        {-1, -1, -1 }, {-1,  1,  1 }, {-1, -1,  1 },
+        { 1, -1, -1 }, { 1, -1,  1 }, { 1,  1,  1 },
+        { 1, -1, -1 }, { 1,  1,  1 }, { 1,  1, -1 },
+        {-1,  1, -1 }, { 1,  1, -1 }, { 1,  1,  1 },
+        {-1,  1, -1 }, { 1,  1,  1 }, {-1,  1,  1 },
+        {-1, -1, -1 }, {-1, -1,  1 }, { 1, -1,  1 },
+        {-1, -1, -1 }, { 1, -1,  1 }, { 1, -1, -1 },
     };
     SDL_GPUBufferCreateInfo bci = {0};
     bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
@@ -564,6 +642,26 @@ static void create_vbos()
     SDL_ReleaseGPUTransferBuffer(device, ctbo);
 }
 
+static void draw_shadow()
+{
+    SDL_GPUDepthStencilTargetInfo dsti = {0};
+    dsti.clear_depth = 1.0f;
+    dsti.load_op = SDL_GPU_LOADOP_CLEAR;
+    dsti.texture = shadow_texture;
+    dsti.store_op = SDL_GPU_STOREOP_STORE;
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, NULL, 0, &dsti);
+    if (!pass)
+    {
+        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
+        return;
+    }
+    SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
+    SDL_PushGPUVertexUniformData(commands, 1, shadow_camera.view, 64);
+    SDL_PushGPUVertexUniformData(commands, 2, shadow_camera.proj, 64);
+    world_render(NULL, commands, pass, true);
+    SDL_EndGPURenderPass(pass);
+}
+
 static void draw_raycast()
 {
     float x;
@@ -572,8 +670,8 @@ static void draw_raycast()
     float a;
     float b;
     float c;
-    camera_get_position(&camera, &x, &y, &z);
-    camera_vector(&camera, &a, &b, &c);
+    camera_get_position(&player_camera, &x, &y, &z);
+    camera_vector(&player_camera, &a, &b, &c);
     if (!physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, false))
     {
         return;
@@ -583,7 +681,6 @@ static void draw_raycast()
     cti.store_op = SDL_GPU_STOREOP_STORE;
     cti.texture = color_texture;
     SDL_GPUDepthStencilTargetInfo dsti = {0};
-    dsti.clear_depth = 0;
     dsti.load_op = SDL_GPU_LOADOP_LOAD;
     dsti.texture = depth_texture;
     dsti.store_op = SDL_GPU_STOREOP_STORE;
@@ -597,7 +694,7 @@ static void draw_raycast()
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = cube_vbo;
     SDL_BindGPUGraphicsPipeline(pass, raycast_pipeline);
-    SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
+    SDL_PushGPUVertexUniformData(commands, 0, player_camera.matrix, 64);
     SDL_PushGPUVertexUniformData(commands, 1, hit, sizeof(hit));
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
@@ -618,8 +715,8 @@ static void draw_sky()
     }
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = cube_vbo;
-    SDL_PushGPUVertexUniformData(commands, 0, camera.view, 64);
-    SDL_PushGPUVertexUniformData(commands, 1, camera.proj, 64);
+    SDL_PushGPUVertexUniformData(commands, 0, player_camera.view, 64);
+    SDL_PushGPUVertexUniformData(commands, 1, player_camera.proj, 64);
     SDL_BindGPUGraphicsPipeline(pass, sky_pipeline);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
@@ -638,7 +735,7 @@ static void draw_ui()
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    int32_t viewport[2] = { camera.width, camera.height };
+    int32_t viewport[2] = { player_camera.width, player_camera.height };
     int32_t block[2] = { blocks[selection][0][0], blocks[selection][0][1] };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
@@ -661,7 +758,7 @@ static void draw_opaque()
     cti.store_op = SDL_GPU_STOREOP_STORE;
     cti.texture = color_texture;
     SDL_GPUDepthStencilTargetInfo dsti = {0};
-    dsti.clear_depth = 1;
+    dsti.clear_depth = 1.0f;
     dsti.load_op = SDL_GPU_LOADOP_CLEAR;
     dsti.texture = depth_texture;
     dsti.store_op = SDL_GPU_STOREOP_STORE;
@@ -672,21 +769,21 @@ static void draw_opaque()
         return;
     }
     float position[3];
-    camera_get_position(&camera, &position[0], &position[1], &position[2]);
-    SDL_GPUTextureSamplerBinding tsb = {0};
-    if (atlas_sampler)
-    {
-        tsb.sampler = atlas_sampler;
-    }
-    if (atlas_texture)
-    {
-        tsb.texture = atlas_texture;
-    }
+    camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
+    SDL_GPUTextureSamplerBinding atsb = {0};
+    atsb.sampler = atlas_sampler;
+    atsb.texture = atlas_texture;
+    SDL_GPUTextureSamplerBinding stsb = {0};
+    stsb.sampler = shadow_sampler;
+    stsb.texture = shadow_texture;
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
-    SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(commands, 1, position, sizeof(position));
-    SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
-    world_render_opaque(&camera, commands, pass);
+    SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
+    SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
+    SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.view, 64);
+    SDL_PushGPUVertexUniformData(commands, 4, shadow_camera.proj, 64);
+    SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
+    SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
+    world_render(&player_camera, commands, pass, true);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -707,7 +804,7 @@ static void draw_transparent()
         return;
     }
     float position[3];
-    camera_get_position(&camera, &position[0], &position[1], &position[2]);
+    camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
     SDL_GPUTextureSamplerBinding tsb = {0};
     if (atlas_sampler)
     {
@@ -718,10 +815,10 @@ static void draw_transparent()
         tsb.texture = atlas_texture;
     }
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
-    SDL_PushGPUVertexUniformData(commands, 0, camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(commands, 1, position, sizeof(position));
+    SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
+    SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
-    world_render_transparent(&camera, commands, pass);
+    world_render(&player_camera, commands, pass, false);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -769,7 +866,11 @@ static void draw()
         width = w;
         height = h;
     }
-    camera_update(&camera);
+    camera_update(&player_camera);
+    if (shadow_pipeline)
+    {
+        draw_shadow();
+    }
     if (sky_pipeline && cube_vbo)
     {
         draw_sky();
@@ -780,7 +881,7 @@ static void draw()
     }
     if (transparent_pipeline)
     {
-        draw_transparent();
+        // draw_transparent();
     }
     if (raycast_pipeline && cube_vbo)
     {
@@ -803,14 +904,14 @@ static bool poll()
         case SDL_EVENT_QUIT:
             return false;
         case SDL_EVENT_WINDOW_RESIZED:
-            camera_viewport(&camera, event.window.data1, event.window.data2);
+            camera_viewport(&player_camera, event.window.data1, event.window.data2);
             break;
         case SDL_EVENT_MOUSE_MOTION:
             if (SDL_GetWindowRelativeMouseMode(window))
             {
                 const float yaw = event.motion.xrel * PLAYER_SENSITIVITY;
                 const float pitch = -event.motion.yrel * PLAYER_SENSITIVITY;
-                camera_rotate(&camera, pitch, yaw);
+                camera_rotate(&player_camera, pitch, yaw);
             }
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -835,8 +936,8 @@ static bool poll()
                 float a;
                 float b;
                 float c;
-                camera_get_position(&camera, &x, &y, &z);
-                camera_vector(&camera, &a, &b, &c);
+                camera_get_position(&player_camera, &x, &y, &z);
+                camera_vector(&player_camera, &a, &b, &c);
                 if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH,
                     previous) && y >= 1.0f)
                 {
@@ -911,7 +1012,26 @@ static void move()
     x *= speed;
     y *= speed;
     z *= speed;
-    camera_move(&camera, x, y, z);
+    camera_move(&player_camera, x, y, z);
+    camera_get_position(&player_camera, &x, &y, &z);
+
+    int s = x;
+    int t = y;
+    int p = z;
+    s /= CHUNK_X;
+    t /= CHUNK_Y;
+    p /= CHUNK_Z;
+    s *= CHUNK_X;
+    t *= CHUNK_Y;
+    p *= CHUNK_Z;
+    t = SHADOW_Y;
+    // const float texel_size = shadow_camera.size / SHADOW_SIZE;
+    // x = roundf(x / texel_size) * texel_size;
+    // y = roundf(y / texel_size) * texel_size;
+    // z = roundf(z / texel_size) * texel_size;
+    // SDL_Log("%f, %f, %f", x, y, z);
+    camera_set_position(&shadow_camera, s, t, p);
+    camera_update(&shadow_camera);
 }
 
 static void commit()
@@ -921,8 +1041,8 @@ static void commit()
     float z;
     float pitch;
     float yaw;
-    camera_get_position(&camera, &x, &y, &z);
-    camera_get_rotation(&camera, &pitch, &yaw);
+    camera_get_position(&player_camera, &x, &y, &z);
+    camera_get_rotation(&player_camera, &pitch, &yaw);
     database_set_player(DATABASE_PLAYER, x, y, z, pitch, yaw);
     database_commit();
 }
@@ -955,12 +1075,14 @@ int main(int argc, char** argv)
         return false;
     }
     load_atlas();
+    load_shadow_pipeline();
     load_raycast_pipeline();
     load_sky_pipeline();
     load_ui_pipeline();
     load_opaque_pipeline();
     load_transparent_pipeline();
     create_samplers();
+    create_textures();
     create_vbos();
     {
         SDL_SetWindowResizable(window, true);
@@ -992,14 +1114,17 @@ int main(int argc, char** argv)
     float z;
     float pitch;
     float yaw;
-    camera_init(&camera, false);
-    camera_move(&camera, PLAYER_X, PLAYER_Y, PLAYER_Z);
-    camera_viewport(&camera, WINDOW_WIDTH, WINDOW_HEIGHT);
+    camera_init(&player_camera, false);
+    camera_move(&player_camera, PLAYER_X, PLAYER_Y, PLAYER_Z);
+    camera_viewport(&player_camera, WINDOW_WIDTH, WINDOW_HEIGHT);
     if (database_get_player(DATABASE_PLAYER, &x, &y, &z, &pitch, &yaw))
     {
-        camera_set_position(&camera, x, y, z);
-        camera_set_rotation(&camera, pitch, yaw);
+        camera_set_position(&player_camera, x, y, z);
+        camera_set_rotation(&player_camera, pitch, yaw);
     }
+    camera_init(&shadow_camera, true);
+    camera_set_rotation(&shadow_camera, SHADOW_PITCH, SHADOW_YAW);
+    move();
     int cooldown = 0;
     int time = DATABASE_TIME;
     int loop = 1;
@@ -1010,7 +1135,7 @@ int main(int argc, char** argv)
             break;
         }
         move();
-        camera_get_position(&camera, &x, &y, &z);
+        camera_get_position(&player_camera, &x, &y, &z);
         world_update(x, y, z);
         draw();
         if (cooldown++ > time)
@@ -1030,9 +1155,25 @@ int main(int argc, char** argv)
     {
         SDL_ReleaseGPUSampler(device, atlas_sampler);
     }
+    if (shadow_sampler)
+    {
+        SDL_ReleaseGPUSampler(device, shadow_sampler);
+    }
     if (atlas_texture)
     {
         SDL_ReleaseGPUTexture(device, atlas_texture);
+    }
+    if (shadow_texture)
+    {
+        SDL_ReleaseGPUTexture(device, shadow_texture);
+    }
+    if (depth_texture)
+    {
+        SDL_ReleaseGPUTexture(device, depth_texture);
+    }
+    if (shadow_pipeline)
+    {
+        SDL_ReleaseGPUGraphicsPipeline(device, shadow_pipeline);
     }
     if (raycast_pipeline)
     {
@@ -1053,10 +1194,6 @@ int main(int argc, char** argv)
     if (sky_pipeline)
     {
         SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
-    }
-    if (depth_texture)
-    {
-        SDL_ReleaseGPUTexture(device, depth_texture);
     }
     if (cube_vbo)
     {

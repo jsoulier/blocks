@@ -25,6 +25,11 @@
 #define ATLAS_X_FACES 16.0
 #define ATLAS_Y_FACES 16.0
 
+#define SHADOW_SIZE 5000
+#define SHADOW_Y 100.0f
+#define SHADOW_PITCH (-PI / 4.0f)
+#define SHADOW_YAW (0.0f)
+
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30

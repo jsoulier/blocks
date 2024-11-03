@@ -529,68 +529,14 @@ void world_update(
     }
 }
 
-static void render(
+void world_render(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
     SDL_GPURenderPass* pass,
-    const int i,
     const bool opaque)
 {
-    const int j = opaque ? i : WORLD_CHUNKS - i - 1;
-    int x = sorted[height][i][0] + terrain.x;
-    int y = sorted[height][i][1];
-    int z = sorted[height][i][2] + terrain.z;
-    if (terrain_border2(&terrain, x, z))
-    {
-        return;
-    }
-    const group_t* group = terrain_get2(&terrain, x, z);
-    if (!group->loaded)
-    {
-        return;
-    }
-    const chunk_t* chunk = &group->chunks[y];
-    if (!chunk->renderable)
-    {
-        return;
-    }
-    SDL_GPUBuffer* vbo;
-    uint32_t size;
-    if (opaque)
-    {
-        vbo = chunk->opaque_vbo;
-        size = chunk->opaque_size;
-    }
-    else
-    {
-        vbo = chunk->transparent_vbo;
-        size = chunk->transparent_size;
-    }
-    if (!size)
-    {
-        return;
-    }
-    x *= CHUNK_X;
-    y *= CHUNK_Y;
-    z *= CHUNK_Z;
-    if (camera && !camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
-    {
-        return;
-    }
-    int32_t position[3] = { x, y, z };
-    SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
-    SDL_GPUBufferBinding vbb = {0};
-    vbb.buffer = vbo;
-    SDL_BindGPUVertexBuffers(pass, 0, &vbb, 1);
-    assert(size <= ibo_size);
-    SDL_DrawGPUIndexedPrimitives(pass, size * 6, 1, 0, 0, 0);
-}
-
-void world_render_opaque(
-    const camera_t* camera,
-    SDL_GPUCommandBuffer* commands,
-    SDL_GPURenderPass* pass)
-{
+    assert(commands);
+    assert(pass);
     if (!ibo)
     {
         return;
@@ -600,25 +546,54 @@ void world_render_opaque(
     SDL_BindGPUIndexBuffer(pass, &ibb, SDL_GPU_INDEXELEMENTSIZE_32BIT);
     for (int i = 0; i < WORLD_CHUNKS; i++)
     {
-        render(camera, commands, pass, i, true);
-    }
-}
-
-void world_render_transparent(
-    const camera_t* camera,
-    SDL_GPUCommandBuffer* commands,
-    SDL_GPURenderPass* pass)
-{
-    if (!ibo)
-    {
-        return;
-    }
-    SDL_GPUBufferBinding ibb = {0};
-    ibb.buffer = ibo;
-    SDL_BindGPUIndexBuffer(pass, &ibb, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-    for (int i = 0; i < WORLD_CHUNKS; i++)
-    {
-        render(camera, commands, pass, i, false);
+        const int j = opaque ? i : WORLD_CHUNKS - i - 1;
+        int x = sorted[height][j][0] + terrain.x;
+        int y = sorted[height][j][1];
+        int z = sorted[height][j][2] + terrain.z;
+        if (terrain_border2(&terrain, x, z))
+        {
+            continue;
+        }
+        const group_t* group = terrain_get2(&terrain, x, z);
+        if (!group->loaded)
+        {
+            continue;
+        }
+        const chunk_t* chunk = &group->chunks[y];
+        if (!chunk->renderable)
+        {
+            continue;
+        }
+        SDL_GPUBuffer* vbo;
+        uint32_t size;
+        if (opaque)
+        {
+            vbo = chunk->opaque_vbo;
+            size = chunk->opaque_size;
+        }
+        else
+        {
+            vbo = chunk->transparent_vbo;
+            size = chunk->transparent_size;
+        }
+        if (!size)
+        {
+            continue;
+        }
+        x *= CHUNK_X;
+        y *= CHUNK_Y;
+        z *= CHUNK_Z;
+        if (camera && !camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
+        {
+            continue;
+        }
+        int32_t position[3] = { x, y, z };
+        SDL_PushGPUVertexUniformData(commands, 0, position, sizeof(position));
+        SDL_GPUBufferBinding vbb = {0};
+        vbb.buffer = vbo;
+        SDL_BindGPUVertexBuffers(pass, 0, &vbb, 1);
+        assert(size <= ibo_size);
+        SDL_DrawGPUIndexedPrimitives(pass, size * 6, 1, 0, 0, 0);
     }
 }
 

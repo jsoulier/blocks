@@ -148,7 +148,7 @@ void camera_init(
     camera->height = 480.0f;
     camera->fov = rad(90.0f);
     camera->near = 1.0f;
-    camera->far = 1000.0f;
+    camera->far = 500.0f;
     camera->size = 360.0f;
     camera->ortho = ortho;
     camera->dirty = true;
@@ -163,7 +163,6 @@ void camera_update(camera_t* camera)
     }
     const float s = sinf(camera->yaw);
     const float c = cosf(camera->yaw);
-    const float a = camera->width / camera->height;
     translate(camera->view, -camera->x, -camera->y, -camera->z);
     rotate(camera->proj, c, 0.0f, s, camera->pitch);
     multiply(camera->view, camera->proj, camera->view);
@@ -171,13 +170,13 @@ void camera_update(camera_t* camera)
     multiply(camera->view, camera->proj, camera->view);
     if (!camera->ortho)
     {
+        const float a = camera->width / camera->height;
         perspective(camera->proj, a, camera->fov, camera->near, camera->far);
     }
     else
     {
-        const float w = camera->size * a;
-        const float h = camera->size;
-        ortho(camera->proj, -w, w, -h, h, camera->near, camera->far);
+        const float w = camera->size;
+        ortho(camera->proj, -w, w, -w, w, -camera->far, camera->far);
     }
     multiply(camera->matrix, camera->proj, camera->view);
     camera->dirty = false;

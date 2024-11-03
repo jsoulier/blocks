@@ -12,14 +12,11 @@ void world_update(
     const int x,
     const int y,
     const int z);
-void world_render_opaque(
+void world_render(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
-    SDL_GPURenderPass* pass);
-void world_render_transparent(
-    const camera_t* camera,
-    SDL_GPUCommandBuffer* commands,
-    SDL_GPURenderPass* pass);
+    SDL_GPURenderPass* pass,
+    const bool opaque);
 void world_set_block(
     const int x,
     const int y,
