@@ -28,7 +28,7 @@
 #define SHADOW_SIZE 5000
 #define SHADOW_Y 100.0f
 #define SHADOW_PITCH (-PI / 4.0f)
-#define SHADOW_YAW (0.0f)
+#define SHADOW_YAW 0.0f
 
 #define CHUNK_X 30
 #define CHUNK_Y 30

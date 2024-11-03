@@ -781,7 +781,7 @@ static void draw_opaque()
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
     SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
     SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
-    world_render(NULL, commands, pass, true);
+    world_render(&player_camera, commands, pass, true);
     SDL_EndGPURenderPass(pass);
 }
 
