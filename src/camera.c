@@ -168,15 +168,16 @@ void camera_update(camera_t* camera)
     multiply(camera->view, camera->proj, camera->view);
     rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
     multiply(camera->view, camera->proj, camera->view);
-    if (!camera->ortho)
+    if (camera->ortho)
     {
-        const float a = camera->width / camera->height;
-        perspective(camera->proj, a, camera->fov, camera->near, camera->far);
+        // TODO: why?
+        const float w = camera->size;
+        ortho(camera->proj, -w, w, -w, w, -camera->far * 2.0f, camera->far);
     }
     else
     {
-        const float w = camera->size;
-        ortho(camera->proj, -w, w, -w, w, -camera->far, camera->far);
+        const float a = camera->width / camera->height;
+        perspective(camera->proj, a, camera->fov, camera->near, camera->far);
     }
     multiply(camera->matrix, camera->proj, camera->view);
     camera->dirty = false;

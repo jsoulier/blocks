@@ -78,7 +78,7 @@ static void load_shadow_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "shadow.vert", 3, 0),
+        .vertex_shader = load_shader(device, "shadow.vert", 2, 0),
         .fragment_shader = load_shader(device, "shadow.frag", 0, 0),
         .target_info =
         {
@@ -279,7 +279,7 @@ static void load_opaque_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "world.vert", 5, 0),
+        .vertex_shader = load_shader(device, "world.vert", 4, 0),
         .fragment_shader = load_shader(device, "world.frag", 0, 2),
         .target_info =
         {
@@ -334,7 +334,7 @@ static void load_transparent_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "world.vert", 5, 0),
+        .vertex_shader = load_shader(device, "world.vert", 4, 0),
         .fragment_shader = load_shader(device, "world.frag", 0, 2),
         .target_info =
         {
@@ -656,8 +656,7 @@ static void draw_shadow()
         return;
     }
     SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
-    SDL_PushGPUVertexUniformData(commands, 1, shadow_camera.view, 64);
-    SDL_PushGPUVertexUniformData(commands, 2, shadow_camera.proj, 64);
+    SDL_PushGPUVertexUniformData(commands, 1, shadow_camera.matrix, 64);
     world_render(NULL, commands, pass, true);
     SDL_EndGPURenderPass(pass);
 }
@@ -779,11 +778,10 @@ static void draw_opaque()
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
     SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
-    SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.view, 64);
-    SDL_PushGPUVertexUniformData(commands, 4, shadow_camera.proj, 64);
+    SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
     SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
     SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
-    world_render(&player_camera, commands, pass, true);
+    world_render(NULL, commands, pass, true);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -805,19 +803,18 @@ static void draw_transparent()
     }
     float position[3];
     camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
-    SDL_GPUTextureSamplerBinding tsb = {0};
-    if (atlas_sampler)
-    {
-        tsb.sampler = atlas_sampler;
-    }
-    if (atlas_texture)
-    {
-        tsb.texture = atlas_texture;
-    }
+    SDL_GPUTextureSamplerBinding atsb = {0};
+    atsb.sampler = atlas_sampler;
+    atsb.texture = atlas_texture;
+    SDL_GPUTextureSamplerBinding stsb = {0};
+    stsb.sampler = shadow_sampler;
+    stsb.texture = shadow_texture;
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
     SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
-    SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
+    SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
+    SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
+    SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
     world_render(&player_camera, commands, pass, false);
     SDL_EndGPURenderPass(pass);
 }
@@ -881,7 +878,7 @@ static void draw()
     }
     if (transparent_pipeline)
     {
-        // draw_transparent();
+        draw_transparent();
     }
     if (raycast_pipeline && cube_vbo)
     {
@@ -1014,23 +1011,13 @@ static void move()
     z *= speed;
     camera_move(&player_camera, x, y, z);
     camera_get_position(&player_camera, &x, &y, &z);
-
-    int s = x;
-    int t = y;
-    int p = z;
-    s /= CHUNK_X;
-    t /= CHUNK_Y;
-    p /= CHUNK_Z;
-    s *= CHUNK_X;
-    t *= CHUNK_Y;
-    p *= CHUNK_Z;
-    t = SHADOW_Y;
-    // const float texel_size = shadow_camera.size / SHADOW_SIZE;
-    // x = roundf(x / texel_size) * texel_size;
-    // y = roundf(y / texel_size) * texel_size;
-    // z = roundf(z / texel_size) * texel_size;
-    // SDL_Log("%f, %f, %f", x, y, z);
-    camera_set_position(&shadow_camera, s, t, p);
+    int a = x;
+    int c = z;
+    a /= CHUNK_X;
+    c /= CHUNK_Z;
+    a *= CHUNK_X;
+    c *= CHUNK_Z;
+    camera_set_position(&shadow_camera, a, SHADOW_Y, c);
     camera_update(&shadow_camera);
 }
 

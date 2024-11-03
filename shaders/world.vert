@@ -22,16 +22,11 @@ layout(set = 1, binding = 2) uniform eye_t
     vec3 position;
 }
 eye;
-layout(set = 1, binding = 3) uniform shadow_view_t
+layout(set = 1, binding = 3) uniform shadow_mvp_t
 {
     mat4 matrix;
 }
-shadow_view;
-layout(set = 1, binding = 4) uniform shadow_proj_t
-{
-    mat4 matrix;
-}
-shadow_proj;
+shadow_mvp;
 
 const vec3 normals[6] = vec3[6]
 (
@@ -67,5 +62,5 @@ void main()
     fog = clamp(fog / world_fog_distance, 0.0, 1.0);
     fog = pow(fog, world_fog_factor);
     normal = normals[direction];
-    shadow_position = bias_matrix * shadow_proj.matrix * shadow_view.matrix * vec4(position, 1.0);
+    shadow_position = bias_matrix * shadow_mvp.matrix * vec4(position, 1.0);
 }

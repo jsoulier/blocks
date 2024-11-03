@@ -18,10 +18,11 @@ void main()
         discard;
     }
     vec3 shadow_coords = shadow_position.xyz / shadow_position.w;
+    // vec3 shadow_coords = shadow_position.xyz;
 
     shadow_coords.y = 1.0 - shadow_coords.y;
     float shadow;
-    if(shadow_coords.z > 1.0)
+    if(shadow_coords.z > 1.0 || shadow_coords.z < 0.0)
     {
         shadow = 0.0;
     }
@@ -38,11 +39,11 @@ void main()
         // TODO: slope bias
         float min_depth = texture(shadow_map, shadow_coords.xy).r; 
         float depth = shadow_coords.z;
-        shadow = (depth - 0.001f) < min_depth ? 0.0 : 1.0;
+        shadow = (depth - 0.001f) < min_depth ? 0.0 : 0.5;
     }
     float angle = max(dot(normalize(normal), -light_direction), 0.0);
     vec3 diffuse = angle * light_color;
-    vec3 lighting = ambient_color + diffuse + (1.0 - shadow);
+    vec3 lighting = ambient_color + diffuse + (0.5 - shadow);
     vec3 final_color = base.rgb * lighting;
     color = mix(vec4(final_color, base.a), vec4(sky_color, 1.0), fog);
 }
