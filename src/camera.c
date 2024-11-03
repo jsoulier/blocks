@@ -107,7 +107,36 @@ static void perspective(
     matrix[3][3] = 0.0f;
 }
 
-void camera_init(camera_t* camera)
+static void ortho(
+    float matrix[4][4],
+    const float left,
+    const float right,
+    const float bottom,
+    const float top,
+    const float near,
+    const float far)
+{
+    matrix[0][0] = 2.0f / (right - left);
+    matrix[0][1] = 0.0f;
+    matrix[0][2] = 0.0f;
+    matrix[0][3] = 0.0f;
+    matrix[1][0] = 0.0f;
+    matrix[1][1] = 2.0f / (top - bottom);
+    matrix[1][2] = 0.0f;
+    matrix[1][3] = 0.0f;
+    matrix[2][0] = 0.0f;
+    matrix[2][1] = 0.0f;
+    matrix[2][2] = -2.0f / (far - near);
+    matrix[2][3] = 0.0f;
+    matrix[3][0] = -(right + left) / (right - left);
+    matrix[3][1] = -(top + bottom) / (top - bottom);
+    matrix[3][2] = -(far + near) / (far - near);
+    matrix[3][3] = 1.0f;
+}
+
+void camera_init(
+    camera_t* camera,
+    const bool ortho)
 {
     assert(camera);
     camera->x = 0.0f;
@@ -120,6 +149,8 @@ void camera_init(camera_t* camera)
     camera->fov = rad(90.0f);
     camera->near = 1.0f;
     camera->far = 1000.0f;
+    camera->size = 360.0f;
+    camera->ortho = ortho;
     camera->dirty = true;
 }
 
@@ -138,7 +169,16 @@ void camera_update(camera_t* camera)
     multiply(camera->view, camera->proj, camera->view);
     rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
     multiply(camera->view, camera->proj, camera->view);
-    perspective(camera->proj, a, camera->fov, camera->near, camera->far);
+    if (!camera->ortho)
+    {
+        perspective(camera->proj, a, camera->fov, camera->near, camera->far);
+    }
+    else
+    {
+        const float w = camera->size * a;
+        const float h = camera->size;
+        ortho(camera->proj, -w, w, -h, h, camera->near, camera->far);
+    }
     multiply(camera->matrix, camera->proj, camera->view);
     camera->dirty = false;
 }

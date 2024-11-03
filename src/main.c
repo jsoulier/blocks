@@ -607,7 +607,7 @@ static void draw_raycast()
 static void draw_sky()
 {
     SDL_GPUColorTargetInfo cti = {0};
-    cti.load_op = SDL_GPU_LOADOP_DONT_CARE;
+    cti.load_op = SDL_GPU_LOADOP_CLEAR;
     cti.store_op = SDL_GPU_STOREOP_STORE;
     cti.texture = color_texture;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
@@ -992,7 +992,7 @@ int main(int argc, char** argv)
     float z;
     float pitch;
     float yaw;
-    camera_init(&camera);
+    camera_init(&camera, false);
     camera_move(&camera, PLAYER_X, PLAYER_Y, PLAYER_Z);
     camera_viewport(&camera, WINDOW_WIDTH, WINDOW_HEIGHT);
     if (database_get_player(DATABASE_PLAYER, &x, &y, &z, &pitch, &yaw))

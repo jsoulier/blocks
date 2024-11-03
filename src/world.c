@@ -573,7 +573,7 @@ static void render(
     x *= CHUNK_X;
     y *= CHUNK_Y;
     z *= CHUNK_Z;
-    if (!camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
+    if (camera && !camera_test(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
     {
         return;
     }
