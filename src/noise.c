@@ -98,6 +98,20 @@ static void terrain(
         {
             group_set_block(group, a, y, b, BLOCK_WATER);
         }
+        const float clouds = stb_perlin_turbulence_noise3(
+            s * NOISE_CLOUD_FREQUENCY,
+            NOISE_CLOUD_Y * NOISE_CLOUD_FREQUENCY,
+            t * NOISE_CLOUD_FREQUENCY,
+            NOISE_LACUNARITY,
+            NOISE_GAIN,
+            NOISE_OCTAVES);
+        if (clouds > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > clouds + NOISE_CLOUD_CLEARANCE)
+        {
+            for (int y = 0; y < clouds * NOISE_CLOUD_THICKNESS; y++)
+            {
+                group_set_block(group, a, NOISE_CLOUD_Y + y, b, BLOCK_CLOUD);
+            }
+        }
     }
 }
 

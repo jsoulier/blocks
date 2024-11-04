@@ -22,6 +22,8 @@ bool block_opaque(const block_t block)
     case BLOCK_EMPTY:
     case BLOCK_GLASS:
     case BLOCK_WATER:
+    // TODO:
+    case BLOCK_CLOUD:
         return 0;
     }
     return 1;
