@@ -280,7 +280,7 @@ static void load_opaque_pipeline()
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load_shader(device, "world.vert", 4, 0),
-        .fragment_shader = load_shader(device, "world.frag", 0, 2),
+        .fragment_shader = load_shader(device, "world.frag", 1, 2),
         .target_info =
         {
             .num_color_targets = 1,
@@ -335,7 +335,7 @@ static void load_transparent_pipeline()
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load_shader(device, "world.vert", 4, 0),
-        .fragment_shader = load_shader(device, "world.frag", 0, 2),
+        .fragment_shader = load_shader(device, "world.frag", 1, 2),
         .target_info =
         {
             .num_color_targets = 1,
@@ -779,6 +779,8 @@ static void draw_opaque()
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
     SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
+    camera_vector(&shadow_camera, &position[0], &position[1], &position[2]);
+    SDL_PushGPUFragmentUniformData(commands, 0, position, sizeof(position));
     SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
     SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
     world_render(&player_camera, commands, pass, true);
@@ -813,6 +815,8 @@ static void draw_transparent()
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
     SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
+    camera_vector(&shadow_camera, &position[0], &position[1], &position[2]);
+    SDL_PushGPUFragmentUniformData(commands, 0, position, sizeof(position));
     SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
     SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
     world_render(&player_camera, commands, pass, false);

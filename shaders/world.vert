@@ -2,31 +2,31 @@
 
 #include "config.glsl"
 
-layout(location = 0) in uint voxel;
-layout(location = 0) out vec2 uv;
-layout(location = 1) out vec3 normal;
-layout(location = 2) out float fog;
-layout(location = 3) out vec4 shadow_position;
-layout(set = 1, binding = 0) uniform chunk_t
+layout(location = 0) in uint i_voxel;
+layout(location = 0) out vec2 o_uv;
+layout(location = 1) out vec3 o_normal;
+layout(location = 2) out vec4 o_shadow;
+layout(location = 3) out float o_fog;
+layout(set = 1, binding = 0) uniform position_t
 {
     ivec3 vector;
 }
-chunk;
+u_position;
 layout(set = 1, binding = 1) uniform mvp_t
 {
     mat4 matrix;
 }
-mvp;
-layout(set = 1, binding = 2) uniform eye_t
+u_mvp;
+layout(set = 1, binding = 2) uniform camera_t
 {
-    vec3 position;
+    vec3 vector;
 }
-eye;
-layout(set = 1, binding = 3) uniform shadow_mvp_t
+u_camera;
+layout(set = 1, binding = 3) uniform shadow_t
 {
     mat4 matrix;
 }
-shadow_mvp;
+u_shadow;
 
 const vec3 normals[6] = vec3[6]
 (
@@ -38,29 +38,29 @@ const vec3 normals[6] = vec3[6]
     vec3( 0,-1, 0)
 );
 
-const mat4 bias_matrix = mat4
+const mat4 bias = mat4
 (
     0.5, 0.0, 0.0, 0.0,
-    0.0, 0.5, 0.0, 0.0,
+    0.0,-0.5, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
     0.5, 0.5, 0.0, 1.0
 );
 
 void main()
 {
-    uint x = voxel >> VOXEL_X_OFFSET & VOXEL_X_MASK;
-    uint y = voxel >> VOXEL_Y_OFFSET & VOXEL_Y_MASK;
-    uint z = voxel >> VOXEL_Z_OFFSET & VOXEL_Z_MASK;
-    uint u = voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK;
-    uint v = voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
-    uint direction = voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
-    ivec3 position = chunk.vector + ivec3(x, y, z);
-    uv.x = u / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
-    uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
-    gl_Position = mvp.matrix * vec4(position, 1.0);
-    fog = abs(length(position.xz - eye.position.xz));
-    fog = clamp(fog / world_fog_distance, 0.0, 1.0);
-    fog = pow(fog, world_fog_factor);
-    normal = normals[direction];
-    shadow_position = bias_matrix * shadow_mvp.matrix * vec4(position, 1.0);
+    uint x = i_voxel >> VOXEL_X_OFFSET & VOXEL_X_MASK;
+    uint y = i_voxel >> VOXEL_Y_OFFSET & VOXEL_Y_MASK;
+    uint z = i_voxel >> VOXEL_Z_OFFSET & VOXEL_Z_MASK;
+    uint u = i_voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK;
+    uint v = i_voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
+    uint direction = i_voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
+    ivec3 position = u_position.vector + ivec3(x, y, z);
+    o_uv.x = u / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
+    o_uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
+    gl_Position = u_mvp.matrix * vec4(position, 1.0);
+    o_fog = abs(length(position.xz - u_camera.vector.xz));
+    o_fog = clamp(o_fog / world_fog_distance, 0.0, 1.0);
+    o_fog = pow(o_fog, world_fog_factor);
+    o_normal = normals[direction];
+    o_shadow = bias * u_shadow.matrix * vec4(position, 1.0);
 }

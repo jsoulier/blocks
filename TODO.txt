@@ -1,4 +1,7 @@
-- Lighting
+- Delta time
+- Indirect drawing
+  - Chunk positions to storage buffers
+- Shadow cascades
 - Collision
 - Transparency within chunks
 - Multisampling
