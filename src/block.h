@@ -24,6 +24,7 @@ enum
     BLOCK_COUNT,
 };
 
+bool block_liquid(const block_t block);
 bool block_opaque(const block_t block);
 bool block_solid(const block_t block);
 bool block_sprite(const block_t block);

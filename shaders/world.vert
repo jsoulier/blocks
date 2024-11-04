@@ -48,12 +48,12 @@ const mat4 bias = mat4
 
 void main()
 {
-    uint x = i_voxel >> VOXEL_X_OFFSET & VOXEL_X_MASK;
-    uint y = i_voxel >> VOXEL_Y_OFFSET & VOXEL_Y_MASK;
-    uint z = i_voxel >> VOXEL_Z_OFFSET & VOXEL_Z_MASK;
-    uint u = i_voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK;
-    uint v = i_voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
-    uint direction = i_voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
+    const uint x = i_voxel >> VOXEL_X_OFFSET & VOXEL_X_MASK;
+    const uint y = i_voxel >> VOXEL_Y_OFFSET & VOXEL_Y_MASK;
+    const uint z = i_voxel >> VOXEL_Z_OFFSET & VOXEL_Z_MASK;
+    const uint u = i_voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK;
+    const uint v = i_voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
+    const uint direction = i_voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
     ivec3 position = u_position.vector + ivec3(x, y, z);
     o_uv.x = u / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
     o_uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;

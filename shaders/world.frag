@@ -36,14 +36,14 @@ void main()
             {
                 const vec2 uv = position.xy + vec2(x, y) * size;
                 const float depth = texture(u_depth, uv).r; 
-                shadow += position.z - world_depth_bias < depth ? 0.0 : 0.5;        
+                shadow += position.z - world_depth_bias < depth ? 0.0 : world_shadow;
             }    
         }
         shadow /= 9.0;
     }
     const float angle = max(dot(i_normal, -u_camera.vector), 0.0);
     const vec3 diffuse = angle * world_light_color;
-    const vec3 lighting = world_ambient_color + diffuse + (0.5 - shadow);
+    const vec3 lighting = world_ambient_color + diffuse + (world_shadow - shadow);
     const vec3 final = block.rgb * lighting;
     o_color = mix(vec4(final, block.a), vec4(sky_bottom_color, 1.0), i_fog);
 }

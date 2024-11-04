@@ -3,6 +3,7 @@
 #include <stb_image.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include "block.h"
 #include "camera.h"
@@ -33,8 +34,10 @@ static uint32_t width;
 static uint32_t height;
 static camera_t player_camera;
 static camera_t shadow_camera;
-static block_t selection = BLOCK_GRASS;
+static block_t hotbar = BLOCK_GRASS;
 static void* atlas_data;
+static uint64_t time1;
+static uint64_t time2;
 
 static SDL_GPUShader* load_shader(
     SDL_GPUDevice* device,
@@ -689,12 +692,12 @@ static void draw_raycast()
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    int32_t hit[3] = { x, y, z };
+    int32_t position[3] = { x, y, z };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = cube_vbo;
     SDL_BindGPUGraphicsPipeline(pass, raycast_pipeline);
     SDL_PushGPUVertexUniformData(commands, 0, player_camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(commands, 1, hit, sizeof(hit));
+    SDL_PushGPUVertexUniformData(commands, 1, position, 12);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
     SDL_EndGPURenderPass(pass);
@@ -735,16 +738,19 @@ static void draw_ui()
         return;
     }
     int32_t viewport[2] = { player_camera.width, player_camera.height };
-    int32_t block[2] = { blocks[selection][0][0], blocks[selection][0][1] };
+    int32_t block[2] = { blocks[hotbar][0][0], blocks[hotbar][0][1] };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
-    SDL_GPUTextureSamplerBinding tsb = {0};
-    tsb.sampler = atlas_sampler;
-    tsb.texture = atlas_texture;
     SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
-    SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
-    SDL_PushGPUFragmentUniformData(commands, 0, &viewport, sizeof(viewport));
-    SDL_PushGPUFragmentUniformData(commands, 1, &block, sizeof(block));
+    if (atlas_sampler && atlas_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = atlas_sampler;
+        tsb.texture = atlas_texture;
+        SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
+    }
+    SDL_PushGPUFragmentUniformData(commands, 0, &viewport, 8);
+    SDL_PushGPUFragmentUniformData(commands, 1, &block, 8);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
     SDL_EndGPURenderPass(pass);
@@ -768,21 +774,28 @@ static void draw_opaque()
         return;
     }
     float position[3];
+    float vector[3];
     camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
-    SDL_GPUTextureSamplerBinding atsb = {0};
-    atsb.sampler = atlas_sampler;
-    atsb.texture = atlas_texture;
-    SDL_GPUTextureSamplerBinding stsb = {0};
-    stsb.sampler = shadow_sampler;
-    stsb.texture = shadow_texture;
+    camera_vector(&shadow_camera, &vector[0], &vector[1], &vector[2]);
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
+    SDL_PushGPUVertexUniformData(commands, 2, position, 12);
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
-    camera_vector(&shadow_camera, &position[0], &position[1], &position[2]);
-    SDL_PushGPUFragmentUniformData(commands, 0, position, sizeof(position));
-    SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
-    SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
+    SDL_PushGPUFragmentUniformData(commands, 0, vector, 12);
+    if (atlas_sampler && atlas_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = atlas_sampler;
+        tsb.texture = atlas_texture;
+        SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
+    }
+    if (shadow_sampler && shadow_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = shadow_sampler;
+        tsb.texture = shadow_texture;
+        SDL_BindGPUFragmentSamplers(pass, 1, &tsb, 1);
+    }
     world_render(&player_camera, commands, pass, true);
     SDL_EndGPURenderPass(pass);
 }
@@ -804,21 +817,28 @@ static void draw_transparent()
         return;
     }
     float position[3];
+    float vector[3];
     camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
-    SDL_GPUTextureSamplerBinding atsb = {0};
-    atsb.sampler = atlas_sampler;
-    atsb.texture = atlas_texture;
-    SDL_GPUTextureSamplerBinding stsb = {0};
-    stsb.sampler = shadow_sampler;
-    stsb.texture = shadow_texture;
+    camera_vector(&shadow_camera, &vector[0], &vector[1], &vector[2]);
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(commands, 2, position, sizeof(position));
+    SDL_PushGPUVertexUniformData(commands, 2, position, 12);
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
-    camera_vector(&shadow_camera, &position[0], &position[1], &position[2]);
-    SDL_PushGPUFragmentUniformData(commands, 0, position, sizeof(position));
-    SDL_BindGPUFragmentSamplers(pass, 0, &atsb, 1);
-    SDL_BindGPUFragmentSamplers(pass, 1, &stsb, 1);
+    SDL_PushGPUFragmentUniformData(commands, 0, vector, 12);
+    if (atlas_sampler && atlas_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = atlas_sampler;
+        tsb.texture = atlas_texture;
+        SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
+    }
+    if (shadow_sampler && shadow_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = shadow_sampler;
+        tsb.texture = shadow_texture;
+        SDL_BindGPUFragmentSamplers(pass, 1, &tsb, 1);
+    }
     world_render(&player_camera, commands, pass, false);
     SDL_EndGPURenderPass(pass);
 }
@@ -925,18 +945,14 @@ static bool poll()
                 event.button.button == BUTTON_BREAK)
             {
                 bool previous = true;
-                block_t block = selection;
+                block_t block = hotbar;
                 if (event.button.button == BUTTON_BREAK)
                 {
                     previous = false;
                     block = BLOCK_EMPTY;
                 }
-                float x;
-                float y;
-                float z;
-                float a;
-                float b;
-                float c;
+                float x, y, z;
+                float a, b, c;
                 camera_get_position(&player_camera, &x, &y, &z);
                 camera_vector(&player_camera, &a, &b, &c);
                 if (physics_raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH,
@@ -954,8 +970,8 @@ static bool poll()
             }
             else if (event.key.scancode == BUTTON_BLOCK)
             {
-                selection = (selection + 1) % BLOCK_COUNT;
-                selection = clamp(selection, BLOCK_EMPTY + 1, BLOCK_COUNT - 1);
+                hotbar = (hotbar + 1) % BLOCK_COUNT;
+                hotbar = clamp(hotbar, BLOCK_EMPTY + 1, BLOCK_COUNT - 1);
             }
             else if (event.key.scancode == BUTTON_FULLSCREEN)
             {
@@ -976,43 +992,44 @@ static bool poll()
     return true;
 }
 
-static void move()
+static void move(const float dt)
 {
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
     float speed = PLAYER_SPEED;
-    if (SDL_GetKeyboardState(NULL)[BUTTON_RIGHT])
+    const bool* state = SDL_GetKeyboardState(NULL);
+    if (state[BUTTON_RIGHT])
     {
         x++;
     }
-    if (SDL_GetKeyboardState(NULL)[BUTTON_LEFT])
+    if (state[BUTTON_LEFT])
     {
         x--;
     }
-    if (SDL_GetKeyboardState(NULL)[BUTTON_UP])
+    if (state[BUTTON_UP])
     {
         y++;
     }
-    if (SDL_GetKeyboardState(NULL)[BUTTON_DOWN])
+    if (state[BUTTON_DOWN])
     {
         y--;
     }
-    if (SDL_GetKeyboardState(NULL)[BUTTON_FORWARD])
+    if (state[BUTTON_FORWARD])
     {
         z++;
     }
-    if (SDL_GetKeyboardState(NULL)[BUTTON_BACKWARD])
+    if (state[BUTTON_BACKWARD])
     {
         z--;
     }
-    if (SDL_GetKeyboardState(NULL)[BUTTON_SPRINT])
+    if (state[BUTTON_SPRINT])
     {
         speed = PLAYER_SUPER_SPEED;
     }
-    x *= speed;
-    y *= speed;
-    z *= speed;
+    x *= speed * dt;
+    y *= speed * dt;
+    z *= speed * dt;
     camera_move(&player_camera, x, y, z);
     camera_get_position(&player_camera, &x, &y, &z);
     int a = x;
@@ -1075,26 +1092,21 @@ int main(int argc, char** argv)
     create_samplers();
     create_textures();
     create_vbos();
-    {
-        SDL_SetWindowResizable(window, true);
-        SDL_Surface* icon = create_icon(APP_ICON);
-        SDL_SetWindowIcon(window, icon);
-        SDL_DestroySurface(icon);
-    }
+    SDL_SetWindowResizable(window, true);
+    SDL_Surface* icon = create_icon(APP_ICON);
+    SDL_SetWindowIcon(window, icon);
+    SDL_DestroySurface(icon);
     if (!database_init(DATABASE_PATH))
     {
         SDL_Log("Failed to create database");
         return false;
     }
-    else
-    {
-        noise_type_t type;
-        int seed;
-        database_get_noise(&type, &seed);
-        noise_init(type, seed);
-        noise_data(&type, &seed);
-        database_set_noise(type, seed);
-    }
+    noise_type_t type;
+    int seed;
+    database_get_noise(&type, &seed);
+    noise_init(type, seed);
+    noise_data(&type, &seed);
+    database_set_noise(type, seed);
     if (!world_init(device))
     {
         SDL_Log("Failed to create world");
@@ -1115,21 +1127,25 @@ int main(int argc, char** argv)
     }
     camera_init(&shadow_camera, true);
     camera_set_rotation(&shadow_camera, SHADOW_PITCH, SHADOW_YAW);
-    move();
+    move(0.0f);
     int cooldown = 0;
-    int time = DATABASE_TIME;
-    int loop = 1;
-    while (loop)
+    time1 = SDL_GetPerformanceCounter();
+    time2 = 0;
+    while (1)
     {
+        time2 = time1;
+        time1 = SDL_GetPerformanceCounter();
+        const float frequency = SDL_GetPerformanceFrequency();
+        const float dt = (time1 - time2) * 1000 / frequency;
         if (!poll())
         {
             break;
         }
-        move();
+        move(dt);
         camera_get_position(&player_camera, &x, &y, &z);
         world_update(x, y, z);
         draw();
-        if (cooldown++ > time)
+        if (cooldown++ > DATABASE_TIME)
         {
             commit();
             cooldown = 0;

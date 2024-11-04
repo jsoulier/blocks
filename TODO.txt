@@ -1,4 +1,5 @@
-- Delta time
+- Seeded noise
+  - Also move away from pure fractals. Killing my CPU
 - Indirect drawing
   - Chunk positions to storage buffers
 - Shadow cascades
