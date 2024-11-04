@@ -966,7 +966,6 @@ static bool poll()
             if (event.key.scancode == BUTTON_PAUSE)
             {
                 SDL_SetWindowRelativeMouseMode(window, false);
-                SDL_SetWindowFullscreen(window, false);
             }
             else if (event.key.scancode == BUTTON_BLOCK)
             {

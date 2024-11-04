@@ -2,28 +2,13 @@
 #include "helpers.h"
 #include "block.h"
 
-bool block_liquid(const block_t block)
-{
-    assert(block < BLOCK_COUNT);
-    switch (block)
-    {
-    case BLOCK_LAVA:
-    case BLOCK_WATER:
-        return 1;
-    }
-    return 0;
-}
-
 bool block_opaque(const block_t block)
 {
     assert(block < BLOCK_COUNT);
     switch (block)
     {
-    case BLOCK_EMPTY:
-    case BLOCK_GLASS:
-    case BLOCK_WATER:
-    // TODO:
     case BLOCK_CLOUD:
+    case BLOCK_WATER:
         return 0;
     }
     return 1;
@@ -37,9 +22,7 @@ bool block_solid(const block_t block)
     case BLOCK_CLOUD:
     case BLOCK_DANDELION:
     case BLOCK_EMPTY:
-    case BLOCK_LAVA:
     case BLOCK_ROSE:
-    case BLOCK_TUMBLEWEED:
     case BLOCK_WATER:
         return 0;
     }
@@ -53,7 +36,6 @@ bool block_sprite(const block_t block)
     {
     case BLOCK_ROSE:
     case BLOCK_DANDELION:
-    case BLOCK_TUMBLEWEED:
         return 1;
     }
     return 0;
@@ -63,12 +45,12 @@ const int blocks[][DIRECTION_3][2] =
 {
     [BLOCK_CLOUD] =
     {
-        [DIRECTION_E] = { 7, 0 },
-        [DIRECTION_W] = { 7, 0 },
-        [DIRECTION_N] = { 7, 0 },
-        [DIRECTION_S] = { 7, 0 },
-        [DIRECTION_U] = { 7, 0 },
-        [DIRECTION_D] = { 7, 0 },
+        [DIRECTION_E] = { 8, 0 },
+        [DIRECTION_W] = { 8, 0 },
+        [DIRECTION_N] = { 8, 0 },
+        [DIRECTION_S] = { 8, 0 },
+        [DIRECTION_U] = { 8, 0 },
+        [DIRECTION_D] = { 8, 0 },
     },
     [BLOCK_DANDELION] =
     {
@@ -88,15 +70,6 @@ const int blocks[][DIRECTION_3][2] =
         [DIRECTION_U] = { 2, 0 },
         [DIRECTION_D] = { 2, 0 },
     },
-    [BLOCK_GLASS] =
-    {
-        [DIRECTION_E] = { 0, 1 },
-        [DIRECTION_W] = { 0, 1 },
-        [DIRECTION_N] = { 0, 1 },
-        [DIRECTION_S] = { 0, 1 },
-        [DIRECTION_U] = { 0, 1 },
-        [DIRECTION_D] = { 0, 1 },
-    },
     [BLOCK_GRASS] =
     {
         [DIRECTION_E] = { 1, 0 },
@@ -106,23 +79,23 @@ const int blocks[][DIRECTION_3][2] =
         [DIRECTION_U] = { 0, 0 },
         [DIRECTION_D] = { 2, 0 },
     },
-    [BLOCK_ICE] =
+    [BLOCK_LEAVES] =
     {
-        [DIRECTION_E] = { 6, 0 },
-        [DIRECTION_W] = { 6, 0 },
-        [DIRECTION_N] = { 6, 0 },
-        [DIRECTION_S] = { 6, 0 },
+        [DIRECTION_E] = { 0, 1 },
+        [DIRECTION_W] = { 0, 1 },
+        [DIRECTION_N] = { 0, 1 },
+        [DIRECTION_S] = { 0, 1 },
+        [DIRECTION_U] = { 0, 1 },
+        [DIRECTION_D] = { 0, 1 },
+    },
+    [BLOCK_LOG] =
+    {
+        [DIRECTION_E] = { 7, 0 },
+        [DIRECTION_W] = { 7, 0 },
+        [DIRECTION_N] = { 7, 0 },
+        [DIRECTION_S] = { 7, 0 },
         [DIRECTION_U] = { 6, 0 },
         [DIRECTION_D] = { 6, 0 },
-    },
-    [BLOCK_LAVA] =
-    {
-        [DIRECTION_E] = { 1, 4 },
-        [DIRECTION_W] = { 1, 4 },
-        [DIRECTION_N] = { 1, 4 },
-        [DIRECTION_S] = { 1, 4 },
-        [DIRECTION_U] = { 1, 4 },
-        [DIRECTION_D] = { 1, 4 },
     },
     [BLOCK_ROSE] =
     {
@@ -159,15 +132,6 @@ const int blocks[][DIRECTION_3][2] =
         [DIRECTION_S] = { 3, 0 },
         [DIRECTION_U] = { 3, 0 },
         [DIRECTION_D] = { 3, 0 },
-    },
-    [BLOCK_TUMBLEWEED] =
-    {
-        [DIRECTION_E] = { 0, 3 },
-        [DIRECTION_W] = { 0, 3 },
-        [DIRECTION_N] = { 0, 3 },
-        [DIRECTION_S] = { 0, 3 },
-        [DIRECTION_U] = { 0, 3 },
-        [DIRECTION_D] = { 0, 3 },
     },
     [BLOCK_WATER] =
     {

@@ -92,22 +92,58 @@ static void terrain(
         group_set_block(group, a, y, b, top);
         if (low && grass)
         {
-            // TODO:
+            const float plant = stb_perlin_fbm_noise3(
+                s * NOISE_PLANT_FREQUENCY,
+                0.0f,
+                t * NOISE_PLANT_FREQUENCY,
+                NOISE_LACUNARITY,
+                NOISE_GAIN,
+                NOISE_OCTAVES);
+            if (plant > NOISE_TREE_THRESHOLD &&
+                a > 2 && a < CHUNK_X - 2 &&
+                b > 2 && b < CHUNK_Z - 2)
+            {
+                const int log = 3 + plant * 2.0f;
+                for (int dy = 0; dy < log; dy++)
+                {
+                    group_set_block(group, a, y + dy + 1, b, BLOCK_LOG);
+                }
+                for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dy = 0; dy < 2; dy++)
+                {
+                    if (dx != 0 || dz != 0 || dy != 0)
+                    {
+                        group_set_block(group, a + dx, y + log + dy, b + dz, BLOCK_LEAVES);
+                    }
+                }
+            }
+            else if (plant > NOISE_FLOWER_THRESHOLD)
+            {
+                if (plant > 0.5)
+                {
+                    group_set_block(group, a, y + 1, b, BLOCK_ROSE);
+                }
+                else
+                {
+                    group_set_block(group, a, y + 1, b, BLOCK_DANDELION);
+                }
+            }
         }
         for (; y < NOISE_SEA; y++)
         {
             group_set_block(group, a, y, b, BLOCK_WATER);
         }
-        const float clouds = stb_perlin_turbulence_noise3(
+        const float cloud = stb_perlin_turbulence_noise3(
             s * NOISE_CLOUD_FREQUENCY,
             NOISE_CLOUD_Y * NOISE_CLOUD_FREQUENCY,
             t * NOISE_CLOUD_FREQUENCY,
             NOISE_LACUNARITY,
             NOISE_GAIN,
             NOISE_OCTAVES);
-        if (clouds > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > clouds + NOISE_CLOUD_CLEARANCE)
+        if (cloud > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > cloud + NOISE_CLOUD_CLEARANCE)
         {
-            for (int y = 0; y < clouds * NOISE_CLOUD_THICKNESS; y++)
+            for (int y = 0; y < cloud * NOISE_CLOUD_THICKNESS; y++)
             {
                 group_set_block(group, a, NOISE_CLOUD_Y + y, b, BLOCK_CLOUD);
             }
