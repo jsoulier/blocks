@@ -51,4 +51,6 @@ shader(ui.vert)
 shader(world.frag)
 shader(world.vert)
 
+configure_file(LICENSE.txt ${BINARY_DIR} COPYONLY)
+configure_file(README.md ${BINARY_DIR} COPYONLY)
 configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)

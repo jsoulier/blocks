@@ -34,7 +34,7 @@ void main()
             const float v = u_block.uv.y * ATLAS_FACE_HEIGHT / ATLAS_HEIGHT;
             const float c = u + x / ATLAS_X_FACES;
             const float d = v + (1.0 - y) / ATLAS_Y_FACES;
-            o_color = texture(u_atlas, vec2(c, d)) * ui_block_light;
+            o_color = texture(u_atlas, vec2(c, d));
             return;
         }
     }

@@ -141,7 +141,7 @@ static void terrain(
             NOISE_LACUNARITY,
             NOISE_GAIN,
             NOISE_OCTAVES);
-        if (cloud > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > cloud + NOISE_CLOUD_CLEARANCE)
+        if (cloud > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > height + NOISE_CLOUD_CLEARANCE)
         {
             for (int y = 0; y < cloud * NOISE_CLOUD_THICKNESS; y++)
             {

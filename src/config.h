@@ -15,7 +15,7 @@
 #define PLAYER_SUPER_SPEED 0.5f
 #define PLAYER_SENSITIVITY 0.1f
 #define PLAYER_X 0
-#define PLAYER_Y 30
+#define PLAYER_Y 60
 #define PLAYER_Z 0
 
 #define ATLAS_WIDTH 256.0
