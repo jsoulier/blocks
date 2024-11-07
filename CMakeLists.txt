@@ -25,10 +25,9 @@ add_executable(blocks WIN32
     src/voxmesh.c
     src/world.c
 )
-if (WIN32)
-    target_link_libraries(blocks PUBLIC SDL3::SDL3)
-else()
-    target_link_libraries(blocks PUBLIC m SDL3::SDL3)
+target_link_libraries(blocks PUBLIC SDL3::SDL3)
+if(UNIX)
+    target_link_libraries(blocks PUBLIC m)
 endif()
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
