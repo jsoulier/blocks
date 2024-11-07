@@ -11,7 +11,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
 make_directory(${BINARY_DIR})
 
 add_subdirectory(lib/SDL)
-add_executable(${PROJECT_NAME} WIN32
+add_executable(blocks WIN32
     lib/sqlite3/sqlite3.c
     lib/stb/stb.c
     src/block.c

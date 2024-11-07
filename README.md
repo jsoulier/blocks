@@ -24,9 +24,10 @@ git clone https://github.com/jsoulier/blocks --recurse-submodules
 cd blocks
 mkdir build
 cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --parallel 8 --config Release
-./bin/blocks.exe
+cd bin
+./blocks.exe
 ```
 
 ### Controls

@@ -8,13 +8,11 @@
 #include "containers.h"
 #include "database.h"
 #include "helpers.h"
-#include "noise.h"
 
 typedef enum
 {
     JOB_TYPE_QUIT,
     JOB_TYPE_COMMIT,
-    JOB_TYPE_NOISE,
     JOB_TYPE_PLAYER,
     JOB_TYPE_BLOCK,
 }
@@ -25,11 +23,6 @@ typedef struct
     job_type_t type;
     union
     {
-        struct
-        {
-            noise_type_t noise_type;
-            int noise_seed;
-        };
         struct
         {
             int player_id;
@@ -57,8 +50,6 @@ static mtx_t mtx;
 static cnd_t cnd;
 static queue_t queue;
 static sqlite3* handle;
-static sqlite3_stmt* set_noise_stmt;
-static sqlite3_stmt* get_noise_stmt;
 static sqlite3_stmt* set_player_stmt;
 static sqlite3_stmt* get_player_stmt;
 static sqlite3_stmt* set_block_stmt;
@@ -84,15 +75,6 @@ static int loop(void* args)
             return 0;
         case JOB_TYPE_COMMIT:
             sqlite3_exec(handle, "COMMIT; BEGIN;", NULL, NULL, NULL);
-            break;
-        case JOB_TYPE_NOISE:
-            sqlite3_bind_int(set_noise_stmt, 1, job.noise_type);
-            sqlite3_bind_int(set_noise_stmt, 2, job.noise_seed);
-            if (sqlite3_step(set_noise_stmt) != SQLITE_DONE)
-            {
-                SDL_Log("Failed to set noise: %s", sqlite3_errmsg(handle));
-            }
-            sqlite3_reset(set_noise_stmt);
             break;
         case JOB_TYPE_PLAYER:
             sqlite3_bind_int(set_player_stmt, 1, job.player_id);
@@ -128,11 +110,6 @@ static int loop(void* args)
 bool database_init(const char* file)
 {
     assert(file);
-    const char* noise_table =
-        "CREATE TABLE IF NOT EXISTS noise ("
-        "    type INT NOT NULL,"
-        "    seed INT NOT NULL"
-        ");";
     const char* players_table =
         "CREATE TABLE IF NOT EXISTS players ("
         "    id INT PRIMARY KEY NOT NULL,"
@@ -154,12 +131,6 @@ bool database_init(const char* file)
     const char* blocks_index =
         "CREATE INDEX IF NOT EXISTS blocks_index "
         "ON blocks (a, c);";
-    const char* set_noise =
-        "INSERT OR REPLACE INTO noise (type, seed) "
-        "VALUES (?, ?);";
-    const char* get_noise = 
-        "SELECT type, seed FROM noise "
-        "LIMIT 1;";
     const char* set_player =
         "INSERT OR REPLACE INTO players (id, x, y, z, pitch, yaw) "
         "VALUES (?, ?, ?, ?, ?, ?);";
@@ -178,11 +149,6 @@ bool database_init(const char* file)
         SDL_Log("Failed to open %s database: %s", file, sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_exec(handle, noise_table, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create noise table: %s", sqlite3_errmsg(handle));
-        return false;
-    }
     if (sqlite3_exec(handle, players_table, NULL, NULL, NULL))
     {
         SDL_Log("Failed to create players table: %s", sqlite3_errmsg(handle));
@@ -196,16 +162,6 @@ bool database_init(const char* file)
     if (sqlite3_exec(handle, blocks_index, NULL, NULL, NULL))
     {
         SDL_Log("Failed to create blocks index: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, set_noise, -1, &set_noise_stmt, NULL))
-    {
-        SDL_Log("Failed to prepare set noise: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, get_noise, -1, &get_noise_stmt, NULL))
-    {
-        SDL_Log("Failed to prepare get noise: %s", sqlite3_errmsg(handle));
         return false;
     }
     if (sqlite3_prepare_v2(handle, set_player, -1, &set_player_stmt, NULL))
@@ -261,12 +217,9 @@ void database_free()
     mtx_destroy(&mtx);
     cnd_destroy(&cnd);
     queue_free(&queue);
-    sqlite3_finalize(set_noise_stmt);
-    sqlite3_finalize(get_noise_stmt);
     sqlite3_finalize(set_player_stmt);
     sqlite3_finalize(get_player_stmt);
     sqlite3_finalize(set_block_stmt);
-    sqlite3_finalize(get_blocks_stmt);
     sqlite3_close(handle);
     handle = NULL;
 }
@@ -281,41 +234,6 @@ void database_commit()
         SDL_Log("Failed to add commit job");
     }
     cnd_signal(&cnd);
-    mtx_unlock(&mtx);
-}
-
-void database_set_noise(
-    const noise_type_t type,
-    const int seed)
-{
-    job_t job;
-    job.type = JOB_TYPE_NOISE;
-    job.noise_type = type;
-    job.noise_seed = seed;
-    mtx_lock(&mtx);
-    if (!queue_add(&queue, &job, false))
-    {
-        SDL_Log("Failed to add noise job");
-    }
-    cnd_signal(&cnd);
-    mtx_unlock(&mtx);
-}
-
-void database_get_noise(
-    noise_type_t* type,
-    int* seed)
-{
-    assert(type);
-    assert(seed);
-    mtx_lock(&mtx);
-    *type = NOISE_TYPE_LATEST;
-    *seed = 0;
-    if (sqlite3_step(get_noise_stmt) == SQLITE_ROW)
-    {
-        *type = sqlite3_column_int(get_noise_stmt, 0);
-        *seed = sqlite3_column_int(get_noise_stmt, 1);
-    }
-    sqlite3_reset(get_noise_stmt);
     mtx_unlock(&mtx);
 }
 

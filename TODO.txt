@@ -1,16 +1,9 @@
-- Seeded noise
-  - Also move away from pure fractals. Killing my CPU
-- Indirect drawing
-  - Chunk positions to storage buffers
-- Shadow cascades
-- Collision
-- Transparency within chunks
-- Multisampling
-- Chunk paging
-  - Free empty chunks
-- Fix near plane clipping
-- Fix texture bleeding
-- Fix database race?
-  - If you write to the database queue then unload and reload the chunk before
-    the queue flushes the write, the chunk won't load the changes
-  - It is probably possible but never managed to make it happen
+- seeded world generation
+- indirect rendering
+- shadow cascades
+- collision
+- chunk transparency
+- chunk paging
+- multisampling
+- fix near plane clipping
+- fix texture bleeding
