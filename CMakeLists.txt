@@ -25,7 +25,11 @@ add_executable(blocks WIN32
     src/voxmesh.c
     src/world.c
 )
-target_link_libraries(blocks PUBLIC SDL3::SDL3)
+if (WIN32)
+    target_link_libraries(blocks PUBLIC SDL3::SDL3)
+else()
+    target_link_libraries(blocks PUBLIC m SDL3::SDL3)
+endif()
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
@@ -37,7 +41,7 @@ function(shader FILE)
     add_custom_target(${NAME} ALL
         COMMAND glslc ${SOURCE} -o ${OUTPUT} -I src
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        DEPENDS ${SOURCE} res/config.glsl src/config.h
+        DEPENDS ${SOURCE} shaders/config.glsl src/config.h
         BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
 endfunction()
 shader(raycast.frag)
