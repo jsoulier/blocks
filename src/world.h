@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include "block.h"
 #include "camera.h"
-#include "helpers.h"
 
 bool world_init(SDL_GPUDevice* device);
 void world_free();

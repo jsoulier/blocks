@@ -11,8 +11,8 @@
 #define WINDOW_HEIGHT 764
 #define WINDOW_TITLE "blocks"
 
-#define PLAYER_SPEED 0.02f
-#define PLAYER_SUPER_SPEED 0.5f
+#define PLAYER_SPEED 0.015f
+#define PLAYER_SUPER_SPEED 0.03f
 #define PLAYER_SENSITIVITY 0.1f
 #define PLAYER_X 0
 #define PLAYER_Y 60
