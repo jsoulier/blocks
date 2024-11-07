@@ -1,4 +1,5 @@
 - seeded world generation
+- text rendering
 - indirect rendering
 - shadow cascades
 - collision

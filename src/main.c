@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 #include "block.h"
 #include "camera.h"
 #include "database.h"
@@ -1111,12 +1112,16 @@ int main(int argc, char** argv)
     float pitch;
     float yaw;
     camera_init(&player_camera, false);
-    camera_move(&player_camera, PLAYER_X, PLAYER_Y, PLAYER_Z);
     camera_viewport(&player_camera, WINDOW_WIDTH, WINDOW_HEIGHT);
     if (database_get_player(DATABASE_PLAYER, &x, &y, &z, &pitch, &yaw))
     {
         camera_set_position(&player_camera, x, y, z);
         camera_set_rotation(&player_camera, pitch, yaw);
+    }
+    else
+    {
+        srand(time(NULL));
+        camera_set_position(&player_camera, rand(), PLAYER_Y, rand());
     }
     camera_init(&shadow_camera, true);
     camera_set_rotation(&shadow_camera, SHADOW_PITCH, SHADOW_YAW);

@@ -19,9 +19,11 @@ bool block_solid(const block_t block)
     assert(block < BLOCK_COUNT);
     switch (block)
     {
+    case BLOCK_BLUEBELL:
     case BLOCK_CLOUD:
     case BLOCK_DANDELION:
     case BLOCK_EMPTY:
+    case BLOCK_LAVENDER:
     case BLOCK_ROSE:
     case BLOCK_WATER:
         return 0;
@@ -34,8 +36,10 @@ bool block_sprite(const block_t block)
     assert(block < BLOCK_COUNT);
     switch (block)
     {
-    case BLOCK_ROSE:
+    case BLOCK_BLUEBELL:
     case BLOCK_DANDELION:
+    case BLOCK_LAVENDER:
+    case BLOCK_ROSE:
         return 1;
     }
     return 0;
@@ -43,6 +47,24 @@ bool block_sprite(const block_t block)
 
 const int blocks[][DIRECTION_3][2] =
 {
+    [BLOCK_BLUEBELL] =
+    {
+        [DIRECTION_E] = { 2, 2 },
+        [DIRECTION_W] = { 2, 2 },
+        [DIRECTION_N] = { 2, 2 },
+        [DIRECTION_S] = { 2, 2 },
+        [DIRECTION_U] = { 2, 2 },
+        [DIRECTION_D] = { 2, 2 },
+    },
+    [BLOCK_LAVENDER] =
+    {
+        [DIRECTION_E] = { 3, 2 },
+        [DIRECTION_W] = { 3, 2 },
+        [DIRECTION_N] = { 3, 2 },
+        [DIRECTION_S] = { 3, 2 },
+        [DIRECTION_U] = { 3, 2 },
+        [DIRECTION_D] = { 3, 2 },
+    },
     [BLOCK_CLOUD] =
     {
         [DIRECTION_E] = { 8, 0 },

@@ -110,13 +110,22 @@ void noise_generate(
             }
             else if (plant > NOISE_FLOWER_THRESHOLD)
             {
-                if (plant > 0.5)
+                const int value = ((int) (plant * 100.0f)) % 4;
+                if (value == 0)
                 {
                     group_set_block(group, a, y + 1, b, BLOCK_ROSE);
                 }
-                else
+                else if (value == 1)
                 {
                     group_set_block(group, a, y + 1, b, BLOCK_DANDELION);
+                }
+                else if (value == 2)
+                {
+                    group_set_block(group, a, y + 1, b, BLOCK_BLUEBELL);
+                }
+                else
+                {
+                    group_set_block(group, a, y + 1, b, BLOCK_LAVENDER);
                 }
             }
         }
