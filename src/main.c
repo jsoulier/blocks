@@ -421,7 +421,7 @@ static void draw_ssao()
     SDL_EndGPURenderPass(pass);
 }
 
-static void draw_composite()
+static void composite()
 {
     SDL_GPUColorTargetInfo cti = {0};
     cti.load_op = SDL_GPU_LOADOP_LOAD;
@@ -554,6 +554,38 @@ static void draw_ui()
     SDL_EndGPURenderPass(pass);
 }
 
+static void blit()
+{
+    const float src = (float) APP_WIDTH / (float) APP_HEIGHT;
+    const float dst = (float) width / (float) height;
+    float scale;
+    if (dst > src)
+    {
+        scale = (float) height / (float) APP_HEIGHT;
+    }
+    else
+    {
+        scale = (float) width / (float) APP_WIDTH;
+    }
+    const uint32_t w = APP_WIDTH * scale;
+    const uint32_t h = APP_HEIGHT * scale;
+    const uint32_t x = ((float) width - (float) w) / 2.0f;
+    const uint32_t y = ((float) height - (float) h) / 2.0f;
+    SDL_GPUBlitInfo blit = {0};
+    blit.source.x = 0;
+    blit.source.y = 0;
+    blit.source.w = APP_WIDTH;
+    blit.source.h = APP_HEIGHT;
+    blit.source.texture = composite_texture;
+    blit.destination.x = x;
+    blit.destination.y = y;
+    blit.destination.w = w;
+    blit.destination.h = h;
+    blit.destination.texture = color_texture;
+    blit.filter = SDL_GPU_FILTER_NEAREST;
+    SDL_BlitGPUTexture(commands, &blit);
+}
+
 static void draw()
 {
     commands = SDL_AcquireGPUCommandBuffer(device);
@@ -572,30 +604,35 @@ static void draw()
         SDL_SubmitGPUCommandBuffer(commands);
         return;
     }
-    camera_viewport(&player_camera, width, height);
     camera_update(&player_camera);
     camera_update(&shadow_camera);
+    SDL_PushGPUDebugGroup(commands, "sky");
     draw_sky();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "shadow");
     draw_shadow();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "opaque");
     draw_opaque();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "ssao");
     draw_ssao();
-    draw_composite();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "composite");
+    composite();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "transparent");
     draw_transparent();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "raycast");
     draw_raycast();
-    SDL_GPUBlitInfo blit = {0};
-    blit.source.x = 0;
-    blit.source.y = 0;
-    blit.source.w = APP_WIDTH;
-    blit.source.h = APP_HEIGHT;
-    blit.source.texture = composite_texture;
-    blit.destination.x = 0;
-    blit.destination.y = 0;
-    blit.destination.w = width;
-    blit.destination.h = height;
-    blit.destination.texture = color_texture;
-    blit.filter = SDL_GPU_FILTER_NEAREST;
-    SDL_BlitGPUTexture(commands, &blit);
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "blit");
+    blit();
+    SDL_PopGPUDebugGroup(commands);
+    SDL_PushGPUDebugGroup(commands, "ui");
     draw_ui();
+    SDL_PopGPUDebugGroup(commands);
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
