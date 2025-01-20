@@ -83,7 +83,7 @@ float get_random(
 }
 
 vec4 get_color(
-    const vec4 color,
+    const sampler2D atlas,
     const sampler2D shadowmap,
     const vec3 position,
     const vec2 uv,
@@ -93,7 +93,8 @@ vec4 get_color(
     const vec3 shadow_vector,
     const bool shadowed,
     const float fog,
-    const float ssao)
+    const float ssao,
+    const float alpha)
 {
     vec3 shadow_uv;
     shadow_uv.x = shadow_position.x * 0.5 + 0.5;
@@ -119,6 +120,8 @@ vec4 get_color(
         b = 0.4;
         c = max(angle, 0.0) * 0.6;
     }
+    vec4 color = texture(atlas, uv);
+    color.a = clamp(color.a + alpha, 0.0, 1.0);
     const vec4 composite = vec4(color.xyz * (a + b + c + 0.3), color.a);
     const float dy = position.y - player_position.y;
     const float dx = distance(position.xz, player_position.xz);

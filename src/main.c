@@ -357,7 +357,7 @@ static void draw_shadow()
 static void draw_opaque()
 {
     SDL_GPUColorTargetInfo cti[3] = {0};
-    cti[0].load_op = SDL_GPU_LOADOP_DONT_CARE;
+    cti[0].load_op = SDL_GPU_LOADOP_CLEAR;
     cti[0].store_op = SDL_GPU_STOREOP_STORE;
     cti[0].texture = position_texture;
     cti[0].cycle = true;
@@ -492,8 +492,6 @@ static void draw_transparent()
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(commands, 0, vector, 12);
     SDL_PushGPUFragmentUniformData(commands, 1, position, 12);
-    SDL_PushGPUFragmentUniformData(commands, 2, player_camera.view, 64);
-    SDL_PushGPUFragmentUniformData(commands, 3, player_camera.proj, 64);
     SDL_BindGPUFragmentSamplers(pass, 0, tsb, 3);
     world_render(&player_camera, commands, pass, WORLD_PASS_TYPE_TRANSPARENT);
     SDL_EndGPURenderPass(pass);

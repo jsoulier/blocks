@@ -34,7 +34,7 @@ void main()
     }
     const vec4 shadow_position = u_shadow_matrix * vec4(position, 1.0);
     o_color = get_color(
-        texture(s_atlas, uv),
+        s_atlas,
         s_shadowmap,
         position,
         uv,
@@ -44,5 +44,6 @@ void main()
         u_shadow_vector,
         get_shadowed(voxel),
         get_fog(distance(position.xz, u_player_position.xz)),
-        texture(s_ssao, i_uv).r);
+        texture(s_ssao, i_uv).r,
+        0.0);
 }

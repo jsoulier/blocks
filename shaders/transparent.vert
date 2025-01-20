@@ -9,6 +9,7 @@ layout(location = 2) out flat vec3 o_normal;
 layout(location = 3) out vec4 o_shadow_position;
 layout(location = 4) out flat uint o_shadowed;
 layout(location = 5) out float o_fog;
+layout(location = 6) out vec2 o_fragment;
 layout(set = 1, binding = 0) uniform t_position
 {
     ivec3 u_position;
@@ -33,6 +34,9 @@ void main()
     o_shadowed = uint(get_shadowed(i_voxel));
     o_fog = get_fog(distance(o_position.xz, u_player_position.xz));
     gl_Position = u_matrix * vec4(o_position, 1.0);
+    o_fragment = gl_Position.xy / gl_Position.w;
+    o_fragment = o_fragment * 0.5 + 0.5;
+    o_fragment.y = 1.0 - o_fragment.y;
     if (!bool(o_shadowed))
     {
         return;
