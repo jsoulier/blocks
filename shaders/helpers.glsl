@@ -83,7 +83,7 @@ float get_random(
 }
 
 vec4 get_color(
-    const sampler2D atlas,
+    const vec4 color,
     const sampler2D shadowmap,
     const vec3 position,
     const vec2 uv,
@@ -119,7 +119,6 @@ vec4 get_color(
         b = 0.4;
         c = max(angle, 0.0) * 0.6;
     }
-    const vec4 color = texture(atlas, uv);
     const vec4 composite = vec4(color.xyz * (a + b + c + 0.3), color.a);
     const float dy = position.y - player_position.y;
     const float dx = distance(position.xz, player_position.xz);

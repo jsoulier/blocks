@@ -293,7 +293,7 @@ static SDL_GPUGraphicsPipeline* load_transparent(
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load("transparent.vert", 4, 0),
-        .fragment_shader = load("transparent.frag", 2, 2),
+        .fragment_shader = load("transparent.frag", 4, 3),
         .target_info =
         {
             .num_color_targets = 1,

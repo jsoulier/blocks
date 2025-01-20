@@ -477,11 +477,13 @@ static void draw_transparent()
     }
     float position[3];
     float vector[3];
-    SDL_GPUTextureSamplerBinding tsb[2] = {0};
+    SDL_GPUTextureSamplerBinding tsb[3] = {0};
     tsb[0].sampler = nearest_sampler;
     tsb[0].texture = atlas_texture;
     tsb[1].sampler = linear_sampler;
     tsb[1].texture = shadow_texture;
+    tsb[2].sampler = nearest_sampler;
+    tsb[2].texture = position_texture;
     camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
     camera_vector(&shadow_camera, &vector[0], &vector[1], &vector[2]);
     pipeline_bind(pass, PIPELINE_TRANSPARENT);
@@ -490,7 +492,9 @@ static void draw_transparent()
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(commands, 0, vector, 12);
     SDL_PushGPUFragmentUniformData(commands, 1, position, 12);
-    SDL_BindGPUFragmentSamplers(pass, 0, tsb, 2);
+    SDL_PushGPUFragmentUniformData(commands, 2, player_camera.view, 64);
+    SDL_PushGPUFragmentUniformData(commands, 3, player_camera.proj, 64);
+    SDL_BindGPUFragmentSamplers(pass, 0, tsb, 3);
     world_render(&player_camera, commands, pass, WORLD_PASS_TYPE_TRANSPARENT);
     SDL_EndGPURenderPass(pass);
 }

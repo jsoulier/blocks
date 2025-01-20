@@ -34,7 +34,7 @@ void main()
     }
     const vec4 shadow_position = u_shadow_matrix * vec4(position, 1.0);
     o_color = get_color(
-        s_atlas,
+        texture(s_atlas, uv),
         s_shadowmap,
         position,
         uv,
