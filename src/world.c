@@ -86,7 +86,7 @@ static int loop(
             terrain_neighbors2(&terrain, x, z, neighbors);
             chunk->mesh = !voxel_vbo(
                 chunk,
-                neighbors,
+                (const chunk_t**) neighbors,
                 device,
                 worker->tbos,
                 worker->sizes);
