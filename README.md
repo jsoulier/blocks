@@ -51,6 +51,7 @@ cd bin
 ```
 
 ### Controls
+
 - `WASDEQ` to move
 - `Escape` to unfocus
 - `LClick` to break a block
@@ -77,8 +78,6 @@ The rendering pipeline is:
 10. Submit
 
 #### SSAO
-
-> NOTE: Use CPU-based techniques. SSAO is cool but significantly hurts performance and looks worse.
 
 SSAO is pretty finicky, especially in blocky games.
 The idea I had was to manually check the neighbouring pixels to see if the current pixel is concave or convex. If it's concave, it's occluded.
