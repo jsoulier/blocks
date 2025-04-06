@@ -16,21 +16,19 @@ bool test(
 {
     const vec3 neighbor_position = texture(s_position, uv).xyz;
     const vec2 neighbor_uv = texture(s_uv, uv).xy;
-    if (length(neighbor_uv) == 0)
+    if (length(neighbor_uv) == 0.0)
     {
         return false;
     }
     const float bias = 0.01;
-    switch (direction)
-    {
-    case 4: return position.y < neighbor_position.y - bias;
-    case 5: return position.y > neighbor_position.y + bias;
-    case 2: return position.x < neighbor_position.x - bias;
-    case 3: return position.x > neighbor_position.x + bias;
-    case 0: return position.z < neighbor_position.z - bias;
-    case 1: return position.z > neighbor_position.z + bias;
-    }
-    return false;
+    float values[6];
+    values[0] = neighbor_position.z - position.z;
+    values[1] = position.z - neighbor_position.z;
+    values[2] = neighbor_position.x - position.x;
+    values[3] = position.x - neighbor_position.x;
+    values[4] = neighbor_position.y - position.y;
+    values[5] = position.y - neighbor_position.y;
+    return values[direction] > bias;
 }
 
 void main()
@@ -52,10 +50,7 @@ void main()
         {
             const vec2 origin = i_uv + vec2(x, y) * scale;
             const vec2 offset = texture(s_random, origin).xy * scale;
-            if (test(direction, position.xyz, origin + offset))
-            {
-                ssao += 1.0;
-            }
+            ssao += float(test(direction, position.xyz, origin + offset));
         }
     }
     kernel = kernel * 2 + 1;
