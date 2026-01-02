@@ -49,7 +49,7 @@ cd bin
 Shaders have a few dependencies and are prebuilt for your convenience.
 To build locally, install [glslc](https://github.com/google/shaderc) and
 [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
-environment variable. The CMake build process will automatically use them
+variable. The build process will automatically use them
 
 ### Controls
 
