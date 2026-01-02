@@ -1,5 +1,5 @@
+#include <SDL3/SDL.h>
 #include <stb_perlin.h>
-#include <math.h>
 #include "block.h"
 #include "chunk.h"
 #include "helpers.h"
@@ -19,7 +19,7 @@ void noise_generate(
         bool grass = false;
         float height = stb_perlin_fbm_noise3(s * 0.005f, 0.0f, t * 0.005f, 2.0f, 0.5f, 6);
         height *= 50.0f;
-        height = powf(max(height, 0.0f), 1.3f);
+        height = SDL_powf(max(height, 0.0f), 1.3f);
         height += 30;
         height = clamp(height, 0, CHUNK_Y - 1);
         if (height < 40)

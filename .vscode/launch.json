@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/blocks.exe",
-            "cwd": "${workspaceFolder}/build/bin",
+            "cwd": "${workspaceFolder}",
             "preLaunchTask": "CMake: build",
         },
         {
@@ -14,7 +14,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/blocks",
-            "cwd": "${workspaceFolder}/build/bin",
+            "cwd": "${workspaceFolder}",
             "preLaunchTask": "CMake: build",
         },
     ]

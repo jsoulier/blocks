@@ -1,4 +1,4 @@
-#include <math.h>
+#include <SDL3/SDL.h>
 #include <stdbool.h>
 #include "camera.h"
 #include "helpers.h"
@@ -60,8 +60,8 @@ static void rotate(
     const float z,
     const float angle)
 {
-    const float s = sinf(angle);
-    const float c = cosf(angle);
+    const float s = SDL_sinf(angle);
+    const float c = SDL_cosf(angle);
     const float i = 1.0f - c;
     matrix[0][0] = i * x * x + c;
     matrix[0][1] = i * x * y - z * s;
@@ -88,7 +88,7 @@ static void perspective(
     const float near,
     const float far)
 {
-    const float f = 1.0f / tanf(fov / 2.0f);
+    const float f = 1.0f / SDL_tanf(fov / 2.0f);
     matrix[0][0] = f / aspect;
     matrix[0][1] = 0.0f;
     matrix[0][2] = 0.0f;
@@ -168,7 +168,7 @@ static void frustum(
         length += planes[i][0] * planes[i][0];
         length += planes[i][1] * planes[i][1];
         length += planes[i][2] * planes[i][2];
-        length = sqrtf(length);
+        length = SDL_sqrtf(length);
         if (length < EPSILON)
         {
             continue;
@@ -208,8 +208,8 @@ void camera_update(
     {
         return;
     }
-    const float s = sinf(camera->yaw);
-    const float c = cosf(camera->yaw);
+    const float s = SDL_sinf(camera->yaw);
+    const float c = SDL_cosf(camera->yaw);
     translate(camera->view, -camera->x, -camera->y, -camera->z);
     rotate(camera->proj, c, 0.0f, s, camera->pitch);
     multiply(camera->view, camera->proj, camera->view);
@@ -258,10 +258,10 @@ void camera_move(
     {
         return;
     }
-    const float s = sinf(camera->yaw);
-    const float c = cosf(camera->yaw);
-    const float a = sinf(camera->pitch);
-    const float b = cosf(camera->pitch);
+    const float s = SDL_sinf(camera->yaw);
+    const float c = SDL_cosf(camera->yaw);
+    const float a = SDL_sinf(camera->pitch);
+    const float b = SDL_cosf(camera->pitch);
     camera->x += b * (s * z) + c * x;
     camera->y += y + z * a;
     camera->z -= b * (c * z) - s * x;
@@ -353,10 +353,10 @@ void camera_get_vector(
     assert(x);
     assert(y);
     assert(z);
-    const float c = cosf(camera->pitch);
-    *x = cosf(camera->yaw - rad(90)) * c;
-    *y = sinf(camera->pitch);
-    *z = sinf(camera->yaw - rad(90)) * c;
+    const float c = SDL_cosf(camera->pitch);
+    *x = SDL_cosf(camera->yaw - rad(90)) * c;
+    *y = SDL_sinf(camera->pitch);
+    *z = SDL_sinf(camera->yaw - rad(90)) * c;
 }
 
 bool camera_test(

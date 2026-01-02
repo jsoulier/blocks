@@ -1,5 +1,4 @@
 #include <SDL3/SDL.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -374,8 +373,8 @@ void world_set_block(
     int z,
     const block_t block)
 {
-    const int a = floor((float) x / CHUNK_X);
-    const int c = floor((float) z / CHUNK_Z);
+    const int a = SDL_floor((float) x / CHUNK_X);
+    const int c = SDL_floor((float) z / CHUNK_Z);
     if (!terrain_in2(&terrain, a, c) || y < 0 || y >= CHUNK_Y)
     {
         return;
@@ -410,8 +409,8 @@ block_t world_get_block(
     int y,
     int z)
 {
-    const int a = floor((float) x / CHUNK_X);
-    const int c = floor((float) z / CHUNK_Z);
+    const int a = SDL_floor((float) x / CHUNK_X);
+    const int c = SDL_floor((float) z / CHUNK_Z);
     if (!terrain_in2(&terrain, a, c) || y < 0 || y >= CHUNK_Y)
     {
         return BLOCK_EMPTY;

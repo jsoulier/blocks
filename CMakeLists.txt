@@ -27,26 +27,59 @@ add_executable(blocks WIN32
     src/world.c
 )
 target_link_libraries(blocks PUBLIC SDL3::SDL3)
-if(UNIX)
-    target_link_libraries(blocks PUBLIC m)
-endif()
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
 
+find_program(GLSLC glslc)
+find_program(SHADERCROSS shadercross)
 function(shader FILE)
-    set(SOURCE shaders/${FILE})
-    set(OUTPUT ${BINARY_DIR}/${FILE})
-    add_custom_command(
-        OUTPUT ${OUTPUT}
-        COMMAND glslc ${SOURCE} -o ${OUTPUT} -I src
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        DEPENDS ${SOURCE} shaders/helpers.glsl src/config.h
-        COMMENT ${SOURCE}
-    )
-    string(REPLACE . _ NAME ${FILE})
-    add_custom_target(${NAME} DEPENDS ${OUTPUT})
-    add_dependencies(blocks ${NAME})
+    set(GLSL ${CMAKE_SOURCE_DIR}/shaders/${FILE})
+    set(SPV ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.spv)
+    set(DXIL ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.dxil)
+    set(MSL ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.msl)
+    set(JSON ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.json)
+    function(compile PROGRAM SOURCE OUTPUT)
+        add_custom_command(
+            OUTPUT ${OUTPUT}
+            COMMAND ${PROGRAM} ${SOURCE} -o ${OUTPUT} -I src
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            DEPENDS ${SOURCE} shaders/helpers.glsl src/config.h
+            COMMENT "${SOURCE} -> ${OUTPUT}"
+        )
+        get_filename_component(NAME ${OUTPUT} NAME)
+        string(REPLACE . _ NAME ${NAME})
+        set(NAME compile_${NAME})
+        add_custom_target(${NAME} DEPENDS ${OUTPUT})
+        add_dependencies(blocks ${NAME})
+    endfunction()
+    if(EXISTS ${GLSLC} AND EXISTS ${SHADERCROSS})
+        compile(${GLSLC} ${GLSL} ${SPV})
+        compile(${SHADERCROSS} ${SPV} ${MSL})
+        compile(${SHADERCROSS} ${SPV} ${JSON})
+    else()
+        message("Skipping build since dependencies are missing")
+    endif()
+    function(package OUTPUT)
+        get_filename_component(NAME ${OUTPUT} NAME)
+        set(BINARY ${BINARY_DIR}/${NAME})
+        add_custom_command(
+            OUTPUT ${BINARY}
+            COMMAND ${CMAKE_COMMAND} -E copy ${OUTPUT} ${BINARY}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            DEPENDS ${OUTPUT}
+            COMMENT "${OUTPUT} -> ${BINARY}"
+        )
+        string(REPLACE . _ NAME ${NAME})
+        set(NAME package_${NAME})
+        add_custom_target(${NAME} DEPENDS ${BINARY})
+        add_dependencies(blocks ${NAME})
+    endfunction()
+    if(NOT APPLE)
+        package(${SPV})
+    else()
+        package(${MSL})
+    endif()
 endfunction()
 shader(composite.frag)
 shader(fullscreen.vert)

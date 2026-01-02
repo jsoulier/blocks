@@ -1,0 +1,24 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct main0_out
+{
+    float2 o_random [[color(0)]];
+};
+
+struct main0_in
+{
+    float2 i_uv [[user(locn0)]];
+};
+
+fragment main0_out main0(main0_in in [[stage_in]])
+{
+    main0_out out = {};
+    out.o_random.x = fract(sin(dot(in.i_uv * 1.0, float2(12.98980045318603515625, 78.233001708984375))) * 43758.546875);
+    out.o_random.y = fract(sin(dot(in.i_uv * 2.0, float2(12.98980045318603515625, 78.233001708984375))) * 43758.546875);
+    out.o_random = (out.o_random * 2.0) - float2(1.0);
+    return out;
+}
+
