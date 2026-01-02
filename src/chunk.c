@@ -5,7 +5,7 @@
 #include "chunk.h"
 #include "map.h"
 
-static void transform(chunk_t* chunk, int* x, int* y, int* z)
+static void transform(const chunk_t* chunk, int* x, int* y, int* z)
 {
     *x -= chunk->x;
     *y -= chunk->y;

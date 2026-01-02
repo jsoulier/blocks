@@ -6,8 +6,8 @@
 
 typedef struct cpu_buffer
 {
-    SDL_GPUTransferBufferUsage usage;
     SDL_GPUTransferBuffer* buffer;
+    uint8_t* data;
     uint32_t size;
     uint32_t capacity;
     uint32_t stride;
