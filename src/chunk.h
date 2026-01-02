@@ -1,94 +1,42 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <stdbool.h>
-#include <stdint.h>
+
 #include "block.h"
-#include "config.h"
-#include "helpers.h"
+#include "buffer.h"
+#include "map.h"
 
-typedef enum
+typedef enum chunk_mesh_type
 {
-    CHUNK_TYPE_OPAQUE,
-    CHUNK_TYPE_TRANSPARENT,
-    CHUNK_TYPE_COUNT,
+    CHUNK_MESH_TYPE_DEFAULT,
+    CHUNK_MESH_TYPE_TRANSPARENT,
+    CHUNK_MESH_TYPE_COUNT,
 }
-chunk_type_t;
+chunk_mesh_type_t;
 
-typedef struct
+typedef enum chunk_flag
 {
-    block_t blocks[CHUNK_X][CHUNK_Y][CHUNK_Z];
-    SDL_GPUBuffer* vbos[CHUNK_TYPE_COUNT];
-    uint32_t sizes[CHUNK_TYPE_COUNT];
-    uint32_t capacities[CHUNK_TYPE_COUNT];
-    bool load;
-    bool mesh;
+    CHUNK_FLAG_NONE = 0,
+    CHUNK_FLAG_GENERATE = 1,
+    CHUNK_FLAG_MESH = 2,
+}
+chunk_flag_t;
+
+typedef struct chunk
+{
+    chunk_flag_t flags;
+    int x;
+    int y;
+    int z;
+    map_t blocks;
+    map_t lights;
+    gpu_buffer_t vertex_buffers[CHUNK_MESH_TYPE_COUNT];
+    gpu_buffer_t light_buffer;
 }
 chunk_t;
 
-void chunk_wrap(
-    int* x,
-    int* y,
-    int* z);
-bool chunk_in(
-    const int x,
-    const int y,
-    const int z);
-void chunk_set_block(
-    chunk_t* chunk,
-    const int x,
-    const int y,
-    const int z,
-    const block_t block);
-
-typedef struct
-{
-    chunk_t* chunks[WORLD_X][WORLD_Z];
-    int x;
-    int z;
-}
-terrain_t;
-
-void terrain_init(
-    terrain_t* terrain);
-void terrain_free(
-    terrain_t* terrain);
-chunk_t* terrain_get(
-    const terrain_t* terrain,
-    const int x,
-    const int z);
-bool terrain_in(
-    const terrain_t* terrain,
-    const int x,
-    const int z);
-bool terrain_border(
-    const terrain_t* terrain,
-    const int x,
-    const int z);
-void terrain_neighbors(
-    terrain_t* terrain,
-    const int x,
-    const int z,
-    chunk_t* neighbors[DIRECTION_2]);
-chunk_t* terrain_get2(
-    const terrain_t* terrain,
-    int x,
-    int z);
-bool terrain_in2(
-    const terrain_t* terrain,
-    int x,
-    int z);
-bool terrain_border2(
-    const terrain_t* terrain,
-    int x,
-    int z);
-void terrain_neighbors2(
-    terrain_t* terrain,
-    int x,
-    int z,
-    chunk_t* neighbors[DIRECTION_2]);
-int* terrain_move(
-    terrain_t* terrain,
-    const int x,
-    const int z,
-    int* size);
+void chunk_init(chunk_t* chunk, SDL_GPUDevice* device);
+void chunk_free(chunk_t* chunk, SDL_GPUDevice* device);
+void chunk_set_block(chunk_t* chunk, int x, int y, int z, block_t block);
+block_t chunk_get_block(const chunk_t* chunk, int x, int y, int z);
+void chunk_set_light(chunk_t* chunk, int x, int y, int z, int light);

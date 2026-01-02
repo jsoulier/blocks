@@ -1,0 +1,166 @@
+#include <SDL3/SDL.h>
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "map.h"
+
+#define EMPTY 0
+#define TOMBSTONE 255
+#define MAX_LOAD 0.7f
+
+typedef struct map_row
+{
+    uint8_t x;
+    uint8_t y;
+    uint8_t z;
+    uint8_t value;
+}
+map_row_t;
+
+static bool equals(const map_row_t row, int x, int y, int z)
+{
+    return row.x == x && row.y == y && row.z == z;
+}
+
+static void init(map_t* map, uint32_t capacity)
+{
+    SDL_assert(SDL_HasExactlyOneBitSet32(capacity));
+    map->rows = calloc(capacity, sizeof(map_row_t));
+    map->capacity = capacity;
+    map->size = 0;
+}
+
+void map_init(map_t* map)
+{
+    init(map, 32);
+}
+
+void map_free(map_t* map)
+{
+    free(map->rows);
+    map->rows = NULL;
+    map->size = 0;
+    map->capacity = 0;
+}
+
+static int hash_int(int x)
+{
+    x += (x << 10);
+    x ^= (x >> 6);
+    x += (x << 3);
+    x ^= (x >> 11);
+    x += (x << 15);
+    return x;
+}
+
+static int hash_xyz(int x, int y, int z)
+{
+    return hash_int(x) ^ hash_int(y) ^ hash_int(z);
+}
+
+static void grow(map_t* map)
+{
+    map_t old_map = *map;
+    init(map, old_map.capacity * 2);
+    for (uint32_t i = 0; i < old_map.capacity; ++i)
+    {
+        if (map_is_valid(&old_map, i))
+        {
+            map_row_t row = old_map.rows[i];
+            map_set(map, row.x, row.y, row.z, row.value);
+        }
+    }
+    map_free(&old_map);
+}
+
+void map_set(map_t* map, int x, int y, int z, int value)
+{
+    SDL_assert(value <= UINT8_MAX);
+    SDL_assert(value != EMPTY && value != TOMBSTONE);
+    if ((float) (map->size + 1) / map->capacity > MAX_LOAD)
+    {
+        grow(map);
+    }
+    uint32_t mask = map->capacity - 1;
+    uint32_t index = hash_xyz(x, y, z) & mask;
+    uint32_t tombstone = UINT32_MAX;
+    for (;;)
+    {
+        map_row_t* row = &map->rows[index];
+        if (row->value == EMPTY)
+        {
+            if (tombstone != UINT32_MAX)
+            {
+                row = &map->rows[tombstone];
+            }
+            row->x = x;
+            row->y = y;
+            row->z = z;
+            row->value = value;
+            map->size++;
+            return;
+        }
+        if (row->value == TOMBSTONE)
+        {
+            if (tombstone == UINT32_MAX)
+            {
+                tombstone = index;
+            }
+        }
+        else if (equals(*row, x, y, z))
+        {
+            row->value = value;
+            return;
+        }
+        index = (index + 1) & mask;
+    }
+}
+
+int map_get(const map_t* map, int x, int y, int z)
+{
+    uint32_t mask = map->capacity - 1;
+    uint32_t index = hash_xyz(x, y, z) & mask;
+    for (;;)
+    {
+        const map_row_t row = map->rows[index];
+        if (row.value == EMPTY)
+        {
+            return EMPTY;
+        }
+        if (row.value != TOMBSTONE && equals(row, x, y, z))
+        {
+            return row.value;
+        }
+        index = (index + 1) & mask;
+    }
+}
+
+void map_remove(map_t* map, int x, int y, int z)
+{
+    uint32_t mask = map->capacity - 1;
+    uint32_t index = hash_xyz(x, y, z) & mask;
+    for (;;)
+    {
+        map_row_t* row = &map->rows[index];
+        if (row->value == EMPTY)
+        {
+            return;
+        }
+        if (row->value != TOMBSTONE && equals(*row, x, y, z))
+        {
+            row->value = TOMBSTONE;
+            map->size--;
+            return;
+        }
+        index = (index + 1) & mask;
+    }
+}
+
+bool map_is_valid(const map_t* map, uint32_t index)
+{
+    SDL_assert(index < map->capacity);
+    map_row_t row = map->rows[index];
+    return row.value != EMPTY && row.value != TOMBSTONE;
+}

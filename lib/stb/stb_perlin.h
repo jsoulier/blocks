@@ -89,10 +89,7 @@ extern float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wra
 
 #ifdef STB_PERLIN_IMPLEMENTATION
 
-// Modified by jsoulier:
-// #include <math.h> // fabs()
-#include <SDL3/SDL.h>
-#define fabs(x) SDL_fabs(x)
+#include <math.h> // fabs()
 
 // not same permutation table as Perlin's reference to avoid copyright issues;
 // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
