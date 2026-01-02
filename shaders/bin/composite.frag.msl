@@ -1,0 +1,194 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct t_shadow_matrix
+{
+    float4x4 u_shadow_matrix;
+};
+
+struct t_player_position
+{
+    float3 u_player_position;
+};
+
+struct t_shadow_vector
+{
+    float3 u_shadow_vector;
+};
+
+constant spvUnsafeArray<float3, 6> _74 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+
+struct main0_out
+{
+    float4 o_color [[color(0)]];
+};
+
+struct main0_in
+{
+    float2 i_uv [[user(locn0)]];
+};
+
+static inline __attribute__((always_inline))
+uint get_direction(uint voxel)
+{
+    return (voxel >> uint(26)) & 7u;
+}
+
+static inline __attribute__((always_inline))
+float3 get_normal(uint voxel)
+{
+    return _74[get_direction(voxel)];
+}
+
+static inline __attribute__((always_inline))
+bool get_shadowed(uint voxel)
+{
+    return ((voxel >> uint(30)) & 1u) != 0u;
+}
+
+static inline __attribute__((always_inline))
+bool get_occluded(uint voxel)
+{
+    return ((voxel >> uint(31)) & 1u) != 0u;
+}
+
+static inline __attribute__((always_inline))
+float get_fog(float x)
+{
+    return fast::min(powr(x / 250.0, 2.5), 1.0);
+}
+
+static inline __attribute__((always_inline))
+float3 get_sky(float y)
+{
+    return mix(float3(0.699999988079071044921875, 0.89999997615814208984375, 1.0), float3(0.300000011920928955078125, 0.60000002384185791015625, 0.89999997615814208984375), float3(fast::clamp(y, 0.0, 0.800000011920928955078125)));
+}
+
+static inline __attribute__((always_inline))
+float4 get_color(texture2d_array<float> atlas, sampler atlasSmplr, texture2d<float> shadowmap, sampler shadowmapSmplr, float3 position, float3 uv, float3 normal, float3 player_position, float3 shadow_position, float3 shadow_vector, bool shadowed, bool occluded, float fog, float ssao, float alpha)
+{
+    float3 shadow_uv;
+    shadow_uv.x = (shadow_position.x * 0.5) + 0.5;
+    shadow_uv.y = 1.0 - ((shadow_position.y * 0.5) + 0.5);
+    shadow_uv.z = shadow_position.z;
+    float ao = ssao * 0.4000000059604644775390625;
+    float ambient = 0.20000000298023223876953125;
+    float directional = 0.0;
+    float angle = dot(normal, -shadow_vector);
+    float depth = shadow_uv.z - 0.001000000047497451305389404296875;
+    bool _145 = !shadowed;
+    bool _179;
+    if (!_145)
+    {
+        bool _150 = angle > 0.0;
+        bool _178;
+        if (_150)
+        {
+            bool _157 = all(shadow_uv <= float3(0.0));
+            bool _165;
+            if (!_157)
+            {
+                _165 = all(shadow_uv >= float3(1.0));
+            }
+            else
+            {
+                _165 = _157;
+            }
+            bool _177;
+            if (!_165)
+            {
+                _177 = depth < shadowmap.sample(shadowmapSmplr, shadow_uv.xy).x;
+            }
+            else
+            {
+                _177 = _165;
+            }
+            _178 = _177;
+        }
+        else
+        {
+            _178 = _150;
+        }
+        _179 = _178;
+    }
+    else
+    {
+        _179 = _145;
+    }
+    if (_179)
+    {
+        directional = fast::max(angle, 0.0) * 1.2000000476837158203125;
+    }
+    if (!occluded)
+    {
+        ao = 0.699999988079071044921875;
+    }
+    float4 color = atlas.sample(atlasSmplr, uv.xy, uint(rint(uv.z)));
+    color.w = fast::clamp(color.w + alpha, 0.0, 1.0);
+    float light = (ao + ambient) + directional;
+    float dy = position.y - player_position.y;
+    float dx = distance(position.xz, player_position.xz);
+    float pitch = precise::atan2(dy, dx);
+    float4 sky = float4(get_sky(pitch), 1.0);
+    float4 composite = float4(color.xyz * light, color.w);
+    return mix(composite, sky, float4(fog));
+}
+
+fragment main0_out main0(main0_in in [[stage_in]], constant t_player_position& _297 [[buffer(0)]], constant t_shadow_vector& _309 [[buffer(1)]], constant t_shadow_matrix& _276 [[buffer(2)]], texture2d_array<float> s_atlas [[texture(0)]], texture2d<float> s_position [[texture(1)]], texture2d<float> s_uv [[texture(2)]], texture2d<uint> s_voxel [[texture(3)]], texture2d<float> s_shadowmap [[texture(4)]], texture2d<float> s_ssao [[texture(5)]], sampler s_atlasSmplr [[sampler(0)]], sampler s_positionSmplr [[sampler(1)]], sampler s_uvSmplr [[sampler(2)]], sampler s_voxelSmplr [[sampler(3)]], sampler s_shadowmapSmplr [[sampler(4)]], sampler s_ssaoSmplr [[sampler(5)]])
+{
+    main0_out out = {};
+    float3 position = s_position.sample(s_positionSmplr, in.i_uv).xyz;
+    float3 uv = s_uv.sample(s_uvSmplr, in.i_uv).xyz;
+    uint voxel = s_voxel.sample(s_voxelSmplr, in.i_uv).x;
+    if (length(uv) == 0.0)
+    {
+        discard_fragment();
+    }
+    float4 shadow_position = _276.u_shadow_matrix * float4(position, 1.0);
+    out.o_color = get_color(s_atlas, s_atlasSmplr, s_shadowmap, s_shadowmapSmplr, position, uv, get_normal(voxel), _297.u_player_position, shadow_position.xyz / float3(shadow_position.w), _309.u_shadow_vector, get_shadowed(voxel), get_occluded(voxel), get_fog(distance(position.xz, _297.u_player_position.xz)), s_ssao.sample(s_ssaoSmplr, in.i_uv).x, 0.0);
+    return out;
+}
+

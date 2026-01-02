@@ -1,0 +1,131 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+constant spvUnsafeArray<float3, 6> _245 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+
+struct main0_out
+{
+    float o_ssao [[color(0)]];
+};
+
+struct main0_in
+{
+    float2 i_uv [[user(locn0)]];
+};
+
+static inline __attribute__((always_inline))
+bool get_occluded(uint voxel)
+{
+    return ((voxel >> uint(31)) & 1u) != 0u;
+}
+
+static inline __attribute__((always_inline))
+uint get_direction(uint voxel)
+{
+    return (voxel >> uint(26)) & 7u;
+}
+
+static inline __attribute__((always_inline))
+bool test(uint direction, float3 position, float2 uv, texture2d<float> s_position, sampler s_positionSmplr, texture2d<float> s_uv, sampler s_uvSmplr)
+{
+    float3 neighbor_position = s_position.sample(s_positionSmplr, uv).xyz;
+    float2 neighbor_uv = s_uv.sample(s_uvSmplr, uv).xy;
+    if (length(neighbor_uv) == 0.0)
+    {
+        return false;
+    }
+    spvUnsafeArray<float, 6> values;
+    values[0] = neighbor_position.z - position.z;
+    values[1] = position.z - neighbor_position.z;
+    values[2] = neighbor_position.x - position.x;
+    values[3] = position.x - neighbor_position.x;
+    values[4] = neighbor_position.y - position.y;
+    values[5] = position.y - neighbor_position.y;
+    return values[direction] > 0.00999999977648258209228515625;
+}
+
+fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> s_position [[texture(0)]], texture2d<float> s_uv [[texture(1)]], texture2d<uint> s_voxel [[texture(2)]], texture2d<float> s_random [[texture(3)]], sampler s_positionSmplr [[sampler(0)]], sampler s_uvSmplr [[sampler(1)]], sampler s_voxelSmplr [[sampler(2)]], sampler s_randomSmplr [[sampler(3)]])
+{
+    main0_out out = {};
+    float2 uv = s_uv.sample(s_uvSmplr, in.i_uv).xy;
+    uint voxel = s_voxel.sample(s_voxelSmplr, in.i_uv).x;
+    bool _132 = !get_occluded(voxel);
+    bool _139;
+    if (!_132)
+    {
+        _139 = length(uv) == 0.0;
+    }
+    else
+    {
+        _139 = _132;
+    }
+    if (_139)
+    {
+        discard_fragment();
+    }
+    float4 position = s_position.sample(s_positionSmplr, in.i_uv);
+    uint direction = get_direction(voxel);
+    float2 scale = float2(75.0) / (float2(int2(s_voxel.get_width(), s_voxel.get_height())) * position.w);
+    float ssao = 0.0;
+    int kernel0 = 2;
+    int _169 = -kernel0;
+    for (int x = _169; x <= kernel0; x++)
+    {
+        int _180 = -kernel0;
+        for (int y = _180; y <= kernel0; y++)
+        {
+            float2 origin = in.i_uv + (float2(float(x), float(y)) * scale);
+            float2 offset = s_random.sample(s_randomSmplr, origin).xy * scale;
+            ssao += float(test(direction, position.xyz, origin + offset, s_position, s_positionSmplr, s_uv, s_uvSmplr));
+        }
+    }
+    kernel0 = (kernel0 * 2) + 1;
+    kernel0 *= kernel0;
+    kernel0--;
+    out.o_ssao = 1.0 - (ssao / float(kernel0));
+    return out;
+}
+

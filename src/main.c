@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include "block.h"
@@ -42,7 +43,9 @@ static block_t selected = BLOCK_GRASS;
 
 static bool create_atlas()
 {
-    atlas_surface = SDL_LoadPNG("atlas.png");
+    char path[512] = {0};
+    snprintf(path, sizeof(path), "%satlas.png", SDL_GetBasePath());
+    atlas_surface = SDL_LoadPNG(path);
     if (!atlas_surface)
     {
         SDL_Log("Failed to create atlas surface: %s", SDL_GetError());
@@ -906,7 +909,7 @@ int main(
         SDL_Log("Failed to create window: %s", SDL_GetError());
         return EXIT_FAILURE;
     }
-    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, DEVICE_VALIDATION, NULL);
+    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, DEVICE_DEBUG, NULL);
     if (!device)
     {
         SDL_Log("Failed to create device: %s", SDL_GetError());

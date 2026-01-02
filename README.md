@@ -12,15 +12,13 @@ Tiny Minecraft clone in C and GLSL using the new SDL3 GPU API
 - Transparency (limited)
 - Deferred rendering
 - Directional shadows
-- SSAO (ish)
+- SSAO
 - Water depth shading
 - Persistent worlds
 
 ### Building
 
 #### Windows
-
-Install the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/) for glslc
 
 ```bash
 git clone https://github.com/jsoulier/blocks --recurse-submodules
@@ -36,10 +34,6 @@ cd bin
 #### Linux
 
 ```bash
-sudo apt install glslc
-```
-
-```bash
 git clone https://github.com/jsoulier/blocks --recurse-submodules
 cd blocks
 mkdir build
@@ -49,6 +43,13 @@ cmake --build . --parallel 8
 cd bin
 ./blocks
 ```
+
+#### Shaders
+
+Shaders have a few dependencies and are prebuilt for your convenience.
+To build locally, install [glslc](https://github.com/google/shaderc) and
+[SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
+environment variable. The CMake build process will automatically use them
 
 ### Controls
 

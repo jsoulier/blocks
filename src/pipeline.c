@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include "helpers.h"
 #include "pipeline.h"
@@ -15,7 +16,27 @@ static SDL_GPUShader* load(
 {
     assert(file);
     SDL_GPUShaderCreateInfo info = {0};
-    void* code = SDL_LoadFile(file, &info.code_size);
+    const char* extension = NULL;
+    if (SDL_GetGPUShaderFormats(device) & SDL_GPU_SHADERFORMAT_SPIRV)
+    {
+        info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+        info.entrypoint = "main";
+        extension = "spv";
+    }
+    else if (SDL_GetGPUShaderFormats(device) & SDL_GPU_SHADERFORMAT_MSL)
+    {
+        info.format = SDL_GPU_SHADERFORMAT_MSL;
+        info.entrypoint = "main0";
+        extension = "msl";
+    }
+    else
+    {
+        SDL_Log("Unknown shader format");
+        return NULL;
+    }
+    char path[512] = {0};
+    snprintf(path, sizeof(path), "%s%s.%s", SDL_GetBasePath(), file, extension);
+    void* code = SDL_LoadFile(path, &info.code_size);
     if (!code)
     {
         SDL_Log("Failed to load %s shader: %s", file, SDL_GetError());
@@ -30,8 +51,6 @@ static SDL_GPUShader* load(
     {
         info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
     }
-    info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-    info.entrypoint = "main";
     info.num_uniform_buffers = uniforms;
     info.num_samplers = samplers;
     SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);

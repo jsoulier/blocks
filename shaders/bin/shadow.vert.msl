@@ -1,0 +1,94 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct t_matrix
+{
+    float4x4 u_matrix;
+};
+
+struct t_position
+{
+    int3 u_position;
+};
+
+constant spvUnsafeArray<float3, 6> _95 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+
+struct main0_out
+{
+    float4 gl_Position [[position]];
+};
+
+struct main0_in
+{
+    uint i_voxel [[attribute(0)]];
+};
+
+static inline __attribute__((always_inline))
+bool get_shadow(uint voxel)
+{
+    return ((voxel >> uint(29)) & 1u) != 0u;
+}
+
+static inline __attribute__((always_inline))
+float3 get_position(uint voxel)
+{
+    return float3(float((voxel >> uint(0)) & 31u), float((voxel >> uint(5)) & 255u), float((voxel >> uint(13)) & 31u));
+}
+
+vertex main0_out main0(main0_in in [[stage_in]], constant t_position& _65 [[buffer(0)]], constant t_matrix& _58 [[buffer(1)]])
+{
+    main0_out out = {};
+    if (get_shadow(in.i_voxel))
+    {
+        out.gl_Position = _58.u_matrix * float4(float3(_65.u_position) + get_position(in.i_voxel), 1.0);
+    }
+    else
+    {
+        out.gl_Position = float4(0.0, 0.0, 2.0, 1.0);
+    }
+    return out;
+}
+
