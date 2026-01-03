@@ -22,3 +22,16 @@ static const int directions[][3] =
     [DIRECTION_U] = { 0, 1, 0 },
     [DIRECTION_D] = { 0,-1, 0 },
 };
+
+// TODO:
+// static const int directions_2d[][2] =
+// {
+//     { 1, 1 },
+//     { 1, 0 },
+//     { 1,-1 },
+//     { 0,-1 },
+//     {-1,-1 },
+//     {-1, 0 },
+//     {-1, 1 },
+//     { 0, 1 },
+// };

@@ -17,7 +17,7 @@ static voxel_t pack(block_t block, int x, int y, int z, int u, int v, direction_
     static_assert(VOXEL_FACE_OFFSET + VOXEL_FACE_BITS <= 32, "");
     static_assert(VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32, "");
     static_assert(VOXEL_OCCLUSION_OFFSET + VOXEL_OCCLUSION_BITS <= 32, "");
-    int face = blocks[block][direction];
+    int face = block_get_face(block, direction);
     SDL_assert(x <= VOXEL_X_MASK);
     SDL_assert(y <= VOXEL_Y_MASK);
     SDL_assert(z <= VOXEL_Z_MASK);

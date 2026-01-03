@@ -1,23 +1,16 @@
 #include <SDL3/SDL.h>
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "map.h"
 
 #define EMPTY 0
 #define TOMBSTONE 255
 #define MAX_LOAD 0.7f
-
-typedef struct map_row
-{
-    uint8_t x;
-    uint8_t y;
-    uint8_t z;
-    uint8_t value;
-}
-map_row_t;
 
 static bool equals(const map_row_t row, int x, int y, int z)
 {
@@ -158,9 +151,20 @@ void map_remove(map_t* map, int x, int y, int z)
     }
 }
 
+void map_clear(map_t* map)
+{
+    memset(map->rows, 0,  map->capacity * sizeof(map_row_t));
+    map->size = 0;
+}
+
 bool map_is_valid(const map_t* map, uint32_t index)
 {
-    SDL_assert(index < map->capacity);
     map_row_t row = map->rows[index];
     return row.value != EMPTY && row.value != TOMBSTONE;
+}
+
+map_row_t map_get_row(const map_t* map, uint32_t index)
+{
+    SDL_assert(map_is_valid(map, index));
+    return map->rows[index];
 }

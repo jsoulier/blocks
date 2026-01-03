@@ -20,10 +20,17 @@ add_executable(blocks WIN32
     src/chunk.c
     src/main.c
     src/map.c
+    src/noise.c
+    src/save.c
+    src/shader.c
+    src/sort.c
     src/voxel.c
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
+target_include_directories(blocks PUBLIC lib/jsmn)
+target_include_directories(blocks PUBLIC lib/sqlite3)
+target_include_directories(blocks PUBLIC lib/stb)
 target_link_libraries(blocks PRIVATE SDL3::SDL3)
 
 function(add_shader FILE)

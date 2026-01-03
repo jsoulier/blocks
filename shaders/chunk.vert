@@ -5,6 +5,11 @@ cbuffer UniformBuffer : register(b0, space1)
     float4x4 Transform : packoffset(c0);
 };
 
+cbuffer UniformBuffer : register(b1, space1)
+{
+    float3 ChunkPosition;
+};
+
 struct Input
 {
     uint Voxel : TEXCOORD0;
@@ -19,7 +24,8 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    output.Position = mul(Transform, float4(VoxelGetPosition(input.Voxel), 1.0f));
+    float3 position = VoxelGetPosition(input.Voxel) + ChunkPosition;
+    output.Position = mul(Transform, float4(position, 1.0f));
     output.Texcoord = VoxelGetTexcoord(input.Voxel);
     return output;
 }

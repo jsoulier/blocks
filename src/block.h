@@ -25,4 +25,4 @@ enum /* block_t */
     BLOCK_COUNT,
 };
 
-extern const int blocks[][DIRECTION_3];
+int block_get_face(block_t block, direction_t direction);
