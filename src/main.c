@@ -2,10 +2,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
 #include "camera.h"
 #include "noise.h"
 #include "save.h"
@@ -14,29 +10,30 @@
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
-static SDL_GPUTextureFormat color_texture_format;
-static SDL_GPUTextureFormat depth_texture_format;
-static SDL_GPUTexture* depth_texture;
-static SDL_GPUGraphicsPipeline* chunk_pipeline;
-static world_t world;
-static save_t save;
-static camera_t camera;
+static SDL_GPUTextureFormat colorTextureFormat;
+static SDL_GPUTextureFormat depthTextureFormat;
+static SDL_GPUTexture* depthTexture;
+static SDL_GPUGraphicsPipeline* chunkPipeline;
+static World world;
+static Save save;
+static Camera camera;
+static Noise noise;
 
-static bool load_chunk_pipeline()
+static bool LoadChunkPipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = shader_load(device, "chunk.vert"),
-        .fragment_shader = shader_load(device, "chunk.frag"),
+        .vertex_shader = LoadShader(device, "chunk.vert"),
+        .fragment_shader = LoadShader(device, "chunk.frag"),
         .target_info =
         {
             .num_color_targets = 1,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[])
             {{
-                .format = color_texture_format,
+                .format = colorTextureFormat,
             }},
             .has_depth_stencil_target = true,
-            .depth_stencil_format = depth_texture_format,
+            .depth_stencil_format = depthTextureFormat,
         },
         .vertex_input_state =
         {
@@ -66,11 +63,11 @@ static bool load_chunk_pipeline()
     };
     if (info.vertex_shader && info.fragment_shader)
     {
-        chunk_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+        chunkPipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
-    return chunk_pipeline != NULL;
+    return chunkPipeline != NULL;
 }
 
 SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
@@ -110,17 +107,17 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_SetGPUSwapchainParameters(device, window,
             SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_MAILBOX);
     }
-    color_texture_format = SDL_GetGPUSwapchainTextureFormat(device, window);
+    colorTextureFormat = SDL_GetGPUSwapchainTextureFormat(device, window);
     if (SDL_GPUTextureSupportsFormat(device, SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
         SDL_GPU_TEXTURETYPE_2D, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET))
     {
-        depth_texture_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+        depthTextureFormat = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
     }
     else
     {
-        depth_texture_format = SDL_GPU_TEXTUREFORMAT_D24_UNORM;
+        depthTextureFormat = SDL_GPU_TEXTUREFORMAT_D24_UNORM;
     }
-    if (!load_chunk_pipeline())
+    if (!LoadChunkPipeline())
     {
         SDL_Log("Failed to create chunk pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
@@ -128,19 +125,18 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
-    noise_t noise;
-    noise_init(&noise, NOISE_TYPE_DEFAULT, 1337);
-    world_init(&world, device, &noise);
-    camera_init(&camera, CAMERA_TYPE_PERSPECTIVE);
+    CreateNoise(&noise, NoiseTypeDefault, 1337);
+    CreateWorld(&world, device);
+    CreateCamera(&camera, CameraTypePerspective);
     return SDL_APP_CONTINUE;
 }
 
 void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
-    world_free(&world);
-    SDL_ReleaseGPUGraphicsPipeline(device, chunk_pipeline);
-    SDL_ReleaseGPUTexture(device, depth_texture);
-    SDL_ClaimWindowForGPUDevice(device, window);
+    DestroyWorld(&world);
+    SDL_ReleaseGPUGraphicsPipeline(device, chunkPipeline);
+    SDL_ReleaseGPUTexture(device, depthTexture);
+    SDL_ReleaseWindowFromGPUDevice(device, window);
     SDL_DestroyGPUDevice(device);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -148,53 +144,53 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 
 SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 {
-    world_tick(&world, &camera, &save);
-    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
-    if (!command_buffer)
+    UpdateWorld(&world, &camera, &save, &noise);
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(device);
+    if (!commandBuffer)
     {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
         return SDL_APP_CONTINUE;
     }
-    SDL_GPUTexture* swapchain_texture;
-    uint32_t width;
-    uint32_t height;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, &width, &height))
+    SDL_GPUTexture* swapchainTexture;
+    Uint32 width;
+    Uint32 height;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, window, &swapchainTexture, &width, &height))
     {
         SDL_Log("Failed to acquire swapchain texture: %s", SDL_GetError());
-        SDL_CancelGPUCommandBuffer(command_buffer);
+        SDL_CancelGPUCommandBuffer(commandBuffer);
         return SDL_APP_CONTINUE;
     }
-    if (!swapchain_texture || !width || !height)
+    if (!swapchainTexture || !width || !height)
     {
-        SDL_SubmitGPUCommandBuffer(command_buffer);
+        SDL_SubmitGPUCommandBuffer(commandBuffer);
         return SDL_APP_CONTINUE;
     }
-    if (width != camera.width || height != camera.height)
+    if (width != camera.Width || height != camera.Height)
     {
-        SDL_ReleaseGPUTexture(device, depth_texture);
+        SDL_ReleaseGPUTexture(device, depthTexture);
         SDL_GPUTextureCreateInfo info = {0};
         info.type = SDL_GPU_TEXTURETYPE_2D;
-        info.format = depth_texture_format;
+        info.format = depthTextureFormat;
         info.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
         info.width = width;
         info.height = height;
         info.layer_count_or_depth = 1;
         info.num_levels = 1;
-        depth_texture = SDL_CreateGPUTexture(device, &info);
-        if (!depth_texture)
+        depthTexture = SDL_CreateGPUTexture(device, &info);
+        if (!depthTexture)
         {
             SDL_Log("Failed to create depth texture: %s", SDL_GetError());
-            SDL_SubmitGPUCommandBuffer(command_buffer);
+            SDL_SubmitGPUCommandBuffer(commandBuffer);
             return SDL_APP_CONTINUE;
         }
-        camera_set_viewport(&camera, width, height);
+        SetCameraViewport(&camera, width, height);
     }
     {
-        SDL_PushGPUDebugGroup(command_buffer, "chunk");
-        world_draw(&world, &camera);
-        SDL_PopGPUDebugGroup(command_buffer);
+        SDL_PushGPUDebugGroup(commandBuffer, "chunk");
+        DrawWorld(&world, &camera);
+        SDL_PopGPUDebugGroup(commandBuffer);
     }
-    SDL_SubmitGPUCommandBuffer(command_buffer);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
     return SDL_APP_CONTINUE;
 }
 

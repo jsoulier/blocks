@@ -1,19 +1,29 @@
-#include <stdint.h>
+#include <SDL3/SDL.h>
 
 #include "chunk.h"
 #include "noise.h"
 
-void noise_init(noise_t* noise, noise_type_t type, uint32_t seed)
+void CreateNoise(Noise* noise, NoiseType type, Uint32 seed)
 {
-    noise->type = type;
-    noise->seed = seed;
+    noise->Type = type;
+    noise->Seed = seed;
 }
 
-void noise_generate(const noise_t* noise, chunk_t* chunk)
+static void Default(const Noise* noise, Chunk* chunk)
 {
     for (int x = 0; x < CHUNK_WIDTH; x++)
     for (int y = 0; y < CHUNK_WIDTH; y++)
     {
 
+    }
+}
+
+void GenerateChunkNoise(const Noise* noise, Chunk* chunk)
+{
+    switch (noise->Type)
+    {
+    case NoiseTypeDefault:
+        Default(noise, chunk);
+        break;
     }
 }

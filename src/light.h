@@ -1,12 +1,12 @@
 #pragma once
 
-#include <stdint.h>
+#include <SDL3/SDL.h>
 
-typedef struct light
+typedef struct Light
 {
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
-    uint8_t intensity;
+    Uint8 red;
+    Uint8 green;
+    Uint8 blue;
+    Uint8 intensity;
 }
-light_t;
+Light;

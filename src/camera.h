@@ -1,45 +1,45 @@
 #pragma once
 
-#include <stdbool.h>
+#include <SDL3/SDL.h>
 
-typedef enum camera_type
+typedef enum CameraType
 {
-    CAMERA_TYPE_ORTHO,
-    CAMERA_TYPE_PERSPECTIVE,
-    CAMERA_TYPE_COUNT,
+    CameraTypeOrtho,
+    CameraTypePerspective,
+    CameraTypeCount,
 }
-camera_type_t;
+CameraType;
 
-typedef struct camera
+typedef struct Camera
 {
-    camera_type_t type;
-    float matrix[4][4];
-    float view[4][4];
-    float proj[4][4];
-    float planes[6][4];
-    float x;
-    float y;
-    float z;
-    float pitch;
-    float yaw;
-    float roll;
-    float width;
-    float height;
-    float fov;
-    float near;
-    float far;
-    float ortho;
+    CameraType Type;
+    float Matrix[4][4];
+    float View[4][4];
+    float Proj[4][4];
+    float Planes[6][4];
+    float X;
+    float Y;
+    float Z;
+    float Pitch;
+    float Yaw;
+    float Roll;
+    float Width;
+    float Height;
+    float Fov;
+    float Near;
+    float Far;
+    float Ortho;
 }
-camera_t;
+Camera;
 
-void camera_init(camera_t* camera, camera_type_t type);
-void camera_update(camera_t* camera);
-void camera_set_viewport(camera_t* camera, int width, int height);
-void camera_move(camera_t* camera, float x, float y, float z);
-void camera_rotate(camera_t* camera, float pitch, float yaw);
-void camera_set_position(camera_t* camera, float x, float y, float z);
-void camera_get_position(const camera_t* camera, float* x, float* y, float* z);
-void camera_set_rotation(camera_t* camera, float pitch, float yaw, float roll);
-void camera_get_rotation(const camera_t* camera, float* pitch, float* yaw, float* roll);
-void camera_get_vector(const camera_t* camera, float* x, float* y, float* z);
-bool camera_is_visible(const camera_t* camera, float x, float y, float z, float a, float b, float c);
+void CreateCamera(Camera* camera, CameraType type);
+void UpdateCamera(Camera* camera);
+void SetCameraViewport(Camera* camera, int width, int height);
+void MoveCamera(Camera* camera, float x, float y, float z);
+void RotateCamera(Camera* camera, float pitch, float yaw);
+void SetCameraPosition(Camera* camera, float x, float y, float z);
+void GetCameraPosition(const Camera* camera, float* x, float* y, float* z);
+void SetCameraRotation(Camera* camera, float pitch, float yaw, float roll);
+void GetCameraRotation(const Camera* camera, float* pitch, float* yaw, float* roll);
+void GetCameraVector(const Camera* camera, float* x, float* y, float* z);
+bool GetCameraVisibility(const Camera* camera, float x, float y, float z, float a, float b, float c);

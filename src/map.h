@@ -1,30 +1,29 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <SDL3/SDL.h>
 
-typedef struct map_row
+typedef struct MapRow
 {
-    uint8_t x;
-    uint8_t y;
-    uint8_t z;
-    uint8_t value;
+    Uint8 X;
+    Uint8 Y;
+    Uint8 Z;
+    Uint8 Value;
 }
-map_row_t;
+MapRow;
 
-typedef struct map
+typedef struct Map
 {
-    map_row_t* rows;
-    uint32_t size;
-    uint32_t capacity;
+    MapRow* Rows;
+    Uint32 Size;
+    Uint32 Capacity;
 }
-map_t;
+Map;
 
-void map_init(map_t* map);
-void map_free(map_t* map);
-void map_set(map_t* map, int x, int y, int z, int value);
-int map_get(const map_t* map, int x, int y, int z);
-void map_remove(map_t* map, int x, int y, int z);
-void map_clear(map_t* map);
-bool map_is_valid(const map_t* map, uint32_t index);
-map_row_t map_get_row(const map_t* map, uint32_t index);
+void CreateMap(Map* map);
+void DestroyMap(Map* map);
+void SetMapValue(Map* map, int x, int y, int z, int value);
+int GetMapValue(const Map* map, int x, int y, int z);
+void RemoveMapValue(Map* map, int x, int y, int z);
+void ClearMap(Map* map);
+bool IsMapRowValid(const Map* map, Uint32 index);
+MapRow GetMapRow(const Map* map, Uint32 index);

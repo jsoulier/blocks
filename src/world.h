@@ -5,30 +5,29 @@
 #include "block.h"
 #include "buffer.h"
 #include "chunk.h"
-#include "noise.h"
 
 #define WORLD_WIDTH 20
 
-typedef struct camera camera_t;
-typedef struct save save_t;
+typedef struct Camera Camera;
+typedef struct Noise Noise;
+typedef struct Save Save;
 
-typedef struct world
+typedef struct World
 {
-    SDL_GPUDevice* device;
-    int x;
-    int y;
-    int z;
-    cpu_buffer_t cpu_index_buffer;
-    gpu_buffer_t gpu_index_buffer;
-    cpu_buffer_t cpu_voxel_buffer;
-    cpu_buffer_t cpu_light_buffer;
-    noise_t noise;
-    chunk_t chunks[WORLD_WIDTH][WORLD_WIDTH];
-    int sorted_chunks[WORLD_WIDTH][WORLD_WIDTH][2];
+    SDL_GPUDevice* Device;
+    int X;
+    int Y;
+    int Z;
+    CpuBuffer CpuIndexBuffer;
+    GpuBuffer GpuIndexBuffer;
+    CpuBuffer CpuVoxelBuffers[ChunkMeshTypeCount];
+    CpuBuffer CpuLightBuffer;
+    Chunk Chunks[WORLD_WIDTH][WORLD_WIDTH];
+    int SortedChunks[WORLD_WIDTH][WORLD_WIDTH][2];
 }
-world_t;
+World;
 
-void world_init(world_t* world, SDL_GPUDevice* device, const noise_t* noise);
-void world_free(world_t* world);
-void world_tick(world_t* world, const camera_t* camera, save_t* save);
-void world_draw(world_t* world, const camera_t* camera);
+void CreateWorld(World* world, SDL_GPUDevice* device);
+void DestroyWorld(World* world);
+void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise);
+void DrawWorld(World* world, const Camera* camera);

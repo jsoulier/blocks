@@ -11,59 +11,63 @@
 #include "voxel.h"
 #include "world.h"
 
-void world_init(world_t* world, SDL_GPUDevice* device, const noise_t* noise)
+void CreateWorld(World* world, SDL_GPUDevice* device)
 {
-    world->device = device;
-    world->x = 0;
-    world->y = 0;
-    world->z = 0;
-    cpu_buffer_init(&world->cpu_index_buffer, device, sizeof(uint32_t));
-    gpu_buffer_init(&world->gpu_index_buffer, device, sizeof(uint32_t));
-    cpu_buffer_init(&world->cpu_voxel_buffer, device, sizeof(voxel_t));
-    cpu_buffer_init(&world->cpu_light_buffer, device, sizeof(light_t));
-    world->noise = *noise;
+    world->Device = device;
+    world->X = 0;
+    world->Y = 0;
+    world->Z = 0;
+    CreateCpuBuffer(&world->CpuIndexBuffer, device, sizeof(uint32_t));
+    CreateGpuBuffer(&world->GpuIndexBuffer, device, sizeof(uint32_t));
+    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    {
+        CreateCpuBuffer(&world->CpuVoxelBuffers[i], device, sizeof(Voxel));
+    }
+    CreateCpuBuffer(&world->CpuLightBuffer, device, sizeof(Light));
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
-        world->sorted_chunks[x][z][0] = x;
-        world->sorted_chunks[x][z][1] = z;
+        world->SortedChunks[x][z][0] = x;
+        world->SortedChunks[x][z][1] = z;
     }
     int w = WORLD_WIDTH;
-    sort_xy(w / 2, w / 2, (int*) world->sorted_chunks, w * w);
+    SortXY(w / 2, w / 2, (int*) world->SortedChunks, w * w);
 }
 
-void world_free(world_t* world)
+void DestroyWorld(World* world)
 {
-    cpu_buffer_free(&world->cpu_index_buffer);
-    gpu_buffer_free(&world->gpu_index_buffer);
-    cpu_buffer_free(&world->cpu_voxel_buffer);
-    cpu_buffer_free(&world->cpu_light_buffer);
+    DestroyCpuBuffer(&world->CpuIndexBuffer);
+    DestroyGpuBuffer(&world->GpuIndexBuffer);
+    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    {
+        DestroyCpuBuffer(&world->CpuVoxelBuffers[i]);
+    }
+    DestroyCpuBuffer(&world->CpuLightBuffer);
 }
 
-static void move(world_t* world, const camera_t* camera)
+static void Move(World* world, const Camera* camera)
 {
 
 }
 
-void world_tick(world_t* world, const camera_t* camera, save_t* save)
+void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
 {
-    move(world, camera);
+    Move(world, camera);
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int y = 0; y < WORLD_WIDTH; y++)
     {
-        int a = world->sorted_chunks[x][y][0];
-        int b = world->sorted_chunks[x][y][1];
-        chunk_t* chunk = &world->chunks[a][b];
-        if (chunk->flags & CHUNK_FLAG_GENERATE)
+        int a = world->SortedChunks[x][y][0];
+        int b = world->SortedChunks[x][y][1];
+        Chunk* chunk = &world->Chunks[a][b];
+        if (chunk->Flags & ChunkFlagGenerate)
         {
-            chunk_generate(chunk, &world->noise);
+            GenerateChunk(chunk, noise);
             // save
-            // TODO: remove
-            return;
+            return; // TODO: remove 
         }
-        if (chunk->flags & CHUNK_FLAG_MESH)
+        if (chunk->Flags & ChunkFlagMesh)
         {
-            chunk_t* neighbors[3][3] = {0};
+            Chunk* neighbors[3][3] = {0};
             for (int i = -1; i <= 1; i++)
             for (int j = -1; j <= 1; j++)
             {
@@ -71,16 +75,15 @@ void world_tick(world_t* world, const camera_t* camera, save_t* save)
                 int l = y + j;
                 if (k >= 0 && l >= 0 && k < WORLD_WIDTH && l < WORLD_WIDTH)
                 {
-                    neighbors[i][j] = &world->chunks[k][l];
+                    neighbors[i][j] = &world->Chunks[k][l];
                 }
             }
-            chunk_mesh(chunk, neighbors, &world->cpu_voxel_buffer, &world->cpu_light_buffer, NULL);
-            // TODO: remove
-            return;
+            MeshChunk(chunk, neighbors, NULL, world->CpuVoxelBuffers, &world->CpuLightBuffer);
+            return; // TODO: remove 
         }
     }
 }
 
-void world_draw(world_t* world, const camera_t* camera)
+void DrawWorld(World* world, const Camera* camera)
 {
 }

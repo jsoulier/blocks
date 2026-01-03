@@ -1,21 +1,21 @@
 #pragma once
 
-#include <stdint.h>
+#include <SDL3/SDL.h>
 
-typedef struct chunk chunk_t;
+typedef struct Chunk Chunk;
 
-typedef enum noise_type
+typedef enum NoiseType
 {
-    NOISE_TYPE_DEFAULT,
+    NoiseTypeDefault,
 }
-noise_type_t;
+NoiseType;
 
-typedef struct noise
+typedef struct Noise
 {
-    noise_type_t type;
-    uint32_t seed;
+    NoiseType Type;
+    Uint32 Seed;
 }
-noise_t;
+Noise;
 
-void noise_init(noise_t* noise, noise_type_t type, uint32_t seed);
-void noise_generate(const noise_t* noise, chunk_t* chunk);
+void CreateNoise(Noise* noise, NoiseType type, Uint32 seed);
+void GenerateChunkNoise(const Noise* noise, Chunk* chunk);

@@ -1,82 +1,80 @@
 #include <SDL3/SDL.h>
 
-#include <stdint.h>
-
 #include "block.h"
 #include "buffer.h"
 #include "chunk.h"
 #include "map.h"
 #include "noise.h"
 
-static void transform(const chunk_t* chunk, int* x, int* y, int* z)
+static void Transform(const Chunk* chunk, int* x, int* y, int* z)
 {
-    *x -= chunk->x;
-    *y -= chunk->y;
-    *z -= chunk->z;
+    *x -= chunk->X;
+    *y -= chunk->Y;
+    *z -= chunk->Z;
 }
 
-void chunk_init(chunk_t* chunk, SDL_GPUDevice* device)
+void CreateChunk(Chunk* chunk, SDL_GPUDevice* device)
 {
-    chunk->flags = CHUNK_FLAG_GENERATE;
-    chunk->x = 0;
-    chunk->y = 0;
-    chunk->z = 0;
-    map_init(&chunk->blocks);
-    map_init(&chunk->lights);
-    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
+    chunk->Flags = ChunkFlagGenerate;
+    chunk->X = 0;
+    chunk->Y = 0;
+    chunk->Z = 0;
+    CreateMap(&chunk->Blocks);
+    CreateMap(&chunk->Lights);
+    for (int i = 0; i < ChunkMeshTypeCount; i++)
     {
-        gpu_buffer_init(&chunk->voxel_buffers[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
+        CreateGpuBuffer(&chunk->VoxelBuffers[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
     }
-    gpu_buffer_init(&chunk->light_buffer, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    CreateGpuBuffer(&chunk->LightBuffer, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
 }
 
-void chunk_free(chunk_t* chunk)
+void DestroyChunk(Chunk* chunk)
 {
-    chunk->flags = CHUNK_FLAG_NONE;
-    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
+    chunk->Flags = ChunkFlagNone;
+    for (int i = 0; i < ChunkMeshTypeCount; i++)
     {
-        gpu_buffer_free(&chunk->voxel_buffers[i]);
+        DestroyGpuBuffer(&chunk->VoxelBuffers[i]);
     }
-    gpu_buffer_free(&chunk->light_buffer);
-    map_free(&chunk->blocks);
-    map_free(&chunk->lights);
+    DestroyGpuBuffer(&chunk->LightBuffer);
+    DestroyMap(&chunk->Blocks);
+    DestroyMap(&chunk->Lights);
 }
 
-void chunk_set_block(chunk_t* chunk, int x, int y, int z, block_t block)
+void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block)
 {
-    chunk->flags |= CHUNK_FLAG_MESH;
-    transform(chunk, &x, &y, &z);
-    map_set(&chunk->blocks, x, y, z, block);
+    chunk->Flags |= ChunkFlagMesh;
+    Transform(chunk, &x, &y, &z);
+    SetMapValue(&chunk->Blocks, x, y, z, block);
     // TODO: check if light (if so, add to lights)
 }
 
-block_t chunk_get_block(const chunk_t* chunk, int x, int y, int z)
+Block GetChunkBlock(const Chunk* chunk, int x, int y, int z)
 {
-    SDL_assert(chunk->flags & CHUNK_FLAG_GENERATE);
-    transform(chunk, &x, &y, &z);
-    return map_get(&chunk->blocks, x, y, z);
+    SDL_assert(chunk->Flags & ChunkFlagGenerate);
+    Transform(chunk, &x, &y, &z);
+    return GetMapValue(&chunk->Blocks, x, y, z);
 }
 
-void chunk_generate(chunk_t* chunk, const noise_t* noise)
+void GenerateChunk(Chunk* chunk, const Noise* noise)
 {
-    SDL_assert(chunk->flags & CHUNK_FLAG_GENERATE);
-    map_clear(&chunk->blocks);
-    map_clear(&chunk->lights);
-    noise_generate(noise, chunk);
-    chunk->flags &= ~CHUNK_FLAG_GENERATE;
-    chunk->flags |= CHUNK_FLAG_MESH;
+    SDL_assert(chunk->Flags & ChunkFlagGenerate);
+    ClearMap(&chunk->Blocks);
+    ClearMap(&chunk->Lights);
+    GenerateChunkNoise(noise, chunk);
+    chunk->Flags &= ~ChunkFlagGenerate;
+    chunk->Flags |= ChunkFlagMesh;
 }
 
-void chunk_mesh(chunk_t* chunk, const chunk_t* neighbors[3][3],
-    cpu_buffer_t* voxel_buffer, cpu_buffer_t* light_buffer, SDL_GPUCopyPass* pass)
+void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass,
+    CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer)
 {
-    for (uint32_t i = 0; i < chunk->blocks.capacity; i++)
+    for (Uint32 i = 0; i < chunk->Blocks.Capacity; i++)
     {
-        if (!map_is_valid(&chunk->blocks, i))
+        if (!IsMapRowValid(&chunk->Blocks, i))
         {
             continue;
         }
-        map_row_t row = map_get_row(&chunk->blocks, i);
-        SDL_assert(row.value != BLOCK_EMPTY);
+        MapRow row = GetMapRow(&chunk->Blocks, i);
+        SDL_assert(row.Value != BlockEmpty);
     }
 }

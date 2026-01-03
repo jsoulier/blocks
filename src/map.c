@@ -1,44 +1,38 @@
 #include <SDL3/SDL.h>
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "map.h"
 
-#define EMPTY 0
-#define TOMBSTONE 255
-#define MAX_LOAD 0.7f
+static const int kEmpty = 0;
+static const int kTombstone = 255;
+static const float kMaxLoad = 0.7f;
 
-static bool equals(const map_row_t row, int x, int y, int z)
+static bool Equals(const MapRow row, int x, int y, int z)
 {
-    return row.x == x && row.y == y && row.z == z;
+    return row.X == x && row.Y == y && row.Z == z;
 }
 
-static void init(map_t* map, uint32_t capacity)
+static void Create(Map* map, Uint32 capacity)
 {
     SDL_assert(SDL_HasExactlyOneBitSet32(capacity));
-    map->rows = calloc(capacity, sizeof(map_row_t));
-    map->capacity = capacity;
-    map->size = 0;
+    map->Rows = SDL_calloc(capacity, sizeof(MapRow));
+    map->Capacity = capacity;
+    map->Size = 0;
 }
 
-void map_init(map_t* map)
+void CreateMap(Map* map)
 {
-    init(map, 32);
+    Create(map, 32);
 }
 
-void map_free(map_t* map)
+void DestroyMap(Map* map)
 {
-    free(map->rows);
-    map->rows = NULL;
-    map->size = 0;
-    map->capacity = 0;
+    SDL_free(map->Rows);
+    map->Rows = NULL;
+    map->Size = 0;
+    map->Capacity = 0;
 }
 
-static int hash_int(int x)
+static int HashInt(int x)
 {
     x += (x << 10);
     x ^= (x >> 6);
@@ -48,123 +42,123 @@ static int hash_int(int x)
     return x;
 }
 
-static int hash_xyz(int x, int y, int z)
+static int HashXYZ(int x, int y, int z)
 {
-    return hash_int(x) ^ hash_int(y) ^ hash_int(z);
+    return HashInt(x) ^ HashInt(y) ^ HashInt(z);
 }
 
-static void grow(map_t* map)
+static void grow(Map* map)
 {
-    map_t old_map = *map;
-    init(map, old_map.capacity * 2);
-    for (uint32_t i = 0; i < old_map.capacity; ++i)
+    Map old_map = *map;
+    Create(map, old_map.Capacity * 2);
+    for (Uint32 i = 0; i < old_map.Capacity; ++i)
     {
-        if (map_is_valid(&old_map, i))
+        if (IsMapRowValid(&old_map, i))
         {
-            map_row_t row = old_map.rows[i];
-            map_set(map, row.x, row.y, row.z, row.value);
+            MapRow row = old_map.Rows[i];
+            SetMapValue(map, row.X, row.Y, row.Z, row.Value);
         }
     }
-    map_free(&old_map);
+    DestroyMap(&old_map);
 }
 
-void map_set(map_t* map, int x, int y, int z, int value)
+void SetMapValue(Map* map, int x, int y, int z, int value)
 {
     SDL_assert(value <= UINT8_MAX);
-    SDL_assert(value != EMPTY && value != TOMBSTONE);
-    if ((float) (map->size + 1) / map->capacity > MAX_LOAD)
+    SDL_assert(value != kEmpty && value != kTombstone);
+    if ((float) (map->Size + 1) / map->Capacity > kMaxLoad)
     {
         grow(map);
     }
-    uint32_t mask = map->capacity - 1;
-    uint32_t index = hash_xyz(x, y, z) & mask;
-    uint32_t tombstone = UINT32_MAX;
+    Uint32 mask = map->Capacity - 1;
+    Uint32 index = HashXYZ(x, y, z) & mask;
+    Uint32 tombstone = UINT32_MAX;
     for (;;)
     {
-        map_row_t* row = &map->rows[index];
-        if (row->value == EMPTY)
+        MapRow* row = &map->Rows[index];
+        if (row->Value == kEmpty)
         {
             if (tombstone != UINT32_MAX)
             {
-                row = &map->rows[tombstone];
+                row = &map->Rows[tombstone];
             }
-            row->x = x;
-            row->y = y;
-            row->z = z;
-            row->value = value;
-            map->size++;
+            row->X = x;
+            row->Y = y;
+            row->Z = z;
+            row->Value = value;
+            map->Size++;
             return;
         }
-        if (row->value == TOMBSTONE)
+        if (row->Value == kTombstone)
         {
             if (tombstone == UINT32_MAX)
             {
                 tombstone = index;
             }
         }
-        else if (equals(*row, x, y, z))
+        else if (Equals(*row, x, y, z))
         {
-            row->value = value;
+            row->Value = value;
             return;
         }
         index = (index + 1) & mask;
     }
 }
 
-int map_get(const map_t* map, int x, int y, int z)
+int GetMapValue(const Map* map, int x, int y, int z)
 {
-    uint32_t mask = map->capacity - 1;
-    uint32_t index = hash_xyz(x, y, z) & mask;
+    Uint32 mask = map->Capacity - 1;
+    Uint32 index = HashXYZ(x, y, z) & mask;
     for (;;)
     {
-        const map_row_t row = map->rows[index];
-        if (row.value == EMPTY)
+        const MapRow row = map->Rows[index];
+        if (row.Value == kEmpty)
         {
-            return EMPTY;
+            return kEmpty;
         }
-        if (row.value != TOMBSTONE && equals(row, x, y, z))
+        if (row.Value != kTombstone && Equals(row, x, y, z))
         {
-            return row.value;
+            return row.Value;
         }
         index = (index + 1) & mask;
     }
 }
 
-void map_remove(map_t* map, int x, int y, int z)
+void RemoveMapValue(Map* map, int x, int y, int z)
 {
-    uint32_t mask = map->capacity - 1;
-    uint32_t index = hash_xyz(x, y, z) & mask;
+    Uint32 mask = map->Capacity - 1;
+    Uint32 index = HashXYZ(x, y, z) & mask;
     for (;;)
     {
-        map_row_t* row = &map->rows[index];
-        if (row->value == EMPTY)
+        MapRow* row = &map->Rows[index];
+        if (row->Value == kEmpty)
         {
             return;
         }
-        if (row->value != TOMBSTONE && equals(*row, x, y, z))
+        if (row->Value != kTombstone && Equals(*row, x, y, z))
         {
-            row->value = TOMBSTONE;
-            map->size--;
+            row->Value = kTombstone;
+            map->Size--;
             return;
         }
         index = (index + 1) & mask;
     }
 }
 
-void map_clear(map_t* map)
+void ClearMap(Map* map)
 {
-    memset(map->rows, 0,  map->capacity * sizeof(map_row_t));
-    map->size = 0;
+    memset(map->Rows, 0,  map->Capacity * sizeof(MapRow));
+    map->Size = 0;
 }
 
-bool map_is_valid(const map_t* map, uint32_t index)
+bool IsMapRowValid(const Map* map, Uint32 index)
 {
-    map_row_t row = map->rows[index];
-    return row.value != EMPTY && row.value != TOMBSTONE;
+    MapRow row = map->Rows[index];
+    return row.Value != kEmpty && row.Value != kTombstone;
 }
 
-map_row_t map_get_row(const map_t* map, uint32_t index)
+MapRow GetMapRow(const Map* map, Uint32 index)
 {
-    SDL_assert(map_is_valid(map, index));
-    return map->rows[index];
+    SDL_assert(IsMapRowValid(map, index));
+    return map->Rows[index];
 }

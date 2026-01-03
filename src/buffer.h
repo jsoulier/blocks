@@ -2,33 +2,31 @@
 
 #include <SDL3/SDL.h>
 
-#include <stdint.h>
-
-typedef struct cpu_buffer
+typedef struct CpuBuffer
 {
-    SDL_GPUDevice* device;
-    SDL_GPUTransferBuffer* buffer;
-    uint8_t* data;
-    uint32_t size;
-    uint32_t capacity;
-    uint32_t stride;
+    SDL_GPUDevice* Device;
+    SDL_GPUTransferBuffer* Buffer;
+    Uint8* Data;
+    Uint32 Size;
+    Uint32 Capacity;
+    Uint32 Stride;
 }
-cpu_buffer_t;
+CpuBuffer;
 
-void cpu_buffer_init(cpu_buffer_t* cpu_buffer, SDL_GPUDevice* device, uint32_t stride);
-void cpu_buffer_free(cpu_buffer_t* cpu_buffer);
-void cpu_buffer_add(cpu_buffer_t* cpu_buffer, void* item);
+void CreateCpuBuffer(CpuBuffer* cpuBuffer, SDL_GPUDevice* device, Uint32 stride);
+void DestroyCpuBuffer(CpuBuffer* cpuBuffer);
+void AppendCpuBuffer(CpuBuffer* cpuBuffer, void* item);
 
-typedef struct gpu_buffer
+typedef struct GpuBuffer
 {
-    SDL_GPUDevice* device;
-    SDL_GPUBufferUsageFlags usage;
-    SDL_GPUBuffer* buffer;
-    uint32_t size;
-    uint32_t capacity;
+    SDL_GPUDevice* Device;
+    SDL_GPUBufferUsageFlags Usage;
+    SDL_GPUBuffer* Buffer;
+    Uint32 Size;
+    Uint32 Capacity;
 }
-gpu_buffer_t;
+GpuBuffer;
 
-void gpu_buffer_init(gpu_buffer_t* gpu_buffer, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
-void gpu_buffer_free(gpu_buffer_t* gpu_buffer);
-void gpu_buffer_upload(gpu_buffer_t* gpu_buffer, SDL_GPUCopyPass* pass, cpu_buffer_t* cpu_buffer);
+void CreateGpuBuffer(GpuBuffer* gpuBuffer, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
+void DestroyGpuBuffer(GpuBuffer* gpuBuffer);
+void UpdateGpuBuffer(GpuBuffer* gpuBuffer, SDL_GPUCopyPass* pass, CpuBuffer* cpuBuffer);

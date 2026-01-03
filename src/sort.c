@@ -2,24 +2,19 @@
 
 #include "sort.h"
 
-static int squared(int* data, const int x, const int y)
+static int Compare(void* userdata, const void* lhs, const void* rhs)
 {
-    const int dx = x - data[0];
-    const int dy = y - data[1];
-    return dx * dx + dy * dy;
-}
-
-static int compare(void* data, const void* a, const void* b)
-{
-    const int* l = a;
-    const int* r = b;
-    const int c = squared(data, l[0], l[1]);
-    const int d = squared(data, r[0], r[1]);
-    if (c < d)
+    const int* l = lhs;
+    const int* r = rhs;
+    int cx = ((int*) userdata)[0];
+    int cy = ((int*) userdata)[1];
+    int a = (l[0] - cx) * (l[0] - cx) + (l[1] - cx) * (l[1] - cx);
+    int b = (r[0] - cy) * (r[0] - cy) + (l[1] - cy) * (l[1] - cy);
+    if (a < b)
     {
         return -1;
     }
-    else if (c > d)
+    else if (a > b)
     {
         return 1;
     }
@@ -29,7 +24,7 @@ static int compare(void* data, const void* a, const void* b)
     }
 }
 
-void sort_xy(int x, int y, int* data, int size)
+void SortXY(int x, int y, int* data, int size)
 {
-    SDL_qsort_r(data, size * 2, sizeof(int), compare, (int[]) {x, y});
+    SDL_qsort_r(data, size * 2, sizeof(int), Compare, (int[]) {x, y});
 }

@@ -1,28 +1,28 @@
 #pragma once
 
-#include <stdint.h>
+#include <SDL3/SDL.h>
 
 #include "direction.h"
 
-typedef uint8_t block_t;
-enum /* block_t */
+typedef Uint8 Block;
+enum /* Block */
 {
-    BLOCK_EMPTY,
-    BLOCK_GRASS,
-    BLOCK_DIRT,
-    BLOCK_SAND,
-    BLOCK_SNOW,
-    BLOCK_STONE,
-    BLOCK_LOG,
-    BLOCK_LEAVES,
-    BLOCK_CLOUD,
-    BLOCK_BUSH,
-    BLOCK_BLUEBELL,
-    BLOCK_DANDELION,
-    BLOCK_ROSE,
-    BLOCK_LAVENDER,
-    BLOCK_WATER,
-    BLOCK_COUNT,
+    BlockEmpty,
+    BlockGrass,
+    BlockDirt,
+    BlockSand,
+    BlockSnow,
+    BlockStone,
+    BlockLog,
+    BlockLeaves,
+    BlockCloud,
+    BlockBush,
+    BlockBluebell,
+    BlockDandelion,
+    BlockRose,
+    BlockLavender,
+    BlockWater,
+    BlockCount,
 };
 
-int block_get_face(block_t block, direction_t direction);
+int GetBlockFace(Block block, Direction direction);

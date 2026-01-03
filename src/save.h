@@ -2,8 +2,8 @@
 
 typedef struct sqlite3 sqlite3;
 
-typedef struct save
+typedef struct Save
 {
-    sqlite3* handle;
+    sqlite3* Handle;
 }
-save_t;
+Save;

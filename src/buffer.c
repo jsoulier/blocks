@@ -1,133 +1,129 @@
 #include <SDL3/SDL.h>
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-
 #include "buffer.h"
 
-void cpu_buffer_init(cpu_buffer_t* cpu_buffer, SDL_GPUDevice* device, uint32_t stride)
+void CreateCpuBuffer(CpuBuffer* cpuBuffer, SDL_GPUDevice* device, Uint32 stride)
 {
-    cpu_buffer->device = device;
-    cpu_buffer->buffer = NULL;
-    cpu_buffer->data = NULL;
-    cpu_buffer->capacity = 0;
-    cpu_buffer->size = 0;
-    cpu_buffer->stride = 0;
+    cpuBuffer->Device = device;
+    cpuBuffer->Buffer = NULL;
+    cpuBuffer->Data = NULL;
+    cpuBuffer->Capacity = 0;
+    cpuBuffer->Size = 0;
+    cpuBuffer->Stride = 0;
 }
 
-void cpu_buffer_free(cpu_buffer_t* cpu_buffer)
+void DestroyCpuBuffer(CpuBuffer* cpuBuffer)
 {
-    SDL_ReleaseGPUTransferBuffer(cpu_buffer->device, cpu_buffer->buffer);
-    cpu_buffer->device = NULL;
-    cpu_buffer->buffer = NULL;
-    cpu_buffer->data = NULL;
-    cpu_buffer->capacity = 0;
-    cpu_buffer->size = 0;
-    cpu_buffer->stride = 0;
+    SDL_ReleaseGPUTransferBuffer(cpuBuffer->Device, cpuBuffer->Buffer);
+    cpuBuffer->Device = NULL;
+    cpuBuffer->Buffer = NULL;
+    cpuBuffer->Data = NULL;
+    cpuBuffer->Capacity = 0;
+    cpuBuffer->Size = 0;
+    cpuBuffer->Stride = 0;
 }
 
-void cpu_buffer_add(cpu_buffer_t* cpu_buffer, void* item)
+void AppendCpuBuffer(CpuBuffer* cpuBuffer, void* item)
 {
-    uint32_t stride = cpu_buffer->stride;
-    if (!cpu_buffer->data && cpu_buffer->buffer)
+    Uint32 stride = cpuBuffer->Stride;
+    if (!cpuBuffer->Data && cpuBuffer->Buffer)
     {
-        SDL_assert(!cpu_buffer->size);
-        cpu_buffer->data = SDL_MapGPUTransferBuffer(cpu_buffer->device, cpu_buffer->buffer, true);
-        if (!cpu_buffer->data)
+        SDL_assert(!cpuBuffer->Size);
+        cpuBuffer->Data = SDL_MapGPUTransferBuffer(cpuBuffer->Device, cpuBuffer->Buffer, true);
+        if (!cpuBuffer->Data)
         {
             SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
             return;
         }
     }
-    SDL_assert(cpu_buffer->size <= cpu_buffer->capacity);
-    if (cpu_buffer->size == cpu_buffer->capacity)
+    SDL_assert(cpuBuffer->Size <= cpuBuffer->Capacity);
+    if (cpuBuffer->Size == cpuBuffer->Capacity)
     {
-        int capacity = SDL_max(64, cpu_buffer->size * 2);
+        int capacity = SDL_max(64, cpuBuffer->Size * 2);
         SDL_GPUTransferBufferCreateInfo info = {0};
         info.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
         info.size = capacity * stride;
-        SDL_GPUTransferBuffer* buffer = SDL_CreateGPUTransferBuffer(cpu_buffer->device, &info);
+        SDL_GPUTransferBuffer* buffer = SDL_CreateGPUTransferBuffer(cpuBuffer->Device, &info);
         if (!buffer)
         {
             SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
             return;
         }
-        void* data = SDL_MapGPUTransferBuffer(cpu_buffer->device, buffer, false);
+        void* data = SDL_MapGPUTransferBuffer(cpuBuffer->Device, buffer, false);
         if (!data)
         {
             SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
-            SDL_ReleaseGPUTransferBuffer(cpu_buffer->device, buffer);
+            SDL_ReleaseGPUTransferBuffer(cpuBuffer->Device, buffer);
             return;
         }
-        if (cpu_buffer->data)
+        if (cpuBuffer->Data)
         {
-            memcpy(data, cpu_buffer->data, cpu_buffer->size * stride);
-            SDL_UnmapGPUTransferBuffer(cpu_buffer->device, cpu_buffer->buffer);
+            SDL_memcpy(data, cpuBuffer->Data, cpuBuffer->Size * stride);
+            SDL_UnmapGPUTransferBuffer(cpuBuffer->Device, cpuBuffer->Buffer);
         }
-        SDL_ReleaseGPUTransferBuffer(cpu_buffer->device, cpu_buffer->buffer);
-        cpu_buffer->capacity = capacity;
-        cpu_buffer->buffer = buffer;
-        cpu_buffer->data = data;
+        SDL_ReleaseGPUTransferBuffer(cpuBuffer->Device, cpuBuffer->Buffer);
+        cpuBuffer->Capacity = capacity;
+        cpuBuffer->Buffer = buffer;
+        cpuBuffer->Data = data;
     }
-    SDL_assert(cpu_buffer->data);
-    memcpy(cpu_buffer->data + cpu_buffer->size * stride, item, stride);
-    cpu_buffer->size++;
+    SDL_assert(cpuBuffer->Data);
+    SDL_memcpy(cpuBuffer->Data + cpuBuffer->Size * stride, item, stride);
+    cpuBuffer->Size++;
 }
 
-void gpu_buffer_init(gpu_buffer_t* gpu_buffer, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage)
+void CreateGpuBuffer(GpuBuffer* gpuBuffer, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage)
 {
-    gpu_buffer->device = device;
-    gpu_buffer->usage = usage;
-    gpu_buffer->buffer = NULL;
-    gpu_buffer->capacity = 0;
-    gpu_buffer->size = 0;
+    gpuBuffer->Device = device;
+    gpuBuffer->Usage = usage;
+    gpuBuffer->Buffer = NULL;
+    gpuBuffer->Capacity = 0;
+    gpuBuffer->Size = 0;
 }
 
-void gpu_buffer_free(gpu_buffer_t* gpu_buffer)
+void DestroyGpuBuffer(GpuBuffer* gpuBuffer)
 {
-    SDL_ReleaseGPUBuffer(gpu_buffer->device, gpu_buffer->buffer);
-    gpu_buffer->buffer = NULL;
-    gpu_buffer->capacity = 0;
-    gpu_buffer->size = 0;
+    SDL_ReleaseGPUBuffer(gpuBuffer->Device, gpuBuffer->Buffer);
+    gpuBuffer->Buffer = NULL;
+    gpuBuffer->Capacity = 0;
+    gpuBuffer->Size = 0;
 }
 
-void gpu_buffer_upload(gpu_buffer_t* gpu_buffer, SDL_GPUCopyPass* pass, cpu_buffer_t* cpu_buffer)
+void UpdateGpuBuffer(GpuBuffer* gpuBuffer, SDL_GPUCopyPass* pass, CpuBuffer* cpuBuffer)
 {
-    gpu_buffer->size = 0;
-    if (cpu_buffer->data)
+    gpuBuffer->Size = 0;
+    if (cpuBuffer->Data)
     {
-        SDL_UnmapGPUTransferBuffer(gpu_buffer->device, cpu_buffer->buffer);
-        cpu_buffer->data = NULL;
+        SDL_UnmapGPUTransferBuffer(gpuBuffer->Device, cpuBuffer->Buffer);
+        cpuBuffer->Data = NULL;
     }
-    if (!cpu_buffer->size)
+    if (!cpuBuffer->Size)
     {
-        gpu_buffer->size = 0;
+        gpuBuffer->Size = 0;
         return;
     }
-    uint32_t size = cpu_buffer->size;
-    cpu_buffer->size = 0;
-    if (size > gpu_buffer->size)
+    Uint32 size = cpuBuffer->Size;
+    cpuBuffer->Size = 0;
+    if (size > gpuBuffer->Size)
     {
-        SDL_ReleaseGPUBuffer(gpu_buffer->device, gpu_buffer->buffer);
-        gpu_buffer->buffer = NULL;
-        gpu_buffer->capacity = 0;
+        SDL_ReleaseGPUBuffer(gpuBuffer->Device, gpuBuffer->Buffer);
+        gpuBuffer->Buffer = NULL;
+        gpuBuffer->Capacity = 0;
         SDL_GPUBufferCreateInfo info = {0};
-        info.usage = gpu_buffer->usage;
-        info.size = cpu_buffer->capacity * cpu_buffer->stride;
-        gpu_buffer->buffer = SDL_CreateGPUBuffer(gpu_buffer->device, &info);
-        if (!gpu_buffer->buffer)
+        info.usage = gpuBuffer->Usage;
+        info.size = cpuBuffer->Capacity * cpuBuffer->Stride;
+        gpuBuffer->Buffer = SDL_CreateGPUBuffer(gpuBuffer->Device, &info);
+        if (!gpuBuffer->Buffer)
         {
             SDL_Log("Failed to create buffer: %s", SDL_GetError());
             return;
         }
-        gpu_buffer->capacity = gpu_buffer->capacity;
+        gpuBuffer->Capacity = gpuBuffer->Capacity;
     }
     SDL_GPUTransferBufferLocation location = {0};
     SDL_GPUBufferRegion region = {0};
-    location.transfer_buffer = cpu_buffer->buffer;
-    region.buffer = gpu_buffer->buffer;
-    region.size = size * cpu_buffer->stride;
+    location.transfer_buffer = cpuBuffer->Buffer;
+    region.buffer = gpuBuffer->Buffer;
+    region.size = size * cpuBuffer->Stride;
     SDL_UploadToGPUBuffer(pass, &location, &region, true);
-    gpu_buffer->size = size;
+    gpuBuffer->Size = size;
 }

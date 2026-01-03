@@ -3,69 +3,69 @@
 
 struct
 {
-    int faces[DIRECTION_3];
+    int Faces[6];
 }
-static const blocks[BLOCK_COUNT] =
+static const kBlocks[BlockCount] =
 {
-    [BLOCK_BLUEBELL] =
+    [BlockBluebell] =
     {
-        .faces = {13, 13, 13, 13, 13, 13}
+        .Faces = {13, 13, 13, 13, 13, 13}
     },
-    [BLOCK_BUSH] =
+    [BlockBush] =
     {
-        .faces = {15, 15, 15, 15, 15, 15}
+        .Faces = {15, 15, 15, 15, 15, 15}
     },
-    [BLOCK_CLOUD] =
+    [BlockCloud] =
     {
-        .faces = { 9,  9,  9,  9,  9,  9}
+        .Faces = { 9,  9,  9,  9,  9,  9}
     },
-    [BLOCK_DANDELION] =
+    [BlockDandelion] =
     {
-        .faces = {12, 12, 12, 12, 12, 12}
+        .Faces = {12, 12, 12, 12, 12, 12}
     },
-    [BLOCK_DIRT] =
+    [BlockDirt] =
     {
-        .faces = { 3,  3,  3,  3,  3,  3}
+        .Faces = { 3,  3,  3,  3,  3,  3}
     },
-    [BLOCK_GRASS] =
+    [BlockGrass] =
     {
-        .faces = { 2,  2,  2,  2,  1,  3}
+        .Faces = { 2,  2,  2,  2,  1,  3}
     },
-    [BLOCK_LAVENDER] =
+    [BlockLavender] =
     {
-        .faces = {14, 14, 14, 14, 14, 14}
+        .Faces = {14, 14, 14, 14, 14, 14}
     },
-    [BLOCK_LEAVES] =
+    [BlockLeaves] =
     {
-        .faces = {10, 10, 10, 10, 10, 10}
+        .Faces = {10, 10, 10, 10, 10, 10}
     },
-    [BLOCK_LOG] =
+    [BlockLog] =
     {
-        .faces = { 8,  8,  8,  8,  7,  7}
+        .Faces = { 8,  8,  8,  8,  7,  7}
     },
-    [BLOCK_ROSE] =
+    [BlockRose] =
     {
-        .faces = {11, 11, 11, 11, 11, 11}
+        .Faces = {11, 11, 11, 11, 11, 11}
     },
-    [BLOCK_SAND] =
+    [BlockSand] =
     {
-        .faces = { 5,  5,  5,  5,  5,  5}
+        .Faces = { 5,  5,  5,  5,  5,  5}
     },
-    [BLOCK_SNOW] =
+    [BlockSnow] =
     {
-        .faces = { 6,  6,  6,  6,  6,  6}
+        .Faces = { 6,  6,  6,  6,  6,  6}
     },
-    [BLOCK_STONE] =
+    [BlockStone] =
     {
-        .faces = { 4,  4,  4,  4,  4,  4}
+        .Faces = { 4,  4,  4,  4,  4,  4}
     },
-    [BLOCK_WATER] =
+    [BlockWater] =
     {
-        .faces = {16, 16, 16, 16, 16, 16}
+        .Faces = {16, 16, 16, 16, 16, 16}
     },
 };
 
-int block_get_face(block_t block, direction_t direction)
+int GetBlockFace(Block block, Direction direction)
 {
-    return blocks[block].faces[direction];
+    return kBlocks[block].Faces[direction];
 }
