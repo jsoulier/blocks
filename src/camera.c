@@ -167,7 +167,7 @@ void CreateCamera(Camera* camera, CameraType type)
     camera->Height = 1.0f;
     camera->Fov = Radians(90.0f);
     camera->Near = 1.0f;
-    camera->Far = 500.0f;
+    camera->Far = 1000.0f;
     camera->Ortho = 100.0f;
 }
 

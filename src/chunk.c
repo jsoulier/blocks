@@ -54,8 +54,15 @@ void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block)
 {
     chunk->Flags |= ChunkFlagMesh;
     Transform(chunk, &x, &y, &z);
-    SetMapValue(&chunk->Blocks, x, y, z, block);
-    // TODO: check if light (if so, add to lights)
+    if (block != BlockEmpty)
+    {
+        SetMapValue(&chunk->Blocks, x, y, z, block);
+    }
+    else
+    {
+        RemoveMapValue(&chunk->Blocks, x, y, z);
+    }
+    // TODO: check if light (if so, add/remove)
 }
 
 Block GetChunkBlock(const Chunk* chunk, int x, int y, int z)

@@ -12,8 +12,9 @@ static const float kAtlasWidth = 512.0f;
 static const int kAtlasMipLevels = 4;
 static const float kBlockWidth = 16.0f;
 
-static const float kSpeed = 0.015f;
+static const float kSpeed = 0.01f;
 static const float kSensitivity = 0.1f;
+static const float kReach = 10.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -448,7 +449,26 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         if (!SDL_GetWindowRelativeMouseMode(window))
         {
             SDL_SetWindowRelativeMouseMode(window, true);
-            break;
+        }
+        else
+        {
+            float dx;
+            float dy;
+            float dz;
+            GetCameraVector(&camera, &dx, &dy, &dz);
+            WorldQuery query = RaycastWorld(&world, camera.X, camera.Y, camera.X, dx, dy, dz, kReach);
+            if (query.HitBlock == BlockEmpty)
+            {
+                break;
+            }
+            if (event->button.button == SDL_BUTTON_LEFT)
+            {
+                SetWorldBlock(&world, query.Position[0], query.Position[1], query.Position[2], BlockEmpty);
+            }
+            else if (event->button.button == SDL_BUTTON_RIGHT)
+            {
+                SetWorldBlock(&world, query.PreviousPosition[0], query.PreviousPosition[1], query.PreviousPosition[2], BlockStone);
+            }
         }
         break;
     }

@@ -8,7 +8,7 @@
 #include "worker.h"
 #include "world.h"
 
-static bool Contains(World* world, int x, int z)
+static bool Contains(const World* world, int x, int z)
 {
     return x >= 0 && z >= 0 && x < WORLD_WIDTH && z < WORLD_WIDTH;
 }
@@ -142,6 +142,7 @@ static void CreateIndexBuffer(World* world, Uint32 size)
 
 void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
 {
+    // TODO: generating everything before meshing can cause artifacts to appear until generation finishes
     Move(world, camera);
     WorkerJob jobs[WORLD_WORKERS] = {0};
     int numJobs = 0;
@@ -240,7 +241,7 @@ void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* comma
     }
 }
 
-Chunk* GetWorldChunk(World* world, int x, int y, int z)
+Chunk* GetWorldChunk(const World* world, int x, int y, int z)
 {
     if (Contains(world, x, z))
     {
@@ -250,4 +251,121 @@ Chunk* GetWorldChunk(World* world, int x, int y, int z)
     {
         return NULL;
     }
+}
+
+static int FloorChunkIndex(float index)
+{
+    return SDL_floorf(index / CHUNK_WIDTH);
+}
+
+Block GetWorldBlock(const World* world, int x, int y, int z)
+{
+    int chunkX = FloorChunkIndex(x - world->X * CHUNK_WIDTH);
+    int chunkY = FloorChunkIndex(y - world->Y * CHUNK_HEIGHT);
+    int chunkZ = FloorChunkIndex(z - world->Z * CHUNK_WIDTH);
+    Chunk* chunk = GetWorldChunk(world, chunkX, chunkY, chunkZ);
+    if (chunk)
+    {
+        return GetChunkBlock(chunk, x, y, z);
+    }
+    else
+    {
+        return BlockEmpty;
+    }
+}
+
+void SetWorldBlock(World* world, int x, int y, int z, Block block)
+{
+    int chunkX = FloorChunkIndex(x - world->X * CHUNK_WIDTH);
+    int chunkY = FloorChunkIndex(y - world->Y * CHUNK_HEIGHT);
+    int chunkZ = FloorChunkIndex(z - world->Z * CHUNK_WIDTH);
+    Chunk* chunk = GetWorldChunk(world, chunkX, chunkY, chunkZ);
+    if (chunk)
+    {
+        SetChunkBlock(chunk, x, y, z, block);
+    }
+    else
+    {
+        SDL_Log("Bad block position: %d, %d, %d", x, y, z);
+    }
+}
+
+WorldQuery RaycastWorld(const World* world, float x, float y, float z, float dx, float dy, float dz, float length)
+{
+    WorldQuery query = {0};
+    query.Position[0] = SDL_floorf(x);
+    query.Position[1] = SDL_floorf(y);
+    query.Position[2] = SDL_floorf(z);
+    float position[3] = {x, y, z};
+    float direction[3] = {dx, dy, dz};
+    float distances[3] = {0};
+    int steps[3] = {0};
+    float delta[3] = {0};
+    for (int i = 0; i < 3; i++)
+    {
+        query.PreviousPosition[i] = query.Position[i];
+        if (SDL_fabsf(direction[i]) > SDL_FLT_EPSILON)
+        {
+            delta[i] = SDL_fabsf(1.0f / direction[i]);
+        }
+        else
+        {
+            delta[i] = 1e6;
+        }
+        if (direction[i] < 0.0f)
+        {
+            steps[i] = -1;
+            distances[i] = (position[i] - query.Position[i]) * delta[i];
+        }
+        else
+        {
+            steps[i] = 1;
+            distances[i] = (query.Position[i] + 1.0f - position[i]) * delta[i];
+        }
+    }
+    float traveled = 0.0f;
+    while (traveled <= length)
+    {
+        query.HitBlock = GetWorldBlock(world, query.Position[0], query.Position[1], query.Position[2]);
+        if (query.HitBlock != BlockEmpty)
+        {
+            return query;
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            query.PreviousPosition[i] = query.Position[i];
+        }
+        if (distances[0] < distances[1])
+        {
+            if (distances[0] < distances[2])
+            {
+                traveled = distances[0];
+                distances[0] += delta[0];
+                query.Position[0] += steps[0];
+            }
+            else
+            {
+                traveled = distances[2];
+                distances[2] += delta[2];
+                query.Position[2] += steps[2];
+            }
+        }
+        else
+        {
+            if (distances[1] < distances[2])
+            {
+                traveled = distances[1];
+                distances[1] += delta[1];
+                query.Position[1] += steps[1];
+            }
+            else
+            {
+                traveled = distances[2];
+                distances[2] += delta[2];
+                query.Position[2] += steps[2];
+            }
+        }
+    }
+    query.HitBlock = BlockEmpty;
+    return query;
 }
