@@ -8,6 +8,7 @@ typedef enum NoiseType
 {
     NoiseType1x1x1,
     NoiseTypeStairs,
+    NoiseTypeFlat,
     NoiseTypeTerrain,
 }
 NoiseType;

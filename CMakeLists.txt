@@ -16,8 +16,8 @@ configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)
 
 add_subdirectory(lib/SDL)
 add_executable(blocks WIN32
-    lib/sqlite3/sqlite3.c
-    lib/stb/stb.c
+lib/stb/stb.c
+lib/sqlite3/sqlite3.c
     src/block.c
     src/buffer.c
     src/camera.c
@@ -29,6 +29,7 @@ add_executable(blocks WIN32
     src/shader.c
     src/sort.c
     src/voxel.c
+    src/worker.c
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)

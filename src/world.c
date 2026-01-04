@@ -4,11 +4,8 @@
 #include "buffer.h"
 #include "camera.h"
 #include "chunk.h"
-#include "light.h"
-#include "noise.h"
-#include "save.h"
 #include "sort.h"
-#include "voxel.h"
+#include "worker.h"
 #include "world.h"
 
 static bool Contains(World* world, int x, int z)
@@ -24,11 +21,10 @@ void CreateWorld(World* world, SDL_GPUDevice* device)
     world->Z = INT32_MAX;
     CreateCpuBuffer(&world->CpuIndexBuffer, device, sizeof(Uint32));
     CreateGpuBuffer(&world->GpuIndexBuffer, device, SDL_GPU_BUFFERUSAGE_INDEX);
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    for (int i = 0; i < WORLD_WORKERS; i++)
     {
-        CreateCpuBuffer(&world->CpuVoxelBuffers[i], device, sizeof(Voxel));
+        CreateWorker(&world->Workers[i], device);
     }
-    CreateCpuBuffer(&world->CpuLightBuffer, device, sizeof(Light));
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
@@ -47,6 +43,10 @@ void CreateWorld(World* world, SDL_GPUDevice* device)
 
 void DestroyWorld(World* world)
 {
+    for (int i = 0; i < WORLD_WORKERS; i++)
+    {
+        DestroyWorker(&world->Workers[i]);
+    }
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
@@ -55,11 +55,6 @@ void DestroyWorld(World* world)
     }
     DestroyCpuBuffer(&world->CpuIndexBuffer);
     DestroyGpuBuffer(&world->GpuIndexBuffer);
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
-    {
-        DestroyCpuBuffer(&world->CpuVoxelBuffers[i]);
-    }
-    DestroyCpuBuffer(&world->CpuLightBuffer);
 }
 
 static void Move(World* world, const Camera* camera)
@@ -73,6 +68,7 @@ static void Move(World* world, const Camera* camera)
         return;
     }
     world->X = cameraX;
+    world->Y = 0;
     world->Z = cameraZ;
     Chunk* in[WORLD_WIDTH][WORLD_WIDTH] = {0};
     Chunk* out[WORLD_WIDTH * WORLD_WIDTH] = {0};
@@ -113,7 +109,7 @@ static void Move(World* world, const Camera* camera)
     SDL_assert(!size);
 }
 
-static void CreateIndexBuffer(World* world, SDL_GPUCopyPass* pass, Uint32 size)
+static void CreateIndexBuffer(World* world, Uint32 size)
 {
     if (world->GpuIndexBuffer.Size >= size)
     {
@@ -126,12 +122,6 @@ static void CreateIndexBuffer(World* world, SDL_GPUCopyPass* pass, Uint32 size)
         Uint32 index = i * 4 + kIndices[j];
         AppendCpuBuffer(&world->CpuIndexBuffer, &index);
     }
-    UpdateGpuBuffer(&world->GpuIndexBuffer, pass, &world->CpuIndexBuffer);
-}
-
-void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
-{
-    Move(world, camera);
     SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(world->Device);
     if (!commandBuffer)
     {
@@ -145,52 +135,85 @@ void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
         SDL_CancelGPUCommandBuffer(commandBuffer);
         return;
     }
+    UpdateGpuBuffer(&world->GpuIndexBuffer, pass, &world->CpuIndexBuffer);
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
+}
+
+void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
+{
+    Move(world, camera);
+    WorkerJob jobs[WORLD_WORKERS] = {0};
+    int numJobs = 0;
     bool generated = true;
     for (int x = 0; x < WORLD_WIDTH; x++)
-    for (int y = 0; y < WORLD_WIDTH; y++)
+    for (int z = 0; z < WORLD_WIDTH; z++)
     {
-        Chunk* chunk = world->Chunks[x][y];
-        if (chunk->Flags & ChunkFlagGenerate)
+        Chunk* chunk = world->Chunks[x][z];
+        if (!(chunk->Flags & ChunkFlagGenerate))
         {
-            GenerateChunk(chunk, noise);
-            generated = false;
-            // TODO: use save
-            // return;
+            continue;
         }
+        // TODO: move
+        if (numJobs >= WORLD_WORKERS)
+        {
+            continue;
+        }
+        Worker* worker = &world->Workers[numJobs];
+        WorkerJob* job = &jobs[numJobs];
+        numJobs++;
+        job->Type = WorkerJobTypeGenerate;
+        job->X = x;
+        job->Y = 0;
+        job->Z = z;
+        job->WorldRef = world;
+        job->SaveRef = save;
+        job->NoiseRef = noise;
+        DispatchWorker(worker, job);
+        generated = false;
     }
     if (generated)
     {
         for (int x = 0; x < WORLD_WIDTH - 2; x++)
-        for (int y = 0; y < WORLD_WIDTH - 2; y++)
+        for (int z = 0; z < WORLD_WIDTH - 2; z++)
         {
-            int a = world->SortedChunks[x][y][0];
-            int b = world->SortedChunks[x][y][1];
+            int a = world->SortedChunks[x][z][0];
+            int b = world->SortedChunks[x][z][1];
             Chunk* chunk = world->Chunks[a][b];
             if (!(chunk->Flags & ChunkFlagMesh))
             {
                 continue;
             }
-            Chunk* neighbors[3][3] = {0};
-            for (int i = -1; i <= 1; i++)
-            for (int j = -1; j <= 1; j++)
+            // TODO: move
+            if (numJobs >= WORLD_WORKERS)
             {
-                int k = a + i;
-                int l = b + j;
-                if (Contains(world, k, l))
-                {
-                    neighbors[i + 1][j + 1] = world->Chunks[k][l];
-                }
+                continue;
             }
-            MeshChunk(chunk, neighbors, pass, world->CpuVoxelBuffers, &world->CpuLightBuffer);
-            for (int i = 0; i < ChunkMeshTypeCount; i++)
-            {
-                CreateIndexBuffer(world, pass, chunk->VoxelBuffers[i].Size * 1.5);
-            }
-            // return;
+            Worker* worker = &world->Workers[numJobs];
+            WorkerJob* job = &jobs[numJobs];
+            numJobs++;
+            job->Type = WorkerJobTypeMesh;
+            job->X = a;
+            job->Y = 0;
+            job->Z = b;
+            job->WorldRef = world;
+            job->SaveRef = save;
+            job->NoiseRef = noise;
+            DispatchWorker(worker, job);
         }
     }
-    SDL_EndGPUCopyPass(pass);
-    SDL_SubmitGPUCommandBuffer(commandBuffer);
+    for (int i = 0; i < numJobs; i++)
+    {
+        Worker* worker = &world->Workers[i];
+        WorkerJob* job = &jobs[i];
+        WaitForWorker(worker);
+        Chunk* chunk = GetWorldChunk(world, job->X, job->Y, job->Z);
+        SDL_assert(chunk);
+        for (int i = 0; i < ChunkMeshTypeCount; i++)
+        {
+            CreateIndexBuffer(world, chunk->VoxelBuffers[i].Size * 1.5);
+        }
+    }
 }
 
 void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* commandBuffer, SDL_GPURenderPass* pass, ChunkMeshType type)
@@ -214,5 +237,17 @@ void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* comma
         SDL_BindGPUVertexBuffers(pass, 0, &vertexBuffer, 1);
         SDL_BindGPUIndexBuffer(pass, &indexBuffer, SDL_GPU_INDEXELEMENTSIZE_32BIT);
         SDL_DrawGPUIndexedPrimitives(pass, chunk->VoxelBuffers[type].Size * 1.5, 1, 0, 0, 0);
+    }
+}
+
+Chunk* GetWorldChunk(World* world, int x, int y, int z)
+{
+    if (Contains(world, x, z))
+    {
+        return world->Chunks[x][z];
+    }
+    else
+    {
+        return NULL;
     }
 }

@@ -276,7 +276,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
-    CreateNoise(&noise, NoiseTypeStairs, 1337);
+    CreateNoise(&noise, NoiseTypeFlat, 1337);
     CreateWorld(&world, device);
     CreateCamera(&camera, CameraTypePerspective);
     ticks = SDL_GetTicks();

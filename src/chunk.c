@@ -23,6 +23,7 @@ static void Transform(const Chunk* chunk, int* x, int* y, int* z)
 
 void CreateChunk(Chunk* chunk, SDL_GPUDevice* device)
 {
+    chunk->Device = device;
     chunk->Flags = ChunkFlagGenerate;
     chunk->X = 0;
     chunk->Y = 0;
@@ -38,6 +39,7 @@ void CreateChunk(Chunk* chunk, SDL_GPUDevice* device)
 
 void DestroyChunk(Chunk* chunk)
 {
+    chunk->Device = NULL;
     chunk->Flags = ChunkFlagNone;
     for (int i = 0; i < ChunkMeshTypeCount; i++)
     {
@@ -73,11 +75,23 @@ void GenerateChunk(Chunk* chunk, const Noise* noise)
     chunk->Flags |= ChunkFlagMesh;
 }
 
-void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass,
-    CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer)
+void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer)
 {
     SDL_assert(!(chunk->Flags & ChunkFlagGenerate));
     SDL_assert(chunk->Flags & ChunkFlagMesh);
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(chunk->Device);
+    if (!commandBuffer)
+    {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commandBuffer);
+    if (!pass)
+    {
+        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
+        SDL_CancelGPUCommandBuffer(commandBuffer);
+        return;
+    }
     for (Uint32 i = 0; i < chunk->Blocks.Capacity; i++)
     {
         if (!IsMapRowValid(&chunk->Blocks, i))
@@ -142,5 +156,7 @@ void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass
     {
         UpdateGpuBuffer(&chunk->VoxelBuffers[i], pass, &voxelBuffers[i]);
     }
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
     chunk->Flags &= ~ChunkFlagMesh;
 }

@@ -29,6 +29,7 @@ ChunkFlag;
 
 typedef struct Chunk
 {
+    SDL_GPUDevice* Device;
     ChunkFlag Flags;
     int X;
     int Y;
@@ -45,5 +46,4 @@ void DestroyChunk(Chunk* chunk);
 void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block);
 Block GetChunkBlock(const Chunk* chunk, int x, int y, int z);
 void GenerateChunk(Chunk* chunk, const Noise* noise);
-void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass,
-    CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer);
+void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer);

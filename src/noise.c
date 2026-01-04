@@ -24,6 +24,20 @@ static void Stairs(const Noise* noise, Chunk* chunk)
     }
 }
 
+static void Flat(const Noise* noise, Chunk* chunk)
+{
+    for (int x = 0; x < CHUNK_WIDTH; x++)
+    for (int z = 0; z < CHUNK_WIDTH; z++)
+    {
+        for (int y = 0; y < 3; y++)
+        {
+            SetChunkBlock(chunk, chunk->X + x, chunk->Y + y, chunk->Z + z, BlockStone);
+        }
+        SetChunkBlock(chunk, chunk->X + x, chunk->Y + 3, chunk->Z + z, BlockDirt);
+        SetChunkBlock(chunk, chunk->X + x, chunk->Y + 4, chunk->Z + z, BlockGrass);
+    }
+}
+
 static void Terrain(const Noise* noise, Chunk* chunk)
 {
     for (int x = 0; x < CHUNK_WIDTH; x++)
@@ -42,6 +56,9 @@ void GenerateChunkNoise(const Noise* noise, Chunk* chunk)
         break;
     case NoiseTypeStairs:
         Stairs(noise, chunk);
+        break;
+    case NoiseTypeFlat:
+        Flat(noise, chunk);
         break;
     case NoiseTypeTerrain:
         Terrain(noise, chunk);
