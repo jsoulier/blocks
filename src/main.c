@@ -22,6 +22,7 @@ static SDL_GPUTextureFormat colorTextureFormat;
 static SDL_GPUTextureFormat depthTextureFormat;
 static SDL_GPUTexture* depthTexture;
 static SDL_GPUGraphicsPipeline* chunkPipeline;
+static SDL_GPUGraphicsPipeline* raycastPipeline;
 static SDL_Surface* atlasSurface;
 static SDL_GPUTexture* atlasTexture;
 static SDL_GPUSampler* linearSampler;
@@ -212,6 +213,48 @@ static bool CreateChunkPipeline()
     return chunkPipeline != NULL;
 }
 
+static bool CreateRaycastPipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info =
+    {
+        .vertex_shader = LoadShader(device, "raycast.vert"),
+        .fragment_shader = LoadShader(device, "raycast.frag"),
+        .target_info =
+        {
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[])
+            {{
+                .format = colorTextureFormat,
+                // TODO: needs to be a separate pass
+                // .blend_state =
+                // {
+                //     .enable_blend = true,
+                //     .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                //     .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                //     .src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE,
+                //     .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                //     .color_blend_op = SDL_GPU_BLENDOP_ADD,
+                //     .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
+                // },
+            }},
+            .has_depth_stencil_target = true,
+            .depth_stencil_format = depthTextureFormat,
+        },
+        .depth_stencil_state =
+        {
+            .enable_depth_test = true,
+            .compare_op = SDL_GPU_COMPAREOP_LESS,
+        },
+    };
+    if (info.vertex_shader && info.fragment_shader)
+    {
+        raycastPipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+    return raycastPipeline != NULL;
+}
+
 SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
 {
 #ifndef NDEBUG
@@ -274,6 +317,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create chunk pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    if (!CreateRaycastPipeline())
+    {
+        SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
@@ -291,6 +339,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUSampler(device, nearestSampler);
     SDL_ReleaseGPUTexture(device, atlasTexture);
     SDL_DestroySurface(atlasSurface);
+    SDL_ReleaseGPUGraphicsPipeline(device, raycastPipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, chunkPipeline);
     SDL_ReleaseGPUTexture(device, depthTexture);
     SDL_ReleaseWindowFromGPUDevice(device, window);
@@ -299,7 +348,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_Quit();
 }
 
-static void RenderWorldPass(SDL_GPUCommandBuffer* commandBuffer, SDL_GPUTexture* swapchainTexture)
+static void Render(SDL_GPUCommandBuffer* commandBuffer, SDL_GPUTexture* swapchainTexture)
 {
     SDL_GPUColorTargetInfo colorInfo = {0};
     colorInfo.load_op = SDL_GPU_LOADOP_CLEAR;
@@ -320,10 +369,28 @@ static void RenderWorldPass(SDL_GPUCommandBuffer* commandBuffer, SDL_GPUTexture*
     SDL_GPUTextureSamplerBinding texture = {0};
     texture.sampler = nearestSampler;
     texture.texture = atlasTexture;
+    SDL_PushGPUDebugGroup(commandBuffer, "Chunk");
     SDL_BindGPUGraphicsPipeline(pass, chunkPipeline);
     SDL_BindGPUFragmentSamplers(pass, 0, &texture, 1);
     SDL_PushGPUVertexUniformData(commandBuffer, 0, camera.Matrix, 64);
     RenderWorld(&world, &camera, commandBuffer, pass, ChunkMeshTypeDefault);
+    SDL_PopGPUDebugGroup(commandBuffer);
+    SDL_PushGPUDebugGroup(commandBuffer, "Raycast");
+    {
+        float dx;
+        float dy;
+        float dz;
+        GetCameraVector(&camera, &dx, &dy, &dz);
+        WorldQuery query = RaycastWorld(&world, camera.X, camera.Y, camera.Z, dx, dy, dz, kReach);
+        if (query.HitBlock != BlockEmpty)
+        {
+            SDL_BindGPUGraphicsPipeline(pass, raycastPipeline);
+            SDL_PushGPUVertexUniformData(commandBuffer, 0, camera.Matrix, 64);
+            SDL_PushGPUVertexUniformData(commandBuffer, 1, query.Position, 12);
+            SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
+        }
+    }
+    SDL_PopGPUDebugGroup(commandBuffer);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -402,11 +469,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
         SetCameraViewport(&camera, width, height);
     }
     UpdateCamera(&camera);
-    {
-        SDL_PushGPUDebugGroup(commandBuffer, "RenderWorld");
-        RenderWorldPass(commandBuffer, swapchainTexture);
-        SDL_PopGPUDebugGroup(commandBuffer);
-    }
+    Render(commandBuffer, swapchainTexture);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
     return SDL_APP_CONTINUE;
 }
@@ -456,7 +519,7 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
             float dy;
             float dz;
             GetCameraVector(&camera, &dx, &dy, &dz);
-            WorldQuery query = RaycastWorld(&world, camera.X, camera.Y, camera.X, dx, dy, dz, kReach);
+            WorldQuery query = RaycastWorld(&world, camera.X, camera.Y, camera.Z, dx, dy, dz, kReach);
             if (query.HitBlock == BlockEmpty)
             {
                 break;

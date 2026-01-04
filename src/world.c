@@ -260,11 +260,15 @@ static int FloorChunkIndex(float index)
 
 Block GetWorldBlock(const World* world, int x, int y, int z)
 {
+    if (y < 0 || y >= CHUNK_HEIGHT)
+    {
+        return BlockEmpty;
+    }
     int chunkX = FloorChunkIndex(x - world->X * CHUNK_WIDTH);
     int chunkY = FloorChunkIndex(y - world->Y * CHUNK_HEIGHT);
     int chunkZ = FloorChunkIndex(z - world->Z * CHUNK_WIDTH);
     Chunk* chunk = GetWorldChunk(world, chunkX, chunkY, chunkZ);
-    if (chunk)
+    if (chunk && !(chunk->Flags & ChunkFlagGenerate))
     {
         return GetChunkBlock(chunk, x, y, z);
     }
@@ -276,11 +280,15 @@ Block GetWorldBlock(const World* world, int x, int y, int z)
 
 void SetWorldBlock(World* world, int x, int y, int z, Block block)
 {
+    if (y < 0 || y >= CHUNK_HEIGHT)
+    {
+        return;
+    }
     int chunkX = FloorChunkIndex(x - world->X * CHUNK_WIDTH);
     int chunkY = FloorChunkIndex(y - world->Y * CHUNK_HEIGHT);
     int chunkZ = FloorChunkIndex(z - world->Z * CHUNK_WIDTH);
     Chunk* chunk = GetWorldChunk(world, chunkX, chunkY, chunkZ);
-    if (chunk)
+    if (chunk && !(chunk->Flags & ChunkFlagGenerate))
     {
         SetChunkBlock(chunk, x, y, z, block);
     }
