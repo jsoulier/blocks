@@ -4,9 +4,9 @@
 
 typedef struct Light
 {
-    Uint8 red;
-    Uint8 green;
-    Uint8 blue;
-    Uint8 intensity;
+    Uint8 Red;
+    Uint8 Green;
+    Uint8 Blue;
+    Uint8 Intensity;
 }
 Light;

@@ -14,6 +14,16 @@ static void _1x1x1(const Noise* noise, Chunk* chunk)
     SetChunkBlock(chunk, chunk->X, chunk->Y, chunk->Z, BlockGrass);
 }
 
+static void Stairs(const Noise* noise, Chunk* chunk)
+{
+    for (int x = 0; x < CHUNK_WIDTH; x++)
+    for (int z = 0; z < CHUNK_WIDTH; z++)
+    for (int y = 0; y < z; y++)
+    {
+        SetChunkBlock(chunk, chunk->X + x, chunk->Y + y, chunk->Z + z, BlockStone);
+    }
+}
+
 static void Terrain(const Noise* noise, Chunk* chunk)
 {
     for (int x = 0; x < CHUNK_WIDTH; x++)
@@ -29,6 +39,9 @@ void GenerateChunkNoise(const Noise* noise, Chunk* chunk)
     {
     case NoiseType1x1x1:
         _1x1x1(noise, chunk);
+        break;
+    case NoiseTypeStairs:
+        Stairs(noise, chunk);
         break;
     case NoiseTypeTerrain:
         Terrain(noise, chunk);

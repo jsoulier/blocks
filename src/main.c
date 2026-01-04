@@ -216,7 +216,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
 #ifndef NDEBUG
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
 #endif
-    SDL_SetAppMetadata("Voxel Raytracer", NULL, NULL);
+    SDL_SetAppMetadata("Blocks", NULL, NULL);
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
@@ -276,7 +276,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
-    CreateNoise(&noise, NoiseType1x1x1, 1337);
+    CreateNoise(&noise, NoiseTypeStairs, 1337);
     CreateWorld(&world, device);
     CreateCamera(&camera, CameraTypePerspective);
     ticks = SDL_GetTicks();

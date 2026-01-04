@@ -25,4 +25,6 @@ enum /* Block */
     BlockCount,
 };
 
+bool IsBlockOpaque(Block block);
+bool IsBlockSprite(Block block);
 int GetBlockFace(Block block, Direction direction);

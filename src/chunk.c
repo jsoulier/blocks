@@ -3,6 +3,7 @@
 #include "block.h"
 #include "buffer.h"
 #include "chunk.h"
+#include "direction.h"
 #include "map.h"
 #include "noise.h"
 #include "voxel.h"
@@ -57,7 +58,7 @@ void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block)
 
 Block GetChunkBlock(const Chunk* chunk, int x, int y, int z)
 {
-    SDL_assert(chunk->Flags & ChunkFlagGenerate);
+    SDL_assert(!(chunk->Flags & ChunkFlagGenerate));
     Transform(chunk, &x, &y, &z);
     return GetMapValue(&chunk->Blocks, x, y, z);
 }
@@ -85,12 +86,54 @@ void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass
         }
         MapRow row = GetMapRow(&chunk->Blocks, i);
         SDL_assert(row.Value != BlockEmpty);
-
-        for (int i = 0; i < 6; i++)
+        if (IsBlockSprite(row.Value))
         {
-            for (int j = 0; j < 4; j++)
+            continue;
+        }
+        for (int j = 0; j < 6; j++)
+        {
+            int neighborX = row.X + kDirections[j][0];
+            int neighborY = row.Y + kDirections[j][1];
+            int neighborZ = row.Z + kDirections[j][2];
+            Block neighborBlock;
+            if (neighborY == CHUNK_HEIGHT)
             {
-                Voxel voxel = VoxelPackCube(row.Value, row.X, row.Y, row.Z, i, 0, j);
+                neighborBlock = BlockEmpty;
+            }
+            else if (neighborY == -1)
+            {
+                continue;
+            }
+            else if (Contains(chunk, neighborX, neighborY, neighborZ))
+            {
+                neighborBlock = GetMapValue(&chunk->Blocks, neighborX, neighborY, neighborZ);
+            }
+            else
+            {
+                neighborX += chunk->X;
+                neighborY += chunk->Y;
+                neighborZ += chunk->Z;
+                SDL_assert(kDirections[j][1] == 0);
+                int directionX = kDirections[j][0] + 1;
+                int directionZ = kDirections[j][2] + 1;
+                const Chunk* neighbor = neighbors[directionX][directionZ];
+                // TODO: replace condition with SDL_assert
+                if (neighbor)
+                {
+                    neighborBlock = GetChunkBlock(neighbor, neighborX, neighborY, neighborZ);
+                }
+                else
+                {
+                    neighborBlock = BlockEmpty;
+                }
+            }
+            if (IsBlockOpaque(neighborBlock))
+            {
+                continue;
+            }
+            for (int k = 0; k < 4; k++)
+            {
+                Voxel voxel = VoxelPackCube(row.Value, row.X, row.Y, row.Z, j, 0, k);
                 AppendCpuBuffer(&voxelBuffers[ChunkMeshTypeDefault], &voxel);
             }
         }

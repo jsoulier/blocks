@@ -32,13 +32,17 @@ void CreateWorld(World* world, SDL_GPUDevice* device)
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
-        world->SortedChunks[x][z][0] = x;
-        world->SortedChunks[x][z][1] = z;
         world->Chunks[x][z] = SDL_malloc(sizeof(Chunk));
         CreateChunk(world->Chunks[x][z], device);
     }
-    int w = WORLD_WIDTH;
-    SortXY(w / 2, w / 2, (int*) world->SortedChunks, w * w);
+    for (int x = 0; x < WORLD_WIDTH - 2; x++)
+    for (int z = 0; z < WORLD_WIDTH - 2; z++)
+    {
+        world->SortedChunks[x][z][0] = x + 1;
+        world->SortedChunks[x][z][1] = z + 1;
+    }
+    int w = WORLD_WIDTH - 2;
+    SortXY(w / 2 + 1, w / 2 + 1, (int*) world->SortedChunks, w * w);
 }
 
 void DestroyWorld(World* world)
@@ -76,6 +80,7 @@ static void Move(World* world, const Camera* camera)
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
+        SDL_assert(world->Chunks[x][z]);
         const int a = x - offsetX;
         const int b = z - offsetZ;
         if (Contains(world, a, b))
@@ -94,6 +99,7 @@ static void Move(World* world, const Camera* camera)
     {
         if (!world->Chunks[x][z])
         {
+            SDL_assert(size > 0);
             Chunk* chunk = out[--size];
             chunk->Flags |= ChunkFlagGenerate;
             world->Chunks[x][z] = chunk;
@@ -139,25 +145,37 @@ void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
         SDL_CancelGPUCommandBuffer(commandBuffer);
         return;
     }
+    bool generated = true;
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int y = 0; y < WORLD_WIDTH; y++)
     {
-        int a = world->SortedChunks[x][y][0];
-        int b = world->SortedChunks[x][y][1];
-        Chunk* chunk = world->Chunks[a][b];
+        Chunk* chunk = world->Chunks[x][y];
         if (chunk->Flags & ChunkFlagGenerate)
         {
             GenerateChunk(chunk, noise);
-            // save
+            generated = false;
+            // TODO: use save
+            // return;
         }
-        if (chunk->Flags & ChunkFlagMesh)
+    }
+    if (generated)
+    {
+        for (int x = 0; x < WORLD_WIDTH - 2; x++)
+        for (int y = 0; y < WORLD_WIDTH - 2; y++)
         {
+            int a = world->SortedChunks[x][y][0];
+            int b = world->SortedChunks[x][y][1];
+            Chunk* chunk = world->Chunks[a][b];
+            if (!(chunk->Flags & ChunkFlagMesh))
+            {
+                continue;
+            }
             Chunk* neighbors[3][3] = {0};
             for (int i = -1; i <= 1; i++)
             for (int j = -1; j <= 1; j++)
             {
                 int k = a + i;
-                int l = y + j;
+                int l = b + j;
                 if (Contains(world, k, l))
                 {
                     neighbors[i + 1][j + 1] = world->Chunks[k][l];
@@ -168,6 +186,7 @@ void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
             {
                 CreateIndexBuffer(world, pass, chunk->VoxelBuffers[i].Size * 1.5);
             }
+            // return;
         }
     }
     SDL_EndGPUCopyPass(pass);
@@ -176,8 +195,8 @@ void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
 
 void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* commandBuffer, SDL_GPURenderPass* pass, ChunkMeshType type)
 {
-    for (int x = 0; x < WORLD_WIDTH; x++)
-    for (int y = 0; y < WORLD_WIDTH; y++)
+    for (int x = 0; x < WORLD_WIDTH - 2; x++)
+    for (int y = 0; y < WORLD_WIDTH - 2; y++)
     {
         int a = world->SortedChunks[x][y][0];
         int b = world->SortedChunks[x][y][1];

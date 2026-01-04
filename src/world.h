@@ -6,7 +6,7 @@
 #include "buffer.h"
 #include "chunk.h"
 
-#define WORLD_WIDTH 20
+#define WORLD_WIDTH 4
 
 typedef struct Camera Camera;
 typedef struct Noise Noise;
@@ -23,7 +23,7 @@ typedef struct World
     CpuBuffer CpuVoxelBuffers[ChunkMeshTypeCount];
     CpuBuffer CpuLightBuffer;
     Chunk* Chunks[WORLD_WIDTH][WORLD_WIDTH];
-    int SortedChunks[WORLD_WIDTH][WORLD_WIDTH][2];
+    int SortedChunks[WORLD_WIDTH - 2][WORLD_WIDTH - 2][2];
 }
 World;
 

@@ -6,8 +6,8 @@
 #include "buffer.h"
 #include "map.h"
 
-#define CHUNK_WIDTH 32
-#define CHUNK_HEIGHT 256
+#define CHUNK_WIDTH 30
+#define CHUNK_HEIGHT 240
 
 typedef struct Noise Noise;
 
