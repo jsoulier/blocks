@@ -10,6 +10,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
 make_directory(${BINARY_DIR})
 
+configure_file(LICENSE.txt ${BINARY_DIR} COPYONLY)
+configure_file(README.md ${BINARY_DIR} COPYONLY)
+configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)
+
 add_subdirectory(lib/SDL)
 add_executable(blocks WIN32
     lib/sqlite3/sqlite3.c
@@ -85,5 +89,5 @@ function(add_shader FILE)
     endif()
     package(${JSON})
 endfunction()
-add_shader(chunk.vert shaders/voxel.hlsl src/voxel_config.h)
+add_shader(chunk.vert shaders/voxel.hlsl src/voxel.inc)
 add_shader(chunk.frag)

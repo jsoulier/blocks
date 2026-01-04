@@ -1,7 +1,7 @@
 #ifndef VOXEL_HLSL
 #define VOXEL_HLSL
 
-#include "voxel_config.h"
+#include "voxel.inc"
 
 static const float3 kVoxelNormals[6] =
 {

@@ -5,12 +5,19 @@
 #include "chunk.h"
 #include "map.h"
 #include "noise.h"
+#include "voxel.h"
+
+static bool Contains(const Chunk* chunk, int x, int y, int z)
+{
+    return x >= 0 && y >= 0 && z >= 0 && x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_WIDTH;
+}
 
 static void Transform(const Chunk* chunk, int* x, int* y, int* z)
 {
     *x -= chunk->X;
     *y -= chunk->Y;
     *z -= chunk->Z;
+    SDL_assert(Contains(chunk, *x, *y, *z));
 }
 
 void CreateChunk(Chunk* chunk, SDL_GPUDevice* device)
@@ -68,6 +75,8 @@ void GenerateChunk(Chunk* chunk, const Noise* noise)
 void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass,
     CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer)
 {
+    SDL_assert(!(chunk->Flags & ChunkFlagGenerate));
+    SDL_assert(chunk->Flags & ChunkFlagMesh);
     for (Uint32 i = 0; i < chunk->Blocks.Capacity; i++)
     {
         if (!IsMapRowValid(&chunk->Blocks, i))
@@ -76,5 +85,19 @@ void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], SDL_GPUCopyPass* pass
         }
         MapRow row = GetMapRow(&chunk->Blocks, i);
         SDL_assert(row.Value != BlockEmpty);
+
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                Voxel voxel = VoxelPackCube(row.Value, row.X, row.Y, row.Z, i, 0, j);
+                AppendCpuBuffer(&voxelBuffers[ChunkMeshTypeDefault], &voxel);
+            }
+        }
     }
+    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    {
+        UpdateGpuBuffer(&chunk->VoxelBuffers[i], pass, &voxelBuffers[i]);
+    }
+    chunk->Flags &= ~ChunkFlagMesh;
 }

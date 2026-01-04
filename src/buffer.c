@@ -4,12 +4,13 @@
 
 void CreateCpuBuffer(CpuBuffer* cpuBuffer, SDL_GPUDevice* device, Uint32 stride)
 {
+    SDL_assert(stride);
     cpuBuffer->Device = device;
     cpuBuffer->Buffer = NULL;
     cpuBuffer->Data = NULL;
     cpuBuffer->Capacity = 0;
     cpuBuffer->Size = 0;
-    cpuBuffer->Stride = 0;
+    cpuBuffer->Stride = stride;
 }
 
 void DestroyCpuBuffer(CpuBuffer* cpuBuffer)

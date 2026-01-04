@@ -6,7 +6,8 @@ typedef struct Chunk Chunk;
 
 typedef enum NoiseType
 {
-    NoiseTypeDefault,
+    NoiseType1x1x1,
+    NoiseTypeTerrain,
 }
 NoiseType;
 

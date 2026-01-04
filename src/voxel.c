@@ -3,7 +3,7 @@
 #include "block.h"
 #include "direction.h"
 #include "voxel.h"
-#include "voxel_config.h"
+#include "voxel.inc"
 
 static Voxel Pack(Block block, int x, int y, int z, int u, int v, Direction direction, int occlusion)
 {

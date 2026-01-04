@@ -22,7 +22,7 @@ typedef struct World
     GpuBuffer GpuIndexBuffer;
     CpuBuffer CpuVoxelBuffers[ChunkMeshTypeCount];
     CpuBuffer CpuLightBuffer;
-    Chunk Chunks[WORLD_WIDTH][WORLD_WIDTH];
+    Chunk* Chunks[WORLD_WIDTH][WORLD_WIDTH];
     int SortedChunks[WORLD_WIDTH][WORLD_WIDTH][2];
 }
 World;
@@ -30,4 +30,4 @@ World;
 void CreateWorld(World* world, SDL_GPUDevice* device);
 void DestroyWorld(World* world);
 void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise);
-void DrawWorld(World* world, const Camera* camera);
+void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* commandBuffer, SDL_GPURenderPass* pass, ChunkMeshType type);

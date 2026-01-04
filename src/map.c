@@ -47,7 +47,7 @@ static int HashXYZ(int x, int y, int z)
     return HashInt(x) ^ HashInt(y) ^ HashInt(z);
 }
 
-static void grow(Map* map)
+static void Grow(Map* map)
 {
     Map old_map = *map;
     Create(map, old_map.Capacity * 2);
@@ -68,7 +68,7 @@ void SetMapValue(Map* map, int x, int y, int z, int value)
     SDL_assert(value != kEmpty && value != kTombstone);
     if ((float) (map->Size + 1) / map->Capacity > kMaxLoad)
     {
-        grow(map);
+        Grow(map);
     }
     Uint32 mask = map->Capacity - 1;
     Uint32 index = HashXYZ(x, y, z) & mask;

@@ -4,27 +4,16 @@
 
 static int Compare(void* userdata, const void* lhs, const void* rhs)
 {
-    const int* l = lhs;
-    const int* r = rhs;
     int cx = ((int*) userdata)[0];
     int cy = ((int*) userdata)[1];
-    int a = (l[0] - cx) * (l[0] - cx) + (l[1] - cx) * (l[1] - cx);
-    int b = (r[0] - cy) * (r[0] - cy) + (l[1] - cy) * (l[1] - cy);
-    if (a < b)
-    {
-        return -1;
-    }
-    else if (a > b)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    const int* l = lhs;
+    const int* r = rhs;
+    int a = (l[0] - cx) * (l[0] - cx) + (l[1] - cy) * (l[1] - cy);
+    int b = (r[0] - cx) * (r[0] - cx) + (r[1] - cy) * (r[1] - cy);
+    return (a > b) - (a < b);
 }
 
 void SortXY(int x, int y, int* data, int size)
 {
-    SDL_qsort_r(data, size * 2, sizeof(int), Compare, (int[]) {x, y});
+    SDL_qsort_r(data, size, sizeof(int)*2, Compare, (int[]) {x, y});
 }

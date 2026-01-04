@@ -1,5 +1,5 @@
-#ifndef VOXEL_CONFIG_H
-#define VOXEL_CONFIG_H
+#ifndef VOXEL_INC
+#define VOXEL_INC
 
 #define VOXEL_X_BITS 5
 #define VOXEL_Y_BITS 8

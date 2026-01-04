@@ -11,14 +11,19 @@
 #include "voxel.h"
 #include "world.h"
 
+static bool Contains(World* world, int x, int z)
+{
+    return x >= 0 && z >= 0 && x < WORLD_WIDTH && z < WORLD_WIDTH;
+}
+
 void CreateWorld(World* world, SDL_GPUDevice* device)
 {
     world->Device = device;
-    world->X = 0;
-    world->Y = 0;
-    world->Z = 0;
-    CreateCpuBuffer(&world->CpuIndexBuffer, device, sizeof(uint32_t));
-    CreateGpuBuffer(&world->GpuIndexBuffer, device, sizeof(uint32_t));
+    world->X = INT32_MAX;
+    world->Y = INT32_MAX;
+    world->Z = INT32_MAX;
+    CreateCpuBuffer(&world->CpuIndexBuffer, device, sizeof(Uint32));
+    CreateGpuBuffer(&world->GpuIndexBuffer, device, SDL_GPU_BUFFERUSAGE_INDEX);
     for (int i = 0; i < ChunkMeshTypeCount; i++)
     {
         CreateCpuBuffer(&world->CpuVoxelBuffers[i], device, sizeof(Voxel));
@@ -29,6 +34,8 @@ void CreateWorld(World* world, SDL_GPUDevice* device)
     {
         world->SortedChunks[x][z][0] = x;
         world->SortedChunks[x][z][1] = z;
+        world->Chunks[x][z] = SDL_malloc(sizeof(Chunk));
+        CreateChunk(world->Chunks[x][z], device);
     }
     int w = WORLD_WIDTH;
     SortXY(w / 2, w / 2, (int*) world->SortedChunks, w * w);
@@ -36,6 +43,12 @@ void CreateWorld(World* world, SDL_GPUDevice* device)
 
 void DestroyWorld(World* world)
 {
+    for (int x = 0; x < WORLD_WIDTH; x++)
+    for (int z = 0; z < WORLD_WIDTH; z++)
+    {
+        DestroyChunk(world->Chunks[x][z]);
+        SDL_free(world->Chunks[x][z]);
+    }
     DestroyCpuBuffer(&world->CpuIndexBuffer);
     DestroyGpuBuffer(&world->GpuIndexBuffer);
     for (int i = 0; i < ChunkMeshTypeCount; i++)
@@ -47,23 +60,95 @@ void DestroyWorld(World* world)
 
 static void Move(World* world, const Camera* camera)
 {
+    const int cameraX = camera->X / CHUNK_WIDTH - WORLD_WIDTH / 2;
+    const int cameraZ = camera->Z / CHUNK_WIDTH - WORLD_WIDTH / 2;
+    const int offsetX = cameraX - world->X;
+    const int offsetZ = cameraZ - world->Z;
+    if (!offsetX && !offsetZ)
+    {
+        return;
+    }
+    world->X = cameraX;
+    world->Z = cameraZ;
+    Chunk* in[WORLD_WIDTH][WORLD_WIDTH] = {0};
+    Chunk* out[WORLD_WIDTH * WORLD_WIDTH] = {0};
+    int size = 0;
+    for (int x = 0; x < WORLD_WIDTH; x++)
+    for (int z = 0; z < WORLD_WIDTH; z++)
+    {
+        const int a = x - offsetX;
+        const int b = z - offsetZ;
+        if (Contains(world, a, b))
+        {
+            in[a][b] = world->Chunks[x][z];
+        }
+        else
+        {
+            out[size++] = world->Chunks[x][z];
+        }
+        world->Chunks[x][z] = NULL;
+    }
+    SDL_memcpy(world->Chunks, in, sizeof(in));
+    for (int x = 0; x < WORLD_WIDTH; x++)
+    for (int z = 0; z < WORLD_WIDTH; z++)
+    {
+        if (!world->Chunks[x][z])
+        {
+            Chunk* chunk = out[--size];
+            chunk->Flags |= ChunkFlagGenerate;
+            world->Chunks[x][z] = chunk;
+        }
+        Chunk* chunk = world->Chunks[x][z];
+        // TODO: offset by WORLD_WIDTH / 2?
+        chunk->X = (world->X + x) * CHUNK_WIDTH;
+        chunk->Y = 0;
+        chunk->Z = (world->Z + z) * CHUNK_WIDTH;
+    }
+    SDL_assert(!size);
+}
 
+static void CreateIndexBuffer(World* world, SDL_GPUCopyPass* pass, Uint32 size)
+{
+    if (world->GpuIndexBuffer.Size >= size)
+    {
+        return;
+    }
+    static const int kIndices[] = {0, 1, 2, 3, 2, 1};
+    for (Uint32 i = 0; i < size; i++)
+    for (Uint32 j = 0; j < 6; j++)
+    {
+        Uint32 index = i * 4 + kIndices[j];
+        AppendCpuBuffer(&world->CpuIndexBuffer, &index);
+    }
+    UpdateGpuBuffer(&world->GpuIndexBuffer, pass, &world->CpuIndexBuffer);
 }
 
 void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
 {
     Move(world, camera);
+    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(world->Device);
+    if (!commandBuffer)
+    {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commandBuffer);
+    if (!pass)
+    {
+        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
+        SDL_CancelGPUCommandBuffer(commandBuffer);
+        return;
+    }
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int y = 0; y < WORLD_WIDTH; y++)
     {
         int a = world->SortedChunks[x][y][0];
         int b = world->SortedChunks[x][y][1];
-        Chunk* chunk = &world->Chunks[a][b];
+        Chunk* chunk = world->Chunks[a][b];
         if (chunk->Flags & ChunkFlagGenerate)
         {
             GenerateChunk(chunk, noise);
             // save
-            return; // TODO: remove 
         }
         if (chunk->Flags & ChunkFlagMesh)
         {
@@ -73,17 +158,42 @@ void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise)
             {
                 int k = a + i;
                 int l = y + j;
-                if (k >= 0 && l >= 0 && k < WORLD_WIDTH && l < WORLD_WIDTH)
+                if (Contains(world, k, l))
                 {
-                    neighbors[i][j] = &world->Chunks[k][l];
+                    neighbors[i + 1][j + 1] = world->Chunks[k][l];
                 }
             }
-            MeshChunk(chunk, neighbors, NULL, world->CpuVoxelBuffers, &world->CpuLightBuffer);
-            return; // TODO: remove 
+            MeshChunk(chunk, neighbors, pass, world->CpuVoxelBuffers, &world->CpuLightBuffer);
+            for (int i = 0; i < ChunkMeshTypeCount; i++)
+            {
+                CreateIndexBuffer(world, pass, chunk->VoxelBuffers[i].Size * 1.5);
+            }
         }
     }
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(commandBuffer);
 }
 
-void DrawWorld(World* world, const Camera* camera)
+void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* commandBuffer, SDL_GPURenderPass* pass, ChunkMeshType type)
 {
+    for (int x = 0; x < WORLD_WIDTH; x++)
+    for (int y = 0; y < WORLD_WIDTH; y++)
+    {
+        int a = world->SortedChunks[x][y][0];
+        int b = world->SortedChunks[x][y][1];
+        Chunk* chunk = world->Chunks[a][b];
+        if (!chunk->VoxelBuffers[type].Size)
+        {
+            continue;
+        }
+        float position[] = {chunk->X, chunk->Y, chunk->Z};
+        SDL_GPUBufferBinding vertexBuffer = {0};
+        SDL_GPUBufferBinding indexBuffer = {0};
+        vertexBuffer.buffer = chunk->VoxelBuffers[type].Buffer;
+        indexBuffer.buffer = world->GpuIndexBuffer.Buffer;
+        SDL_PushGPUVertexUniformData(commandBuffer, 1, position, sizeof(position));
+        SDL_BindGPUVertexBuffers(pass, 0, &vertexBuffer, 1);
+        SDL_BindGPUIndexBuffer(pass, &indexBuffer, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+        SDL_DrawGPUIndexedPrimitives(pass, chunk->VoxelBuffers[type].Size * 1.5, 1, 0, 0, 0);
+    }
 }
