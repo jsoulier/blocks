@@ -38,7 +38,7 @@ static const uint kIndices[36] =
 Output main(uint vertexID : SV_VertexID)
 {
     Output output;
-    float3 position = BlockPosition + 0.5f + kVertices[kIndices[vertexID]] * 1.1;
+    float3 position = BlockPosition + 0.5f + kVertices[kIndices[vertexID]] * 1.01;
     output.Position = mul(Transform, float4(position, 1.0f));
     return output;
 }

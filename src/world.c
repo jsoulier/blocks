@@ -101,7 +101,6 @@ static void Move(World* world, const Camera* camera)
             world->Chunks[x][z] = chunk;
         }
         Chunk* chunk = world->Chunks[x][z];
-        // TODO: offset by WORLD_WIDTH / 2?
         chunk->X = (world->X + x) * CHUNK_WIDTH;
         chunk->Y = 0;
         chunk->Z = (world->Z + z) * CHUNK_WIDTH;
@@ -229,6 +228,10 @@ void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* comma
         {
             continue;
         }
+        if (!GetCameraVisibility(camera, chunk->X, chunk->Y, chunk->Z, CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH))
+        {
+            continue;
+        }
         float position[] = {chunk->X, chunk->Y, chunk->Z};
         SDL_GPUBufferBinding vertexBuffer = {0};
         SDL_GPUBufferBinding indexBuffer = {0};
@@ -296,6 +299,7 @@ void SetWorldBlock(World* world, int x, int y, int z, Block block)
     {
         SDL_Log("Bad block position: %d, %d, %d", x, y, z);
     }
+    // TODO: remesh neighbors
 }
 
 WorldQuery RaycastWorld(const World* world, float x, float y, float z, float dx, float dy, float dz, float length)

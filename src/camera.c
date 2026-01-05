@@ -163,10 +163,10 @@ void CreateCamera(Camera* camera, CameraType type)
     camera->Pitch = 0.0f;
     camera->Yaw = 0.0f;
     camera->Roll = 0.0f;
-    camera->Width = 1.0f;
-    camera->Height = 1.0f;
+    camera->Width = 1;
+    camera->Height = 1;
     camera->Fov = Radians(90.0f);
-    camera->Near = 1.0f;
+    camera->Near = 0.1f;
     camera->Far = 1000.0f;
     camera->Ortho = 100.0f;
 }
@@ -180,7 +180,7 @@ void UpdateCamera(Camera* camera)
     Multiply(camera->View, camera->Proj, camera->View);
     Rotate(camera->Proj, 0.0f, 1.0f, 0.0f, -camera->Yaw);
     Multiply(camera->View, camera->Proj, camera->View);
-    float aspect = camera->Width / camera->Height;
+    float aspect = (float) camera->Width / camera->Height;
     if (camera->Type == CameraTypeOrtho)
     {
         float ox = camera->Ortho * aspect;

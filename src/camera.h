@@ -23,8 +23,8 @@ typedef struct Camera
     float Pitch;
     float Yaw;
     float Roll;
-    float Width;
-    float Height;
+    int Width;
+    int Height;
     float Fov;
     float Near;
     float Far;
