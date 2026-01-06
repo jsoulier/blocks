@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include <FastNoiseLite.h>
 
 #include "chunk.h"
 #include "noise.h"
@@ -40,10 +41,11 @@ static void Flat(const Noise* noise, Chunk* chunk)
 
 static void Terrain(const Noise* noise, Chunk* chunk)
 {
-    for (int x = 0; x < CHUNK_WIDTH; x++)
-    for (int y = 0; y < CHUNK_WIDTH; y++)
+    for (int i = 0; i < CHUNK_WIDTH; i++)
+    for (int j = 0; j < CHUNK_WIDTH; j++)
     {
-
+        float x = chunk->X + i;
+        float z = chunk->Z + j;
     }
 }
 

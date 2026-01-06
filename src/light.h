@@ -8,5 +8,8 @@ typedef struct Light
     Uint8 Green;
     Uint8 Blue;
     Uint8 Intensity;
+    Sint32 X;
+    Sint32 Y;
+    Sint32 Z;
 }
 Light;

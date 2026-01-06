@@ -19,6 +19,7 @@ typedef enum ChunkMeshType
 }
 ChunkMeshType;
 
+// TODO: separate the mesh and light generation phase
 typedef enum ChunkFlag
 {
     ChunkFlagNone = 0,

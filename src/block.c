@@ -1,11 +1,13 @@
 #include "block.h"
 #include "direction.h"
+#include "light.h"
 
 struct
 {
     bool Opaque;
     bool Sprite;
     int Faces[6];
+    Light LightValue;
 }
 static const kBlocks[BlockCount] =
 {
@@ -93,6 +95,13 @@ static const kBlocks[BlockCount] =
         .Sprite = false,
         .Faces = {16, 16, 16, 16, 16, 16}
     },
+    [BlockYellowTorch] =
+    {
+        .Opaque = false,
+        .Sprite = false,
+        .Faces = {17, 17, 17, 17, 17, 17},
+        .LightValue = {255, 255, 0, 55},
+    },
 };
 
 bool IsBlockOpaque(Block block)
@@ -108,4 +117,14 @@ bool IsBlockSprite(Block block)
 int GetBlockFace(Block block, Direction direction)
 {
     return kBlocks[block].Faces[direction];
+}
+
+bool IsBlockLightSource(Block block)
+{
+    return kBlocks[block].LightValue.Intensity > 0;
+}
+
+Light GetBlockLight(Block block)
+{
+    return kBlocks[block].LightValue;
 }

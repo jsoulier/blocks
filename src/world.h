@@ -23,6 +23,8 @@ typedef struct World
     Worker Workers[WORLD_WORKERS];
     CpuBuffer CpuIndexBuffer;
     GpuBuffer GpuIndexBuffer;
+    CpuBuffer CpuEmptyLightBuffer;
+    GpuBuffer GpuEmptyLightBuffer;
     Chunk* Chunks[WORLD_WIDTH][WORLD_WIDTH];
     int SortedChunks[WORLD_WIDTH - 2][WORLD_WIDTH - 2][2];
 }

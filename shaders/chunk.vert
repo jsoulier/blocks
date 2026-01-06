@@ -18,14 +18,17 @@ struct Input
 struct Output
 {
     float4 Position : SV_Position;
-    float3 Texcoord : TEXCOORD0;
+    float3 WorldPosition : TEXCOORD0;
+    nointerpolation float3 Normal : TEXCOORD1;
+    float3 Texcoord : TEXCOORD2;
 };
 
 Output main(Input input)
 {
     Output output;
-    float3 position = VoxelGetPosition(input.Voxel) + ChunkPosition;
-    output.Position = mul(Transform, float4(position, 1.0f));
+    output.WorldPosition = VoxelGetPosition(input.Voxel) + ChunkPosition;
+    output.Normal = VoxelGetNormal(input.Voxel);
+    output.Position = mul(Transform, float4(output.WorldPosition, 1.0f));
     output.Texcoord = VoxelGetTexcoord(input.Voxel);
     return output;
 }

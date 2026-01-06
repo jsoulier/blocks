@@ -39,6 +39,7 @@ static Save save;
 static Camera camera;
 static Noise noise;
 static Uint64 ticks;
+static Block block = BlockYellowTorch;
 
 static bool CreateAtlas()
 {
@@ -614,8 +615,17 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
             }
             else if (event->button.button == SDL_BUTTON_RIGHT)
             {
-                SetWorldBlock(&world, query.PreviousPosition[0], query.PreviousPosition[1], query.PreviousPosition[2], BlockStone, &save);
+                SetWorldBlock(&world, query.PreviousPosition[0], query.PreviousPosition[1], query.PreviousPosition[2], block, &save);
             }
+        }
+        break;
+    case SDL_EVENT_MOUSE_WHEEL:
+        {
+            int value = block;
+            value += event->wheel.y;
+            value = value % BlockCount;
+            value = SDL_max(value, 1);
+            block = value;
         }
         break;
     }

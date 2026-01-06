@@ -62,7 +62,14 @@ void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block)
     {
         RemoveMapValue(&chunk->Blocks, x, y, z);
     }
-    // TODO: check if light (if so, add/remove)
+    if (IsBlockLightSource(block))
+    {
+        SetMapValue(&chunk->Lights, x, y, z, block);
+    }
+    else
+    {
+        RemoveMapValue(&chunk->Lights, x, y, z);
+    }
 }
 
 Block GetChunkBlock(const Chunk* chunk, int x, int y, int z)
@@ -159,10 +166,36 @@ void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], CpuBuffer voxelBuffer
             }
         }
     }
+    for (int i = -1; i <= 1; i++)
+    for (int j = -1; j <= 1; j++)
+    {
+        // NOTE: not really a neighbor since it's also us
+        const Chunk* neighbor = neighbors[i + 1][j + 1];
+        if (!neighbor)
+        {
+            continue;
+        }
+        for (Uint32 i = 0; i < neighbor->Lights.Capacity; i++)
+        {
+            if (!IsMapRowValid(&neighbor->Lights, i))
+            {
+                continue;
+            }
+            MapRow row = GetMapRow(&neighbor->Lights, i);
+            SDL_assert(row.Value != BlockEmpty);
+            SDL_assert(IsBlockLightSource(row.Value));
+            Light light = GetBlockLight(row.Value);
+            light.X = neighbor->X + row.X;
+            light.Y = neighbor->Y + row.Y;
+            light.Z = neighbor->Z + row.Z;
+            AppendCpuBuffer(lightBuffer, &light);
+        }
+    }
     for (int i = 0; i < ChunkMeshTypeCount; i++)
     {
         UpdateGpuBuffer(&chunk->VoxelBuffers[i], pass, &voxelBuffers[i]);
     }
+    UpdateGpuBuffer(&chunk->LightBuffer, pass, lightBuffer);
     SDL_EndGPUCopyPass(pass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
     chunk->Flags &= ~ChunkFlagMesh;

@@ -4,6 +4,7 @@
 #include "buffer.h"
 #include "camera.h"
 #include "chunk.h"
+#include "light.h"
 #include "save.h"
 #include "sort.h"
 #include "worker.h"
@@ -22,6 +23,8 @@ void CreateWorld(World* world, SDL_GPUDevice* device)
     world->Z = INT32_MAX;
     CreateCpuBuffer(&world->CpuIndexBuffer, device, sizeof(Uint32));
     CreateGpuBuffer(&world->GpuIndexBuffer, device, SDL_GPU_BUFFERUSAGE_INDEX);
+    CreateCpuBuffer(&world->CpuEmptyLightBuffer, device, sizeof(Light));
+    CreateGpuBuffer(&world->GpuEmptyLightBuffer, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     for (int i = 0; i < WORLD_WORKERS; i++)
     {
         CreateWorker(&world->Workers[i], device);
@@ -56,6 +59,8 @@ void DestroyWorld(World* world)
     }
     DestroyCpuBuffer(&world->CpuIndexBuffer);
     DestroyGpuBuffer(&world->GpuIndexBuffer);
+    DestroyCpuBuffer(&world->CpuEmptyLightBuffer);
+    DestroyGpuBuffer(&world->GpuEmptyLightBuffer);
 }
 
 static void Move(World* world, const Camera* camera)
@@ -136,6 +141,12 @@ static void CreateIndexBuffer(World* world, Uint32 size)
         return;
     }
     UpdateGpuBuffer(&world->GpuIndexBuffer, pass, &world->CpuIndexBuffer);
+
+    // TODO:
+    Light light = {0};
+    AppendCpuBuffer(&world->CpuEmptyLightBuffer, &light);
+    UpdateGpuBuffer(&world->GpuEmptyLightBuffer, pass, &world->CpuEmptyLightBuffer);
+
     SDL_EndGPUCopyPass(pass);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
 }
@@ -238,6 +249,18 @@ void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* comma
         SDL_GPUBufferBinding indexBuffer = {0};
         vertexBuffer.buffer = chunk->VoxelBuffers[type].Buffer;
         indexBuffer.buffer = world->GpuIndexBuffer.Buffer;
+
+        Sint32 lightCount = chunk->LightBuffer.Size;
+        if (lightCount)
+        {
+            SDL_BindGPUFragmentStorageBuffers(pass, 0, &chunk->LightBuffer.Buffer, 1);
+        }
+        else
+        {
+            SDL_BindGPUFragmentStorageBuffers(pass, 0, &world->GpuEmptyLightBuffer.Buffer, 1);
+        }
+        SDL_PushGPUFragmentUniformData(commandBuffer, 0, &lightCount, sizeof(lightCount));
+
         SDL_PushGPUVertexUniformData(commandBuffer, 1, position, sizeof(position));
         SDL_BindGPUVertexBuffers(pass, 0, &vertexBuffer, 1);
         SDL_BindGPUIndexBuffer(pass, &indexBuffer, SDL_GPU_INDEXELEMENTSIZE_32BIT);
@@ -304,6 +327,17 @@ void SetWorldBlock(World* world, int x, int y, int z, Block block, Save* save)
         SDL_assert(chunk->Y == (world->Y + chunkY) * CHUNK_HEIGHT);
         SDL_assert(chunk->Z == (world->Z + chunkZ) * CHUNK_WIDTH);
         SetChunkBlock(chunk, x, y, z, block);
+        for (int i = -1; i <= 1; i++)
+        for (int j = -1; j <= 1; j++)
+        {
+            int k = chunkX + i;
+            int l = chunkZ + j;
+            Chunk* neighbor = GetWorldChunk(world, k, chunkY, l);
+            if (neighbor)
+            {
+                neighbor->Flags |= ChunkFlagMesh;
+            }
+        }
     }
     else
     {
@@ -311,7 +345,6 @@ void SetWorldBlock(World* world, int x, int y, int z, Block block, Save* save)
         return;
     }
     SaveBlock(save, world->X + chunkX, world->Y + chunkY, world->Z + chunkZ, x, y, z, block);
-    // TODO: remesh neighbors
 }
 
 WorldQuery RaycastWorld(const World* world, float x, float y, float z, float dx, float dy, float dz, float length)
