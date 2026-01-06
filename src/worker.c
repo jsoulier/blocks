@@ -31,6 +31,7 @@ static int Loop(void* args)
         {
         case WorkerJobTypeGenerate:
             GenerateChunk(chunk, job->NoiseRef);
+            LoadChunkFromSave(job->SaveRef, chunk->X / CHUNK_WIDTH, chunk->Y / CHUNK_HEIGHT, chunk->Z / CHUNK_WIDTH, chunk);
             // TODO: use save
             break;
         case WorkerJobTypeMesh:

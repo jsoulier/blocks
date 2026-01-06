@@ -44,6 +44,6 @@ Chunk* GetWorldChunk(const World* world, int x, int y, int z);
 
 // TODO: convert to take arrays for position instead
 Block GetWorldBlock(const World* world, int x, int y, int z);
-void SetWorldBlock(World* world, int x, int y, int z, Block block);
+void SetWorldBlock(World* world, int x, int y, int z, Block block, Save* save);
 
 WorldQuery RaycastWorld(const World* world, float x, float y, float z, float dx, float dy, float dz, float length);

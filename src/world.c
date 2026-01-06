@@ -4,6 +4,7 @@
 #include "buffer.h"
 #include "camera.h"
 #include "chunk.h"
+#include "save.h"
 #include "sort.h"
 #include "worker.h"
 #include "world.h"
@@ -271,6 +272,12 @@ Block GetWorldBlock(const World* world, int x, int y, int z)
     int chunkY = FloorChunkIndex(y - world->Y * CHUNK_HEIGHT);
     int chunkZ = FloorChunkIndex(z - world->Z * CHUNK_WIDTH);
     Chunk* chunk = GetWorldChunk(world, chunkX, chunkY, chunkZ);
+    if (chunk)
+    {
+        SDL_assert(chunk->X == (world->X + chunkX) * CHUNK_WIDTH);
+        SDL_assert(chunk->Y == (world->Y + chunkY) * CHUNK_HEIGHT);
+        SDL_assert(chunk->Z == (world->Z + chunkZ) * CHUNK_WIDTH);
+    }
     if (chunk && !(chunk->Flags & ChunkFlagGenerate))
     {
         return GetChunkBlock(chunk, x, y, z);
@@ -281,7 +288,7 @@ Block GetWorldBlock(const World* world, int x, int y, int z)
     }
 }
 
-void SetWorldBlock(World* world, int x, int y, int z, Block block)
+void SetWorldBlock(World* world, int x, int y, int z, Block block, Save* save)
 {
     if (y < 0 || y >= CHUNK_HEIGHT)
     {
@@ -293,12 +300,17 @@ void SetWorldBlock(World* world, int x, int y, int z, Block block)
     Chunk* chunk = GetWorldChunk(world, chunkX, chunkY, chunkZ);
     if (chunk && !(chunk->Flags & ChunkFlagGenerate))
     {
+        SDL_assert(chunk->X == (world->X + chunkX) * CHUNK_WIDTH);
+        SDL_assert(chunk->Y == (world->Y + chunkY) * CHUNK_HEIGHT);
+        SDL_assert(chunk->Z == (world->Z + chunkZ) * CHUNK_WIDTH);
         SetChunkBlock(chunk, x, y, z, block);
     }
     else
     {
         SDL_Log("Bad block position: %d, %d, %d", x, y, z);
+        return;
     }
+    SaveBlock(save, world->X + chunkX, world->Y + chunkY, world->Z + chunkZ, x, y, z, block);
     // TODO: remesh neighbors
 }
 

@@ -16,6 +16,8 @@ static const float kSpeed = 0.01f;
 static const float kSensitivity = 0.1f;
 static const float kReach = 10.0f;
 
+static const char* kSavePath = "blocks.sqlite3";
+
 static SDL_GPUSampleCount kSampleCount = SDL_GPU_SAMPLECOUNT_4;
 
 static SDL_Window* window;
@@ -351,12 +353,14 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     CreateNoise(&noise, NoiseTypeFlat, 1337);
     CreateWorld(&world, device);
     CreateCamera(&camera, CameraTypePerspective);
+    CreateOrLoadSave(&save, kSavePath);
     ticks = SDL_GetTicks();
     return SDL_APP_CONTINUE;
 }
 
 void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
+    CloseSave(&save);
     DestroyWorld(&world);
     SDL_ReleaseGPUSampler(device, linearSampler);
     SDL_ReleaseGPUSampler(device, nearestSampler);
@@ -447,49 +451,6 @@ static void OpaquePass(SDL_GPUCommandBuffer* commandBuffer, SDL_GPUTexture* swap
     );
 }
 
-static void TransparentPass(SDL_GPUCommandBuffer* commandBuffer, SDL_GPUTexture* swapchainTexture)
-{
-    // SDL_GPUColorTargetInfo colorInfo = {0};
-    // colorInfo.load_op = SDL_GPU_LOADOP_LOAD;
-    // colorInfo.store_op = SDL_GPU_STOREOP_STORE;
-    // colorInfo.texture = swapchainTexture;
-    // SDL_GPUDepthStencilTargetInfo depthInfo = {0};
-    // depthInfo.load_op = SDL_GPU_LOADOP_LOAD;
-    // depthInfo.store_op = SDL_GPU_STOREOP_STORE;
-    // depthInfo.texture = depthTexture;
-    // SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commandBuffer, &colorInfo, 1, &depthInfo);
-    // if (!pass)
-    // {
-    //     SDL_Log("Failed to begin render pass: %s", SDL_GetError());
-    //     return;
-    // }
-    // // SDL_GPUTextureSamplerBinding texture = {0};
-    // // texture.sampler = nearestSampler;
-    // // texture.texture = atlasTexture;
-    // // SDL_PushGPUDebugGroup(commandBuffer, "ChunkMeshTypeTransparent");
-    // // SDL_BindGPUGraphicsPipeline(pass, chunkPipeline);
-    // // SDL_BindGPUFragmentSamplers(pass, 0, &texture, 1);
-    // // SDL_PushGPUVertexUniformData(commandBuffer, 0, camera.Matrix, 64);
-    // // RenderWorld(&world, &camera, commandBuffer, pass, ChunkMeshTypeTransparent);
-    // // SDL_PopGPUDebugGroup(commandBuffer);
-    // SDL_PushGPUDebugGroup(commandBuffer, "Raycast");
-    // {
-    //     float dx;
-    //     float dy;
-    //     float dz;
-    //     GetCameraVector(&camera, &dx, &dy, &dz);
-    //     WorldQuery query = RaycastWorld(&world, camera.X, camera.Y, camera.Z, dx, dy, dz, kReach);
-    //     if (query.HitBlock != BlockEmpty)
-    //     {
-    //         SDL_BindGPUGraphicsPipeline(pass, raycastPipeline);
-    //         SDL_PushGPUVertexUniformData(commandBuffer, 0, camera.Matrix, 64);
-    //         SDL_PushGPUVertexUniformData(commandBuffer, 1, query.Position, 12);
-    //         SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
-    //     }
-    // }
-    // SDL_PopGPUDebugGroup(commandBuffer);
-    // SDL_EndGPURenderPass(pass);
-}
 void Move(float deltaTime)
 {
     if (!SDL_GetWindowRelativeMouseMode(window))
@@ -593,7 +554,6 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     }
     UpdateCamera(&camera);
     OpaquePass(commandBuffer, swapchainTexture);
-    TransparentPass(commandBuffer, swapchainTexture);
     SDL_SubmitGPUCommandBuffer(commandBuffer);
     return SDL_APP_CONTINUE;
 }
@@ -650,11 +610,11 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
             }
             if (event->button.button == SDL_BUTTON_LEFT)
             {
-                SetWorldBlock(&world, query.Position[0], query.Position[1], query.Position[2], BlockEmpty);
+                SetWorldBlock(&world, query.Position[0], query.Position[1], query.Position[2], BlockEmpty, &save);
             }
             else if (event->button.button == SDL_BUTTON_RIGHT)
             {
-                SetWorldBlock(&world, query.PreviousPosition[0], query.PreviousPosition[1], query.PreviousPosition[2], BlockStone);
+                SetWorldBlock(&world, query.PreviousPosition[0], query.PreviousPosition[1], query.PreviousPosition[2], BlockStone, &save);
             }
         }
         break;
