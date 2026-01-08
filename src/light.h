@@ -2,14 +2,14 @@
 
 #include <SDL3/SDL.h>
 
-typedef struct Light
+typedef struct light
 {
-    Uint8 Red;
-    Uint8 Green;
-    Uint8 Blue;
-    Uint8 Intensity;
-    Sint32 X;
-    Sint32 Y;
-    Sint32 Z;
+    Uint8 red;
+    Uint8 green;
+    Uint8 blue;
+    Uint8 intensity;
+    Sint32 x;
+    Sint32 y;
+    Sint32 z;
 }
-Light;
+light_t;

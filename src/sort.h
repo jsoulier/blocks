@@ -1,3 +1,3 @@
 #pragma once
 
-void SortXY(int x, int y, int* data, int size);
+void sort_xy(int x, int y, int* data, int size);

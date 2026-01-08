@@ -8,195 +8,251 @@
 #include "noise.h"
 #include "voxel.h"
 
-static bool Contains(const Chunk* chunk, int x, int y, int z)
+static bool is_local(int x, int y, int z)
 {
-    return x >= 0 && y >= 0 && z >= 0 && x < CHUNK_WIDTH && y < CHUNK_HEIGHT && z < CHUNK_WIDTH;
+    SDL_assert(y >= 0);
+    SDL_assert(y < CHUNK_HEIGHT);
+    return x >= 0 && z >= 0 && x < CHUNK_WIDTH && z < CHUNK_WIDTH;
 }
 
-static void Transform(const Chunk* chunk, int* x, int* y, int* z)
+void chunk_world_to_local(const chunk_t* chunk, int* x, int* y, int* z)
 {
-    *x -= chunk->X;
-    *y -= chunk->Y;
-    *z -= chunk->Z;
-    SDL_assert(Contains(chunk, *x, *y, *z));
+    *x -= chunk->x;
+    *z -= chunk->z;
+    SDL_assert(is_local(*x, *y, *z));
 }
 
-void CreateChunk(Chunk* chunk, SDL_GPUDevice* device)
+void chunk_local_to_world(const chunk_t* chunk, int* x, int* y, int* z)
 {
-    chunk->Device = device;
-    chunk->Flags = ChunkFlagGenerate;
-    chunk->X = 0;
-    chunk->Y = 0;
-    chunk->Z = 0;
-    CreateMap(&chunk->Blocks);
-    CreateMap(&chunk->Lights);
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    // TODO: SDL_assert(is_local(*x, *y, *z));
+    *x += chunk->x;
+    *z += chunk->z;
+}
+
+void chunk_init(chunk_t* chunk, SDL_GPUDevice* device)
+{
+    chunk->device = device;
+    chunk->flag = CHUNK_FLAG_SET_BLOCKS;
+    chunk->x = 0;
+    chunk->z = 0;
+    map_init(&chunk->blocks, 32);
+    map_init(&chunk->lights, 1);
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
-        CreateGpuBuffer(&chunk->VoxelBuffers[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
+        gpu_buffer_init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
     }
-    CreateGpuBuffer(&chunk->LightBuffer, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    gpu_buffer_init(&chunk->gpu_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
 }
 
-void DestroyChunk(Chunk* chunk)
+void chunk_free(chunk_t* chunk)
 {
-    chunk->Device = NULL;
-    chunk->Flags = ChunkFlagNone;
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    gpu_buffer_free(&chunk->gpu_lights);
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
-        DestroyGpuBuffer(&chunk->VoxelBuffers[i]);
+        gpu_buffer_free(&chunk->gpu_voxels[i]);
     }
-    DestroyGpuBuffer(&chunk->LightBuffer);
-    DestroyMap(&chunk->Blocks);
-    DestroyMap(&chunk->Lights);
+    map_free(&chunk->blocks);
+    map_free(&chunk->lights);
+    chunk->x = 0;
+    chunk->z = 0;
+    chunk->flag = CHUNK_FLAG_NONE;
+    chunk->device = NULL;
 }
 
-void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block)
+block_t chunk_set_block(chunk_t* chunk, int x, int y, int z, block_t block)
 {
-    chunk->Flags |= ChunkFlagMesh;
-    Transform(chunk, &x, &y, &z);
-    if (block != BlockEmpty)
+    chunk->flag |= CHUNK_FLAG_SET_VOXELS;
+    chunk_world_to_local(chunk, &x, &y, &z);
+    if (block != BLOCK_EMPTY)
     {
-        SetMapValue(&chunk->Blocks, x, y, z, block);
+        map_set(&chunk->blocks, x, y, z, block);
     }
     else
     {
-        RemoveMapValue(&chunk->Blocks, x, y, z);
+        map_remove(&chunk->blocks, x, y, z);
     }
-    if (IsBlockLightSource(block))
+    block_t old_block = map_get(&chunk->lights, x, y, z);
+    if (!block_is_light(block) && !block_is_light(old_block))
     {
-        SetMapValue(&chunk->Lights, x, y, z, block);
+        return old_block;
+    }
+    chunk->flag |= CHUNK_FLAG_SET_LIGHTS;
+    if (block_is_light(block))
+    {
+        map_set(&chunk->lights, x, y, z, block);
     }
     else
     {
-        RemoveMapValue(&chunk->Lights, x, y, z);
+        map_remove(&chunk->lights, x, y, z);
     }
+    return old_block;
 }
 
-Block GetChunkBlock(const Chunk* chunk, int x, int y, int z)
+block_t chunk_get_block(const chunk_t* chunk, int x, int y, int z)
 {
-    SDL_assert(!(chunk->Flags & ChunkFlagGenerate));
-    Transform(chunk, &x, &y, &z);
-    return GetMapValue(&chunk->Blocks, x, y, z);
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_BLOCKS));
+    chunk_world_to_local(chunk, &x, &y, &z);
+    return map_get(&chunk->blocks, x, y, z);
 }
 
-void GenerateChunk(Chunk* chunk, const Noise* noise)
+static block_t get_block(chunk_t* chunks[3][3], int x, int y, int z, int dx, int dy, int dz)
 {
-    SDL_assert(chunk->Flags & ChunkFlagGenerate);
-    ClearMap(&chunk->Blocks);
-    ClearMap(&chunk->Lights);
-    GenerateChunkNoise(noise, chunk);
-    chunk->Flags &= ~ChunkFlagGenerate;
-    chunk->Flags |= ChunkFlagMesh;
+    SDL_assert(dx >= -1 && dx <= 1);
+    SDL_assert(dy >= -1 && dy <= 1);
+    SDL_assert(dz >= -1 && dz <= 1);
+    x += dx;
+    y += dy;
+    z += dz;
+    const chunk_t* chunk = chunks[1][1];
+    if (y == CHUNK_HEIGHT)
+    {
+        return BLOCK_EMPTY;
+    }
+    else if (y == -1)
+    {
+        return BLOCK_GRASS;
+    }
+    if (is_local(x, y, z))
+    {
+        return map_get(&chunk->blocks, x, y, z);
+    }
+    chunk_local_to_world(chunk, &x, &y, &z);
+    const chunk_t* neighbor = chunks[dx + 1][dz + 1];
+    SDL_assert(neighbor);
+    return chunk_get_block(neighbor, x, y, z);
 }
 
-void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer)
+static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[CHUNK_MESH_TYPE_COUNT])
 {
-    SDL_assert(!(chunk->Flags & ChunkFlagGenerate));
-    SDL_assert(chunk->Flags & ChunkFlagMesh);
-    SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(chunk->Device);
-    if (!commandBuffer)
+    bool has_voxels = false;
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
+    {
+        has_voxels |= voxels[i].size > 0;
+    }
+    if (!has_voxels)
+    {
+        return;
+    }
+    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(chunk->device);
+    if (!command_buffer)
     {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
         return;
     }
-    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commandBuffer);
-    if (!pass)
+    SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+    if (!copy_pass)
     {
         SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
-        SDL_CancelGPUCommandBuffer(commandBuffer);
+        SDL_CancelGPUCommandBuffer(command_buffer);
         return;
     }
-    for (Uint32 i = 0; i < chunk->Blocks.Capacity; i++)
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
-        if (!IsMapRowValid(&chunk->Blocks, i))
+        gpu_buffer_update(&chunk->gpu_voxels[i], copy_pass, &voxels[i]);
+    }
+    SDL_EndGPUCopyPass(copy_pass);
+    SDL_SubmitGPUCommandBuffer(command_buffer);
+}
+
+static void upload_lights(chunk_t* chunk, cpu_buffer_t* lights)
+{
+    if (!lights->size)
+    {
+        return;
+    }
+    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(chunk->device);
+    if (!command_buffer)
+    {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+    if (!copy_pass)
+    {
+        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
+        SDL_CancelGPUCommandBuffer(command_buffer);
+        return;
+    }
+    gpu_buffer_update(&chunk->gpu_lights, copy_pass, lights);
+    SDL_EndGPUCopyPass(copy_pass);
+    SDL_SubmitGPUCommandBuffer(command_buffer);
+}
+
+void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE_COUNT])
+{
+    chunk_t* chunk = chunks[1][1];
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_BLOCKS));
+    SDL_assert(chunk->flag & CHUNK_FLAG_SET_VOXELS);
+    for (Uint32 i = 0; i < chunk->blocks.capacity; i++)
+    {
+        if (!map_is_row_valid(&chunk->blocks, i))
         {
             continue;
         }
-        MapRow row = GetMapRow(&chunk->Blocks, i);
-        SDL_assert(row.Value != BlockEmpty);
-        if (IsBlockSprite(row.Value))
+        map_row_t row = map_get_row(&chunk->blocks, i);
+        SDL_assert(row.value != BLOCK_EMPTY);
+        if (block_is_sprite(row.value))
         {
             continue;
         }
         for (int j = 0; j < 6; j++)
         {
-            int neighborX = row.X + kDirections[j][0];
-            int neighborY = row.Y + kDirections[j][1];
-            int neighborZ = row.Z + kDirections[j][2];
-            Block neighborBlock;
-            if (neighborY == CHUNK_HEIGHT)
-            {
-                neighborBlock = BlockEmpty;
-            }
-            else if (neighborY == -1)
-            {
-                continue;
-            }
-            else if (Contains(chunk, neighborX, neighborY, neighborZ))
-            {
-                neighborBlock = GetMapValue(&chunk->Blocks, neighborX, neighborY, neighborZ);
-            }
-            else
-            {
-                neighborX += chunk->X;
-                neighborY += chunk->Y;
-                neighborZ += chunk->Z;
-                SDL_assert(kDirections[j][1] == 0);
-                int directionX = kDirections[j][0] + 1;
-                int directionZ = kDirections[j][2] + 1;
-                const Chunk* neighbor = neighbors[directionX][directionZ];
-                // TODO: replace condition with SDL_assert
-                if (neighbor)
-                {
-                    neighborBlock = GetChunkBlock(neighbor, neighborX, neighborY, neighborZ);
-                }
-                else
-                {
-                    neighborBlock = BlockEmpty;
-                }
-            }
-            if (IsBlockOpaque(neighborBlock))
+            int dx = DIRECTIONS[j][0];
+            int dy = DIRECTIONS[j][1];
+            int dz = DIRECTIONS[j][2];
+            block_t neighbor = get_block(chunks, row.x, row.y, row.z, dx, dy, dz);
+            if (block_is_opaque(neighbor))
             {
                 continue;
             }
             for (int k = 0; k < 4; k++)
             {
-                Voxel voxel = VoxelPackCube(row.Value, row.X, row.Y, row.Z, j, 0, k);
-                AppendCpuBuffer(&voxelBuffers[ChunkMeshTypeDefault], &voxel);
+                voxel_t voxel = voxel_pack_cube(row.value, row.x, row.y, row.z, j, k);
+                cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_OPAQUE], &voxel);
             }
         }
     }
+    upload_voxels(chunk, voxels);
+    chunk->flag &= ~CHUNK_FLAG_SET_VOXELS;
+}
+
+void chunk_set_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights)
+{
+    chunk_t* chunk = chunks[1][1];
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_BLOCKS));
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_VOXELS));
+    SDL_assert(chunk->flag & CHUNK_FLAG_SET_LIGHTS);
     for (int i = -1; i <= 1; i++)
     for (int j = -1; j <= 1; j++)
     {
-        // NOTE: not really a neighbor since it's also us
-        const Chunk* neighbor = neighbors[i + 1][j + 1];
-        if (!neighbor)
+        const chunk_t* neighbor = chunks[i + 1][j + 1];
+        SDL_assert(neighbor);
+        for (Uint32 i = 0; i < neighbor->lights.capacity; i++)
         {
-            continue;
-        }
-        for (Uint32 i = 0; i < neighbor->Lights.Capacity; i++)
-        {
-            if (!IsMapRowValid(&neighbor->Lights, i))
+            if (!map_is_row_valid(&neighbor->lights, i))
             {
                 continue;
             }
-            MapRow row = GetMapRow(&neighbor->Lights, i);
-            SDL_assert(row.Value != BlockEmpty);
-            SDL_assert(IsBlockLightSource(row.Value));
-            Light light = GetBlockLight(row.Value);
-            light.X = neighbor->X + row.X;
-            light.Y = neighbor->Y + row.Y;
-            light.Z = neighbor->Z + row.Z;
-            AppendCpuBuffer(lightBuffer, &light);
+            map_row_t row = map_get_row(&neighbor->lights, i);
+            SDL_assert(row.value != BLOCK_EMPTY);
+            SDL_assert(block_is_light(row.value));
+            light_t light = block_get_light(row.value);
+            light.x = neighbor->x + row.x;
+            light.y = row.y;
+            light.z = neighbor->z + row.z;
+            cpu_buffer_append(lights, &light);
         }
     }
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
-    {
-        UpdateGpuBuffer(&chunk->VoxelBuffers[i], pass, &voxelBuffers[i]);
-    }
-    UpdateGpuBuffer(&chunk->LightBuffer, pass, lightBuffer);
-    SDL_EndGPUCopyPass(pass);
-    SDL_SubmitGPUCommandBuffer(commandBuffer);
-    chunk->Flags &= ~ChunkFlagMesh;
+    upload_lights(chunk, lights);
+    chunk->flag &= ~CHUNK_FLAG_SET_LIGHTS;
+}
+
+void chunk_set_blocks(chunk_t* chunk)
+{
+    SDL_assert(chunk->flag & CHUNK_FLAG_SET_BLOCKS);
+    map_clear(&chunk->blocks);
+    map_clear(&chunk->lights);
+    noise_generate(chunk, chunk->x, chunk->z);
+    chunk->flag &= ~CHUNK_FLAG_SET_BLOCKS;
+    chunk->flag |= CHUNK_FLAG_SET_LIGHTS;
 }

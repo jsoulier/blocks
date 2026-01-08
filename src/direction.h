@@ -1,22 +1,22 @@
 #pragma once
 
-typedef enum Direction
+typedef enum direction
 {
-    DirectionNorth,
-    DirectionSouth,
-    DirectionEast,
-    DirectionWest,
-    DirectionUp,
-    DirectionDown,
+    DIRECTION_NORTH,
+    DIRECTION_SOUTH,
+    DIRECTION_EAST,
+    DIRECTION_WEST,
+    DIRECTION_UP,
+    DIRECTION_DOWN,
 }
-Direction;
+direction_t;
 
-static const int kDirections[][3] =
+static const int DIRECTIONS[][3] =
 {
-    [DirectionNorth] = { 0, 0, 1 },
-    [DirectionSouth] = { 0, 0,-1 },
-    [DirectionEast]  = { 1, 0, 0 },
-    [DirectionWest]  = {-1, 0, 0 },
-    [DirectionUp]    = { 0, 1, 0 },
-    [DirectionDown]  = { 0,-1, 0 },
+    [DIRECTION_NORTH] = { 0, 0, 1 },
+    [DIRECTION_SOUTH] = { 0, 0,-1 },
+    [DIRECTION_EAST]  = { 1, 0, 0 },
+    [DIRECTION_WEST]  = {-1, 0, 0 },
+    [DIRECTION_UP]    = { 0, 1, 0 },
+    [DIRECTION_DOWN]  = { 0,-1, 0 },
 };

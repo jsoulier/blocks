@@ -12,7 +12,7 @@ struct Output
 {
     float4 Position : SV_POSITION;
 };
-    
+
 static const float3 kVertices[8] =
 {
     float3(-0.5f,-0.5f,-0.5f),
@@ -35,10 +35,12 @@ static const uint kIndices[36] =
     4, 5, 1, 4, 1, 0
 };
 
+static const float kScale = 1.01f;
+
 Output main(uint vertexID : SV_VertexID)
 {
     Output output;
-    float3 position = BlockPosition + 0.5f + kVertices[kIndices[vertexID]] * 1.01;
+    float3 position = BlockPosition + 0.5f + kVertices[kIndices[vertexID]] * kScale;
     output.Position = mul(Transform, float4(position, 1.0f));
     return output;
 }

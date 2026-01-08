@@ -8,44 +8,35 @@
 #include "worker.h"
 
 #define WORLD_WIDTH 20
-#define WORLD_WORKERS 4
 
-typedef struct Camera Camera;
-typedef struct Noise Noise;
-typedef struct Save Save;
+typedef struct camera camera_t;
 
-typedef struct World
+typedef struct world_query
 {
-    SDL_GPUDevice* Device;
-    int X;
-    int Y;
-    int Z;
-    Worker Workers[WORLD_WORKERS];
-    CpuBuffer CpuIndexBuffer;
-    GpuBuffer GpuIndexBuffer;
-    CpuBuffer CpuEmptyLightBuffer;
-    GpuBuffer GpuEmptyLightBuffer;
-    Chunk* Chunks[WORLD_WIDTH][WORLD_WIDTH];
-    int SortedChunks[WORLD_WIDTH - 2][WORLD_WIDTH - 2][2];
+    block_t block;
+    int current[3];
+    int previous[3];
 }
-World;
+world_query_t;
 
-typedef struct WorldQuery
+typedef struct world_render
 {
-    Block HitBlock;
-    int Position[3];
-    int PreviousPosition[3];
+    camera_t* camera;
+    chunk_mesh_type_t type;
+    SDL_GPUCommandBuffer* command_buffer;
+    SDL_GPURenderPass* render_pass;
+    SDL_GPUGraphicsPipeline* pipeline;
+    SDL_GPUSampler* sampler;
+    SDL_GPUTexture* atlas_texture;
 }
-WorldQuery;
+world_render_data_t;
 
-void CreateWorld(World* world, SDL_GPUDevice* device);
-void DestroyWorld(World* world);
-void UpdateWorld(World* world, const Camera* camera, Save* save, Noise* noise);
-void RenderWorld(World* world, const Camera* camera, SDL_GPUCommandBuffer* commandBuffer, SDL_GPURenderPass* pass, ChunkMeshType type);
-Chunk* GetWorldChunk(const World* world, int x, int y, int z);
-
-// TODO: convert to take arrays for position instead
-Block GetWorldBlock(const World* world, int x, int y, int z);
-void SetWorldBlock(World* world, int x, int y, int z, Block block, Save* save);
-
-WorldQuery RaycastWorld(const World* world, float x, float y, float z, float dx, float dy, float dz, float length);
+void world_init(SDL_GPUDevice* device);
+void world_free();
+void world_update(const camera_t* camera);
+void world_render(const world_render_data_t* data);
+chunk_t* world_get_chunk(int x, int z);
+void world_get_chunks(int x, int z, chunk_t* chunks[3][3]);
+block_t world_get_block(int index[3]);
+void world_set_block(int index[3], block_t block);
+world_query_t world_query(float x, float y, float z, float dx, float dy, float dz, float length);

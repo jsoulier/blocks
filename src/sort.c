@@ -2,7 +2,7 @@
 
 #include "sort.h"
 
-static int Compare(void* userdata, const void* lhs, const void* rhs)
+static int compare(void* userdata, const void* lhs, const void* rhs)
 {
     int cx = ((int*) userdata)[0];
     int cy = ((int*) userdata)[1];
@@ -13,7 +13,7 @@ static int Compare(void* userdata, const void* lhs, const void* rhs)
     return (a > b) - (a < b);
 }
 
-void SortXY(int x, int y, int* data, int size)
+void sort_xy(int x, int y, int* data, int size)
 {
-    SDL_qsort_r(data, size, sizeof(int)*2, Compare, (int[]) {x, y});
+    SDL_qsort_r(data, size, sizeof(int) * 2, compare, (int[]) {x, y});
 }

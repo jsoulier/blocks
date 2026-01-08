@@ -9,42 +9,42 @@
 #define CHUNK_WIDTH 30
 #define CHUNK_HEIGHT 240
 
-typedef struct Noise Noise;
-
-typedef enum ChunkMeshType
+typedef enum chunk_mesh_type
 {
-    ChunkMeshTypeDefault,
-    ChunkMeshTypeTransparent,
-    ChunkMeshTypeCount,
+    CHUNK_MESH_TYPE_OPAQUE,
+    CHUNK_MESH_TYPE_TRANSPARENT,
+    CHUNK_MESH_TYPE_COUNT,
 }
-ChunkMeshType;
+chunk_mesh_type_t;
 
-// TODO: separate the mesh and light generation phase
-typedef enum ChunkFlag
+typedef enum chunk_flag
 {
-    ChunkFlagNone = 0,
-    ChunkFlagGenerate = 1,
-    ChunkFlagMesh = 2,
+    CHUNK_FLAG_NONE       = 0,
+    CHUNK_FLAG_SET_BLOCKS = 1,
+    CHUNK_FLAG_SET_VOXELS = 2,
+    CHUNK_FLAG_SET_LIGHTS = 4,
 }
-ChunkFlag;
+chunk_flag_t;
 
-typedef struct Chunk
+typedef struct chunk
 {
-    SDL_GPUDevice* Device;
-    ChunkFlag Flags;
-    int X;
-    int Y;
-    int Z;
-    Map Blocks;
-    Map Lights;
-    GpuBuffer VoxelBuffers[ChunkMeshTypeCount];
-    GpuBuffer LightBuffer;
+    SDL_GPUDevice* device;
+    chunk_flag_t flag;
+    int x;
+    int z;
+    map_t blocks;
+    map_t lights;
+    gpu_buffer_t gpu_voxels[CHUNK_MESH_TYPE_COUNT];
+    gpu_buffer_t gpu_lights;
 }
-Chunk;
+chunk_t;
 
-void CreateChunk(Chunk* chunk, SDL_GPUDevice* device);
-void DestroyChunk(Chunk* chunk);
-void SetChunkBlock(Chunk* chunk, int x, int y, int z, Block block);
-Block GetChunkBlock(const Chunk* chunk, int x, int y, int z);
-void GenerateChunk(Chunk* chunk, const Noise* noise);
-void MeshChunk(Chunk* chunk, const Chunk* neighbors[3][3], CpuBuffer voxelBuffers[ChunkMeshTypeCount], CpuBuffer* lightBuffer);
+void chunk_world_to_local(const chunk_t* chunk, int* x, int* y, int* z);
+void chunk_local_to_world(const chunk_t* chunk, int* x, int* y, int* z);
+void chunk_init(chunk_t* chunk, SDL_GPUDevice* device);
+void chunk_free(chunk_t* chunk);
+block_t chunk_set_block(chunk_t* chunk, int x, int y, int z, block_t block);
+block_t chunk_get_block(const chunk_t* chunk, int x, int y, int z);
+void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE_COUNT]);
+void chunk_set_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights);
+void chunk_set_blocks(chunk_t* chunk);

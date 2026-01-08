@@ -4,127 +4,148 @@
 
 struct
 {
-    bool Opaque;
-    bool Sprite;
-    int Faces[6];
-    Light LightValue;
+    bool is_opaque;
+    bool is_sprite;
+    bool is_solid;
+    int indices[6];
+    light_t light;
 }
-static const kBlocks[BlockCount] =
+static const BLOCKS[BLOCK_COUNT] =
 {
-    [BlockBluebell] =
+    [BLOCK_GRASS] =
     {
-        .Opaque = true,
-        .Sprite = true,
-        .Faces = {13, 13, 13, 13, 13, 13}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 2,  2,  2,  2,  1,  3}
     },
-    [BlockBush] =
+    [BLOCK_DIRT] =
     {
-        .Opaque = true,
-        .Sprite = true,
-        .Faces = {15, 15, 15, 15, 15, 15}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 3,  3,  3,  3,  3,  3}
     },
-    [BlockCloud] =
+    [BLOCK_SAND] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 9,  9,  9,  9,  9,  9}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 5,  5,  5,  5,  5,  5}
     },
-    [BlockDandelion] =
+    [BLOCK_SNOW] =
     {
-        .Opaque = true,
-        .Sprite = true,
-        .Faces = {12, 12, 12, 12, 12, 12}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 6,  6,  6,  6,  6,  6}
     },
-    [BlockDirt] =
+    [BLOCK_STONE] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 3,  3,  3,  3,  3,  3}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 4,  4,  4,  4,  4,  4}
     },
-    [BlockGrass] =
+    [BLOCK_LOG] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 2,  2,  2,  2,  1,  3}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 8,  8,  8,  8,  7,  7}
     },
-    [BlockLavender] =
+    [BLOCK_LEAVES] =
     {
-        .Opaque = true,
-        .Sprite = true,
-        .Faces = {14, 14, 14, 14, 14, 14}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = {10, 10, 10, 10, 10, 10}
     },
-    [BlockLeaves] =
+    [BLOCK_CLOUD] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = {10, 10, 10, 10, 10, 10}
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .indices = { 9,  9,  9,  9,  9,  9}
     },
-    [BlockLog] =
+    [BLOCK_BUSH] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 8,  8,  8,  8,  7,  7}
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .indices = {15, 15, 15, 15, 15, 15}
     },
-    [BlockRose] =
+    [BLOCK_BLUEBELL] =
     {
-        .Opaque = true,
-        .Sprite = true,
-        .Faces = {11, 11, 11, 11, 11, 11}
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .indices = {13, 13, 13, 13, 13, 13}
     },
-    [BlockSand] =
+    [BLOCK_DANDELION] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 5,  5,  5,  5,  5,  5}
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .indices = {12, 12, 12, 12, 12, 12}
     },
-    [BlockSnow] =
+    [BLOCK_ROSE] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 6,  6,  6,  6,  6,  6}
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .indices = {11, 11, 11, 11, 11, 11}
     },
-    [BlockStone] =
+    [BLOCK_LAVENDER] =
     {
-        .Opaque = true,
-        .Sprite = false,
-        .Faces = { 4,  4,  4,  4,  4,  4}
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .indices = {14, 14, 14, 14, 14, 14}
     },
-    [BlockWater] =
+    [BLOCK_WATER] =
     {
-        .Opaque = false,
-        .Sprite = false,
-        .Faces = {16, 16, 16, 16, 16, 16}
+        .is_opaque = false,
+        .is_sprite = false,
+        .is_solid = false,
+        .indices = {16, 16, 16, 16, 16, 16}
     },
-    [BlockYellowTorch] =
+    [BLOCK_YELLOW_TORCH] =
     {
-        .Opaque = false,
-        .Sprite = false,
-        .Faces = {17, 17, 17, 17, 17, 17},
-        .LightValue = {255, 255, 0, 55},
+        .is_opaque = false,
+        .is_sprite = false,
+        .is_solid = false,
+        .indices = {17, 17, 17, 17, 17, 17},
+        .light = {255, 255, 0, 55},
     },
 };
 
-bool IsBlockOpaque(Block block)
+bool block_is_opaque(block_t block)
 {
-    return kBlocks[block].Opaque;
+    return BLOCKS[block].is_opaque;
 }
 
-bool IsBlockSprite(Block block)
+bool block_is_sprite(block_t block)
 {
-    return kBlocks[block].Sprite;
+    return BLOCKS[block].is_sprite;
 }
 
-int GetBlockFace(Block block, Direction direction)
+bool block_is_solid(block_t block)
 {
-    return kBlocks[block].Faces[direction];
+    return BLOCKS[block].is_solid;
 }
 
-bool IsBlockLightSource(Block block)
+int block_get_index(block_t block, direction_t direction)
 {
-    return kBlocks[block].LightValue.Intensity > 0;
+    return BLOCKS[block].indices[direction];
 }
 
-Light GetBlockLight(Block block)
+bool block_is_light(block_t block)
 {
-    return kBlocks[block].LightValue;
+    return BLOCKS[block].light.intensity > 0;
+}
+
+light_t block_get_light(block_t block)
+{
+    return BLOCKS[block].light;
 }

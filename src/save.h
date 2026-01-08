@@ -4,25 +4,13 @@
 
 #include "block.h"
 
-typedef struct Chunk Chunk;
-typedef struct sqlite3 sqlite3;
-typedef struct sqlite3_stmt sqlite3_stmt;
+typedef struct chunk chunk_t;
+typedef struct player player_t;
 
-typedef struct Save
-{
-    sqlite3* Handle;
-    sqlite3_stmt* SetPlayerStatement;
-    sqlite3_stmt* GetPlayerStatement;
-    sqlite3_stmt* SetBlockStatement;
-    sqlite3_stmt* GetChunkStatement;
-    SDL_Mutex* Mutex;
-}
-Save;
-
-bool CreateOrLoadSave(Save* save, const char* path);
-void CloseSave(Save* save);
-void CommitSave(Save* save);
-void SavePlayer(Save* save, float x, float y, float z, float pitch, float yaw, float roll);
-bool LoadPlayerFromSave(Save* save, float* x, float* y, float* z, float* pitch, float* yaw, float* roll);
-void SaveBlock(Save* save, int chunkX, int chunkY, int chunkZ, int blockX, int blockY, int blockZ, Block block);
-void LoadChunkFromSave(Save* save, int chunkX, int chunkY, int chunkZ, Chunk* chunk);
+bool save_init(const char* path);
+void save_free();
+void save_commit();
+void save_set_player(const player_t* player);
+bool save_get_player(player_t* player);
+void save_set_block(const chunk_t* chunk, int x, int y, int z, block_t block);
+void save_get_chunk(chunk_t* chunk);

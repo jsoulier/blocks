@@ -7,111 +7,112 @@
 #include "worker.h"
 #include "world.h"
 
-static int Loop(void* args)
+static int worker_func(void* args)
 {
-    Worker* worker = args;
+    worker_t* worker = args;
     while (true)
     {
-        SDL_LockMutex(worker->Mutex);
-        while (!worker->JobRef)
+        SDL_LockMutex(worker->mutex);
+        while (!worker->job)
         {
-            SDL_WaitCondition(worker->Condition, worker->Mutex);
+            SDL_WaitCondition(worker->condition, worker->mutex);
         }
-        if (worker->JobRef->Type == WorkerJobTypeQuit)
+        if (worker->job->type == WORKER_JOB_TYPE_QUIT)
         {
-            worker->JobRef = NULL;
-            SDL_SignalCondition(worker->Condition);
-            SDL_UnlockMutex(worker->Mutex);
+            worker->job = NULL;
+            SDL_SignalCondition(worker->condition);
+            SDL_UnlockMutex(worker->mutex);
             return 0;
         }
-        const WorkerJob* job = worker->JobRef;
-        Chunk* chunk = GetWorldChunk(job->WorldRef, job->X, job->Y, job->Z);
+        const worker_job_t* job = worker->job;
+        chunk_t* chunk = world_get_chunk(job->x, job->z);
         SDL_assert(chunk);
-        switch (job->Type)
+        if (job->type == WORKER_JOB_TYPE_SET_BLOCKS)
         {
-        case WorkerJobTypeGenerate:
-            GenerateChunk(chunk, job->NoiseRef);
-            LoadChunkFromSave(job->SaveRef, chunk->X / CHUNK_WIDTH, chunk->Y / CHUNK_HEIGHT, chunk->Z / CHUNK_WIDTH, chunk);
-            // TODO: use save
-            break;
-        case WorkerJobTypeMesh:
-            Chunk* neighbors[3][3] = {0};
-            for (int i = -1; i <= 1; i++)
-            for (int j = -1; j <= 1; j++)
-            {
-                int k = job->X + i;
-                int l = job->Z + j;
-                neighbors[i + 1][j + 1] = GetWorldChunk(job->WorldRef, k, job->Y, l);
-            }
-            MeshChunk(chunk, neighbors, worker->CpuVoxelBuffers, &worker->CpuLightBuffer);
-            break;
-        default:
-            SDL_assert(false);
+            chunk_set_blocks(chunk);
+            save_get_chunk(chunk);
         }
-        worker->JobRef = NULL;
-        SDL_SignalCondition(worker->Condition);
-        SDL_UnlockMutex(worker->Mutex);
+        else
+        {
+            chunk_t* chunks[3][3];
+            world_get_chunks(job->x, job->z, chunks);
+            if (job->type == WORKER_JOB_TYPE_SET_VOXELS)
+            {
+                chunk_set_voxels(chunks, worker->voxels);
+            }
+            else if (job->type == WORKER_JOB_TYPE_SET_LIGHTS)
+            {
+                chunk_set_lights(chunks, &worker->lights);
+            }
+            else
+            {
+                SDL_assert(false);
+            }
+        }
+        worker->job = NULL;
+        SDL_SignalCondition(worker->condition);
+        SDL_UnlockMutex(worker->mutex);
     }
     return 0;
 }
 
-void CreateWorker(Worker* worker, SDL_GPUDevice* device)
+void worker_init(worker_t* worker, SDL_GPUDevice* device)
 {
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
-        CreateCpuBuffer(&worker->CpuVoxelBuffers[i], device, sizeof(Voxel));
+        cpu_buffer_init(&worker->voxels[i], device, sizeof(voxel_t));
     }
-    CreateCpuBuffer(&worker->CpuLightBuffer, device, sizeof(Light));
-    worker->Mutex = SDL_CreateMutex();
-    if (!worker->Mutex)
+    cpu_buffer_init(&worker->lights, device, sizeof(light_t));
+    worker->mutex = SDL_CreateMutex();
+    if (!worker->mutex)
     {
         SDL_Log("Failed to create mutex: %s", SDL_GetError());
     }
-    worker->Condition = SDL_CreateCondition();
-    if (!worker->Condition)
+    worker->condition = SDL_CreateCondition();
+    if (!worker->condition)
     {
         SDL_Log("Failed to create condition variable: %s", SDL_GetError());
     }
-    worker->Thread = SDL_CreateThread(Loop, "worker", worker);
-    if (!worker->Thread)
+    worker->thread = SDL_CreateThread(worker_func, "worker", worker);
+    if (!worker->thread)
     {
         SDL_Log("Failed to create thread: %s", SDL_GetError());
     }
 }
 
-void DestroyWorker(Worker* worker)
+void worker_free(worker_t* worker)
 {
-    WorkerJob job;
-    job.Type = WorkerJobTypeQuit;
-    DispatchWorker(worker, &job);
-    SDL_WaitThread(worker->Thread, NULL);
-    SDL_DestroyMutex(worker->Mutex);
-    SDL_DestroyCondition(worker->Condition);
-    worker->Thread = NULL;
-    worker->Mutex = NULL;
-    worker->Condition = NULL;
-    for (int i = 0; i < ChunkMeshTypeCount; i++)
+    worker_job_t job = {0};
+    job.type = WORKER_JOB_TYPE_QUIT;
+    worker_dispatch(worker, &job);
+    SDL_WaitThread(worker->thread, NULL);
+    SDL_DestroyMutex(worker->mutex);
+    SDL_DestroyCondition(worker->condition);
+    worker->thread = NULL;
+    worker->mutex = NULL;
+    worker->condition = NULL;
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
-        DestroyCpuBuffer(&worker->CpuVoxelBuffers[i]);
+        cpu_buffer_free(&worker->voxels[i]);
     }
-    DestroyCpuBuffer(&worker->CpuLightBuffer);
+    cpu_buffer_free(&worker->lights);
 }
 
-void DispatchWorker(Worker* worker, const WorkerJob* job)
+void worker_dispatch(worker_t* worker, const worker_job_t* job)
 {
-    SDL_LockMutex(worker->Mutex);
-    SDL_assert(!worker->JobRef);
-    worker->JobRef = job;
-    SDL_SignalCondition(worker->Condition);
-    SDL_UnlockMutex(worker->Mutex);
+    SDL_LockMutex(worker->mutex);
+    SDL_assert(!worker->job);
+    worker->job = job;
+    SDL_SignalCondition(worker->condition);
+    SDL_UnlockMutex(worker->mutex);
 }
 
-void WaitForWorker(Worker* worker)
+void worker_wait(const worker_t* worker)
 {
-    SDL_LockMutex(worker->Mutex);
-    while (worker->JobRef)
+    SDL_LockMutex(worker->mutex);
+    while (worker->job)
     {
-        SDL_WaitCondition(worker->Condition, worker->Mutex);
+        SDL_WaitCondition(worker->condition, worker->mutex);
     }
-    SDL_UnlockMutex(worker->Mutex);
+    SDL_UnlockMutex(worker->mutex);
 }

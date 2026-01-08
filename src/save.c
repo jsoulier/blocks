@@ -1,12 +1,12 @@
 #include <SDL3/SDL.h>
 #include <sqlite3.h>
 
+#include "camera.h"
 #include "chunk.h"
+#include "player.h"
 #include "save.h"
 
-static const int kPlayerID = 0;
-
-static const char* kPlayerTable =
+static const char* PLAYERS =
     "CREATE TABLE IF NOT EXISTS players ("
     "    id INT PRIMARY KEY NOT NULL,"
     "    x REAL NOT NULL,"
@@ -14,200 +14,207 @@ static const char* kPlayerTable =
     "    z REAL NOT NULL,"
     "    pitch REAL NOT NULL,"
     "    yaw REAL NOT NULL,"
-    "    roll REAL NOT NULL"
+    "    roll REAL NOT NULL,"
+    "    block INT NOT NULL"
     ");";
-static const char* kBlockTable =
+static const char* BLOCKS =
     "CREATE TABLE IF NOT EXISTS blocks ("
-    "    chunkX INTEGER NOT NULL,"
-    "    chunkY INTEGER NOT NULL,"
-    "    chunkZ INTEGER NOT NULL,"
-    "    blockX INTEGER NOT NULL,"
-    "    blockY INTEGER NOT NULL,"
-    "    blockZ INTEGER NOT NULL,"
+    "    chunk_x INTEGER NOT NULL,"
+    "    chunk_z INTEGER NOT NULL,"
+    "    block_x INTEGER NOT NULL,"
+    "    block_y INTEGER NOT NULL,"
+    "    block_z INTEGER NOT NULL,"
     "    block INTEGER NOT NULL,"
-    "    PRIMARY KEY (chunkX, chunkY, chunkZ, blockX, blockY, blockZ)"
+    "    PRIMARY KEY (chunk_x, chunk_z, block_x, block_y, block_z)"
     ");";
-static const char* kSetPlayer =
-    "INSERT OR REPLACE INTO players (id, x, y, z, pitch, yaw, roll) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?);";
-static const char* kGetPlayer =
-    "SELECT x, y, z, pitch, yaw, roll FROM players "
-    "WHERE id = ?;";
-static const char* kSetBlock =
-    "INSERT OR REPLACE INTO blocks (chunkX, chunkY, chunkZ, blockX, blockY, blockZ, block) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?);";
-static const char* kGetChunk =
-    "SELECT blockX, blockY, blockZ, block FROM blocks "
-    "WHERE chunkX = ? AND chunkY = ? AND chunkZ = ?;";
-static const char* kBlockIndex =
-    "CREATE INDEX IF NOT EXISTS blocks_index "
-    "ON blocks (chunkX, chunkY, chunkZ);";
+static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, x, y, z, pitch, yaw, roll, block) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+static const char* GET_PLAYER = "SELECT x, y, z, pitch, yaw, roll, block FROM players WHERE id = ?;";
+static const char* SET_BLOCK = "INSERT OR REPLACE INTO blocks (chunk_x, chunk_z, block_x, block_y, block_z, block) VALUES (?, ?, ?, ?, ?, ?);";
+static const char* GET_CHUNK = "SELECT block_x, block_y, block_z, block FROM blocks WHERE chunk_x = ? AND chunk_z = ?;";
+static const char* BLOCK_INDEX = "CREATE INDEX IF NOT EXISTS block_index ON blocks (chunk_x, chunk_z);";
 
-bool CreateOrLoadSave(Save* save, const char* path)
+static sqlite3* handle;
+static sqlite3_stmt* set_player;
+static sqlite3_stmt* get_player;
+static sqlite3_stmt* set_block;
+static sqlite3_stmt* get_chunk;
+static SDL_Mutex* mutex;
+
+bool save_init(const char* path)
 {
-    if (sqlite3_open(path, &save->Handle))
+    if (sqlite3_open(path, &handle))
     {
-        SDL_Log("Failed to open %s database: %s", path, sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to open %s database: %s", path, sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_exec(save->Handle, kPlayerTable, NULL, NULL, NULL))
+    if (sqlite3_exec(handle, PLAYERS, NULL, NULL, NULL))
     {
-        SDL_Log("Failed to create players table: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to create players: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_exec(save->Handle, kBlockTable, NULL, NULL, NULL))
+    if (sqlite3_exec(handle, BLOCKS, NULL, NULL, NULL))
     {
-        SDL_Log("Failed to create blocks table: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to create blocks: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_prepare_v2(save->Handle, kSetPlayer, -1, &save->SetPlayerStatement, NULL))
+    if (sqlite3_prepare_v2(handle, SET_PLAYER, -1, &set_player, NULL))
     {
-        SDL_Log("Failed to prepare set player: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to prepare set player: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_prepare_v2(save->Handle, kGetPlayer, -1, &save->GetPlayerStatement, NULL))
+    if (sqlite3_prepare_v2(handle, GET_PLAYER, -1, &get_player, NULL))
     {
-        SDL_Log("Failed to prepare get player: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to prepare get player: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_prepare_v2(save->Handle, kSetBlock, -1, &save->SetBlockStatement, NULL))
+    if (sqlite3_prepare_v2(handle, SET_BLOCK, -1, &set_block, NULL))
     {
-        SDL_Log("Failed to prepare set block: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to prepare set block: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_prepare_v2(save->Handle, kGetChunk, -1, &save->GetChunkStatement, NULL))
+    if (sqlite3_prepare_v2(handle, GET_CHUNK, -1, &get_chunk, NULL))
     {
-        SDL_Log("Failed to prepare get blocks: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to prepare get blocks: %s", sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_exec(save->Handle, kBlockIndex, NULL, NULL, NULL))
+    if (sqlite3_exec(handle, BLOCK_INDEX, NULL, NULL, NULL))
     {
-        SDL_Log("Failed to create blocks index: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to create block index: %s", sqlite3_errmsg(handle));
         return false;
     }
-    save->Mutex = SDL_CreateMutex();
-    if (!save->Mutex)
+    mutex = SDL_CreateMutex();
+    if (!mutex)
     {
         SDL_Log("Failed to create mutex: %s", SDL_GetError());
         return false;
     }
-    sqlite3_exec(save->Handle, "BEGIN;", NULL, NULL, NULL);
+    sqlite3_exec(handle, "BEGIN;", NULL, NULL, NULL);
     return true;
 }
 
-void CloseSave(Save* save)
+void save_free()
 {
-    SDL_DestroyMutex(save->Mutex);
-    sqlite3_exec(save->Handle, "COMMIT;", NULL, NULL, NULL);
-    sqlite3_finalize(save->SetPlayerStatement);
-    sqlite3_finalize(save->GetPlayerStatement);
-    sqlite3_finalize(save->SetBlockStatement);
-    sqlite3_finalize(save->GetChunkStatement);
-    sqlite3_close(save->Handle);
-    save->Handle = NULL;
-    save->SetPlayerStatement = NULL;
-    save->GetPlayerStatement = NULL;
-    save->SetBlockStatement = NULL;
-    save->GetChunkStatement = NULL;
-    save->Mutex = NULL;
+    SDL_DestroyMutex(mutex);
+    sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
+    sqlite3_finalize(set_player);
+    sqlite3_finalize(get_player);
+    sqlite3_finalize(set_block);
+    sqlite3_finalize(get_chunk);
+    sqlite3_close(handle);
+    handle = NULL;
+    set_player = NULL;
+    get_player = NULL;
+    set_block = NULL;
+    get_chunk = NULL;
+    mutex = NULL;
 }
 
-void CommitSave(Save* save)
+void save_commit()
 {
-    if (!save->Handle)
+    if (!handle)
     {
         return;
     }
-    SDL_LockMutex(save->Mutex);
-    sqlite3_exec(save->Handle, "COMMIT; BEGIN;", NULL, NULL, NULL);
-    SDL_UnlockMutex(save->Mutex);
+    SDL_LockMutex(mutex);
+    sqlite3_exec(handle, "COMMIT; BEGIN;", NULL, NULL, NULL);
+    SDL_UnlockMutex(mutex);
 }
 
-void SavePlayer(Save* save, float x, float y, float z, float pitch, float yaw, float roll)
+void save_set_player(const player_t* player)
 {
-    if (!save->Handle)
+    if (!handle)
     {
         return;
     }
-    SDL_LockMutex(save->Mutex);
-    sqlite3_bind_int(save->SetPlayerStatement, 1, kPlayerID);
-    sqlite3_bind_double(save->SetPlayerStatement, 2, x);
-    sqlite3_bind_double(save->SetPlayerStatement, 3, y);
-    sqlite3_bind_double(save->SetPlayerStatement, 4, z);
-    sqlite3_bind_double(save->SetPlayerStatement, 5, pitch);
-    sqlite3_bind_double(save->SetPlayerStatement, 6, yaw);
-    sqlite3_bind_double(save->SetPlayerStatement, 7, roll);
-    if (sqlite3_step(save->SetPlayerStatement) != SQLITE_DONE)
+    float x;
+    float y;
+    float z;
+    float pitch;
+    float roll;
+    float yaw;
+    camera_get_position(&player->camera, &x, &y, &z);
+    camera_get_rotation(&player->camera, &pitch, &yaw, &roll);
+    SDL_LockMutex(mutex);
+    sqlite3_bind_int(set_player, 1, player->id);
+    sqlite3_bind_double(set_player, 2, x);
+    sqlite3_bind_double(set_player, 3, y);
+    sqlite3_bind_double(set_player, 4, z);
+    sqlite3_bind_double(set_player, 5, pitch);
+    sqlite3_bind_double(set_player, 6, yaw);
+    sqlite3_bind_double(set_player, 7, roll);
+    sqlite3_bind_int(set_player, 8, player->block);
+    if (sqlite3_step(set_player) != SQLITE_DONE)
     {
-        SDL_Log("Failed to set player: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to set player: %s", sqlite3_errmsg(handle));
     }
-    sqlite3_reset(save->SetPlayerStatement);
-    SDL_UnlockMutex(save->Mutex);
+    sqlite3_reset(set_player);
+    SDL_UnlockMutex(mutex);
 }
 
-bool LoadPlayerFromSave(Save* save, float* x, float* y, float* z, float* pitch, float* yaw, float* roll)
+bool save_get_player(player_t* player)
 {
-    if (!save->Handle)
+    if (!handle)
     {
         return false;
     }
-    SDL_LockMutex(save->Mutex);
-    sqlite3_bind_int(save->GetPlayerStatement, 1, kPlayerID);
-    bool hasPlayer = sqlite3_step(save->GetPlayerStatement) == SQLITE_ROW;
-    if (hasPlayer)
+    SDL_LockMutex(mutex);
+    sqlite3_bind_int(get_player, 1, player->id);
+    bool has_player = sqlite3_step(get_player) == SQLITE_ROW;
+    if (has_player)
     {
-        *x = sqlite3_column_double(save->GetPlayerStatement, 0);
-        *y = sqlite3_column_double(save->GetPlayerStatement, 1);
-        *z = sqlite3_column_double(save->GetPlayerStatement, 2);
-        *pitch = sqlite3_column_double(save->GetPlayerStatement, 3);
-        *yaw = sqlite3_column_double(save->GetPlayerStatement, 4);
-        *roll = sqlite3_column_double(save->GetPlayerStatement, 5);
+        float x = sqlite3_column_double(get_player, 0);
+        float y = sqlite3_column_double(get_player, 1);
+        float z = sqlite3_column_double(get_player, 2);
+        float pitch = sqlite3_column_double(get_player, 3);
+        float yaw = sqlite3_column_double(get_player, 4);
+        float roll = sqlite3_column_double(get_player, 5);
+        player->block = sqlite3_column_int(get_player, 6);
+        camera_set_position(&player->camera, x, y, z);
+        camera_set_rotation(&player->camera, pitch, yaw, roll);
     }
-    sqlite3_reset(save->GetPlayerStatement);
-    SDL_UnlockMutex(save->Mutex);
-    return hasPlayer;
+    sqlite3_reset(get_player);
+    SDL_UnlockMutex(mutex);
+    return has_player;
 }
 
-void SaveBlock(Save* save, int chunkX, int chunkY, int chunkZ, int blockX, int blockY, int blockZ, Block block)
+void save_set_block(const chunk_t* chunk, int x, int y, int z, block_t block)
 {
-    if (!save->Handle)
+    if (!handle)
     {
         return;
     }
-    SDL_LockMutex(save->Mutex);
-    sqlite3_bind_int(save->SetBlockStatement, 1, chunkX);
-    sqlite3_bind_int(save->SetBlockStatement, 2, chunkY);
-    sqlite3_bind_int(save->SetBlockStatement, 3, chunkZ);
-    sqlite3_bind_int(save->SetBlockStatement, 4, blockX);
-    sqlite3_bind_int(save->SetBlockStatement, 5, blockY);
-    sqlite3_bind_int(save->SetBlockStatement, 6, blockZ);
-    sqlite3_bind_int(save->SetBlockStatement, 7, block);
-    if (sqlite3_step(save->SetBlockStatement) != SQLITE_DONE)
+    SDL_LockMutex(mutex);
+    sqlite3_bind_int(set_block, 1, chunk->x);
+    sqlite3_bind_int(set_block, 2, chunk->z);
+    sqlite3_bind_int(set_block, 3, x);
+    sqlite3_bind_int(set_block, 4, y);
+    sqlite3_bind_int(set_block, 5, z);
+    sqlite3_bind_int(set_block, 6, block);
+    if (sqlite3_step(set_block) != SQLITE_DONE)
     {
-        SDL_Log("Failed to set block: %s", sqlite3_errmsg(save->Handle));
+        SDL_Log("Failed to set block: %s", sqlite3_errmsg(handle));
     }
-    sqlite3_reset(save->SetBlockStatement);
-    SDL_UnlockMutex(save->Mutex);
+    sqlite3_reset(set_block);
+    SDL_UnlockMutex(mutex);
 }
 
-void LoadChunkFromSave(Save* save, int chunkX, int chunkY, int chunkZ, Chunk* chunk)
+void save_get_chunk(chunk_t* chunk)
 {
-    if (!save->Handle)
+    if (!handle)
     {
         return;
     }
-    SDL_LockMutex(save->Mutex);
-    sqlite3_bind_int(save->GetChunkStatement, 1, chunkX);
-    sqlite3_bind_int(save->GetChunkStatement, 2, chunkY);
-    sqlite3_bind_int(save->GetChunkStatement, 3, chunkZ);
-    while (sqlite3_step(save->GetChunkStatement) == SQLITE_ROW)
+    SDL_LockMutex(mutex);
+    sqlite3_bind_int(get_chunk, 1, chunk->x);
+    sqlite3_bind_int(get_chunk, 2, chunk->z);
+    while (sqlite3_step(get_chunk) == SQLITE_ROW)
     {
-        int x = sqlite3_column_int(save->GetChunkStatement, 0);
-        int y = sqlite3_column_int(save->GetChunkStatement, 1);
-        int z = sqlite3_column_int(save->GetChunkStatement, 2);
-        Block block = sqlite3_column_int(save->GetChunkStatement, 3);
-        SetChunkBlock(chunk, x, y, z, block);
+        int x = sqlite3_column_int(get_chunk, 0);
+        int y = sqlite3_column_int(get_chunk, 1);
+        int z = sqlite3_column_int(get_chunk, 2);
+        block_t block = sqlite3_column_int(get_chunk, 3);
+        chunk_set_block(chunk, x, y, z, block);
     }
-    sqlite3_reset(save->GetChunkStatement);
-    SDL_UnlockMutex(save->Mutex);
+    sqlite3_reset(get_chunk);
+    SDL_UnlockMutex(mutex);
 }

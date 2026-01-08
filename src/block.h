@@ -5,30 +5,33 @@
 #include "direction.h"
 #include "light.h"
 
-typedef Uint8 Block;
+typedef Uint8 block_t;
 enum /* Block */
 {
-    BlockEmpty,
-    BlockGrass,
-    BlockDirt,
-    BlockSand,
-    BlockSnow,
-    BlockStone,
-    BlockLog,
-    BlockLeaves,
-    BlockCloud,
-    BlockBush,
-    BlockBluebell,
-    BlockDandelion,
-    BlockRose,
-    BlockLavender,
-    BlockWater,
-    BlockYellowTorch,
-    BlockCount,
+    BLOCK_EMPTY,
+
+    BLOCK_GRASS,
+    BLOCK_DIRT,
+    BLOCK_SAND,
+    BLOCK_SNOW,
+    BLOCK_STONE,
+    BLOCK_LOG,
+    BLOCK_LEAVES,
+    BLOCK_CLOUD,
+    BLOCK_BUSH,
+    BLOCK_BLUEBELL,
+    BLOCK_DANDELION,
+    BLOCK_ROSE,
+    BLOCK_LAVENDER,
+    BLOCK_WATER,
+    BLOCK_YELLOW_TORCH,
+
+    BLOCK_COUNT,
 };
 
-bool IsBlockOpaque(Block block);
-bool IsBlockSprite(Block block);
-int GetBlockFace(Block block, Direction direction);
-bool IsBlockLightSource(Block block);
-Light GetBlockLight(Block block);
+bool block_is_opaque(block_t block);
+bool block_is_sprite(block_t block);
+bool block_is_solid(block_t block);
+int block_get_index(block_t block, direction_t direction);
+bool block_is_light(block_t block);
+light_t block_get_light(block_t block);

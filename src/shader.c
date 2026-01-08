@@ -3,83 +3,83 @@
 
 #include "shader.h"
 
-SDL_GPUShader* LoadShader(SDL_GPUDevice* device, const char* name)
+SDL_GPUShader* shader_load(SDL_GPUDevice* device, const char* name)
 {
     SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(device);
     const char* entrypoint;
-    const char* fileExtension;
+    const char* file_extension;
     if (format & SDL_GPU_SHADERFORMAT_SPIRV)
     {
         format = SDL_GPU_SHADERFORMAT_SPIRV;
         entrypoint = "main";
-        fileExtension = "spv";
+        file_extension = "spv";
     }
     else if (format & SDL_GPU_SHADERFORMAT_DXIL)
     {
         format = SDL_GPU_SHADERFORMAT_DXIL;
         entrypoint = "main";
-        fileExtension = "dxil";
+        file_extension = "dxil";
     }
     else if (format & SDL_GPU_SHADERFORMAT_MSL)
     {
         format = SDL_GPU_SHADERFORMAT_MSL;
         entrypoint = "main0";
-        fileExtension = "msl";
+        file_extension = "msl";
     }
     else
     {
         SDL_assert(false);
     }
-    char shaderPath[512] = {0};
-    char shaderJsonPath[512] = {0};
-    SDL_snprintf(shaderPath, sizeof(shaderPath), "%s%s.%s", SDL_GetBasePath(), name, fileExtension);
-    SDL_snprintf(shaderJsonPath, sizeof(shaderJsonPath), "%s%s.json", SDL_GetBasePath(), name);
-    size_t shaderSize;
-    size_t shaderJsonSize;
-    char* shaderData = SDL_LoadFile(shaderPath, &shaderSize);
-    if (!shaderData)
+    char shader_path[512] = {0};
+    char shader_json_path[512] = {0};
+    SDL_snprintf(shader_path, sizeof(shader_path), "%s%s.%s", SDL_GetBasePath(), name, file_extension);
+    SDL_snprintf(shader_json_path, sizeof(shader_json_path), "%s%s.json", SDL_GetBasePath(), name);
+    size_t shader_size;
+    size_t shader_json_size;
+    char* shader_data = SDL_LoadFile(shader_path, &shader_size);
+    if (!shader_data)
     {
-        SDL_Log("Failed to load shader: %s", shaderPath);
+        SDL_Log("Failed to load shader: %s", shader_path);
         return NULL;
     }
-    char* shaderJsonData = SDL_LoadFile(shaderJsonPath, &shaderJsonSize);
-    if (!shaderJsonData)
+    char* shader_json_data = SDL_LoadFile(shader_json_path, &shader_json_size);
+    if (!shader_json_data)
     {
-        SDL_Log("Failed to load shader json: %s", shaderJsonPath);
+        SDL_Log("Failed to load shader json: %s", shader_json_path);
         return NULL;
     }
-    jsmn_parser jsonParser;
-    jsmntok_t jsonTokens[64];
-    jsmn_init(&jsonParser);
-    if (jsmn_parse(&jsonParser, shaderJsonData, shaderJsonSize, jsonTokens, 64) <= 0)
+    jsmn_parser json_parser;
+    jsmntok_t json_tokens[64];
+    jsmn_init(&json_parser);
+    if (jsmn_parse(&json_parser, shader_json_data, shader_json_size, json_tokens, 64) <= 0)
     {
-        SDL_Log("Failed to parse json: %s", shaderJsonPath);
+        SDL_Log("Failed to parse json: %s", shader_json_path);
         return NULL;
     }
     SDL_GPUShaderCreateInfo info = {0};
     for (int i = 1; i < 64; i += 2)
     {
-        if (jsonTokens[i].type != JSMN_STRING)
+        if (json_tokens[i].type != JSMN_STRING)
         {
             continue;
         }
-        char* keyString = shaderJsonData + jsonTokens[i + 0].start;
-        char* valueString = shaderJsonData + jsonTokens[i + 1].start;
-        int keySize = jsonTokens[i + 0].end - jsonTokens[i + 0].start;
+        char* key_string = shader_json_data + json_tokens[i + 0].start;
+        char* value_string = shader_json_data + json_tokens[i + 1].start;
+        int key_size = json_tokens[i + 0].end - json_tokens[i + 0].start;
         Uint32* value;
-        if (!SDL_memcmp("samplers", keyString, keySize))
+        if (!SDL_memcmp("samplers", key_string, key_size))
         {
             value = &info.num_samplers;
         }
-        else if (!SDL_memcmp("storage_textures", keyString, keySize))
+        else if (!SDL_memcmp("storage_textures", key_string, key_size))
         {
             value = &info.num_storage_textures;
         }
-        else if (!SDL_memcmp("storage_buffers", keyString, keySize))
+        else if (!SDL_memcmp("storage_buffers", key_string, key_size))
         {
             value = &info.num_storage_buffers;
         }
-        else if (!SDL_memcmp("uniform_buffers", keyString, keySize))
+        else if (!SDL_memcmp("uniform_buffers", key_string, key_size))
         {
             value = &info.num_uniform_buffers;
         }
@@ -87,10 +87,10 @@ SDL_GPUShader* LoadShader(SDL_GPUDevice* device, const char* name)
         {
             continue;
         }
-        *value = *valueString - '0';
+        *value = *value_string - '0';
     }
-    info.code = shaderData;
-    info.code_size = shaderSize;
+    info.code = shader_data;
+    info.code_size = shader_size;
     info.entrypoint = entrypoint;
     info.format = format;
     if (SDL_strstr(name, ".frag"))
@@ -107,108 +107,108 @@ SDL_GPUShader* LoadShader(SDL_GPUDevice* device, const char* name)
         SDL_Log("Failed to create shader: %s", SDL_GetError());
         return NULL;
     }
-    SDL_free(shaderData);
-    SDL_free(shaderJsonData);
+    SDL_free(shader_data);
+    SDL_free(shader_json_data);
     return shader;
 }
 
-SDL_GPUComputePipeline* LoadComputePipeline(SDL_GPUDevice* device, const char* name)
+SDL_GPUComputePipeline* shader_load_compute(SDL_GPUDevice* device, const char* name)
 {
     SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(device);
     const char* entrypoint;
-    const char* fileExtension;
+    const char* file_extension;
     if (format & SDL_GPU_SHADERFORMAT_SPIRV)
     {
         format = SDL_GPU_SHADERFORMAT_SPIRV;
         entrypoint = "main";
-        fileExtension = "spv";
+        file_extension = "spv";
     }
     else if (format & SDL_GPU_SHADERFORMAT_DXIL)
     {
         format = SDL_GPU_SHADERFORMAT_DXIL;
         entrypoint = "main";
-        fileExtension = "dxil";
+        file_extension = "dxil";
     }
     else if (format & SDL_GPU_SHADERFORMAT_MSL)
     {
         format = SDL_GPU_SHADERFORMAT_MSL;
         entrypoint = "main0";
-        fileExtension = "msl";
+        file_extension = "msl";
     }
     else
     {
         SDL_assert(false);
     }
-    char shaderPath[512] = {0};
-    char shaderJsonPath[512] = {0};
-    SDL_snprintf(shaderPath, sizeof(shaderPath), "%s%s.%s", SDL_GetBasePath(), name, fileExtension);
-    SDL_snprintf(shaderJsonPath, sizeof(shaderJsonPath), "%s%s.json", SDL_GetBasePath(), name);
-    size_t shaderSize;
-    size_t shaderJsonSize;
-    char* shaderData = SDL_LoadFile(shaderPath, &shaderSize);
-    if (!shaderData)
+    char shader_path[512] = {0};
+    char shader_json_path[512] = {0};
+    SDL_snprintf(shader_path, sizeof(shader_path), "%s%s.%s", SDL_GetBasePath(), name, file_extension);
+    SDL_snprintf(shader_json_path, sizeof(shader_json_path), "%s%s.json", SDL_GetBasePath(), name);
+    size_t shader_size;
+    size_t shader_json_size;
+    char* shader_data = SDL_LoadFile(shader_path, &shader_size);
+    if (!shader_data)
     {
-        SDL_Log("Failed to load shader: %s", shaderPath);
+        SDL_Log("Failed to load shader: %s", shader_path);
         return NULL;
     }
-    char* shaderJsonData = SDL_LoadFile(shaderJsonPath, &shaderJsonSize);
-    if (!shaderJsonData)
+    char* shader_json_data = SDL_LoadFile(shader_json_path, &shader_json_size);
+    if (!shader_json_data)
     {
-        SDL_Log("Failed to load shader json: %s", shaderJsonPath);
+        SDL_Log("Failed to load shader json: %s", shader_json_path);
         return NULL;
     }
-    jsmn_parser jsonParser;
-    jsmntok_t jsonTokens[64];
-    jsmn_init(&jsonParser);
-    if (jsmn_parse(&jsonParser, shaderJsonData, shaderJsonSize, jsonTokens, 64) <= 0)
+    jsmn_parser json_parser;
+    jsmntok_t json_tokens[64];
+    jsmn_init(&json_parser);
+    if (jsmn_parse(&json_parser, shader_json_data, shader_json_size, json_tokens, 64) <= 0)
     {
-        SDL_Log("Failed to parse json: %s", shaderJsonPath);
+        SDL_Log("Failed to parse json: %s", shader_json_path);
         return NULL;
     }
     SDL_GPUComputePipelineCreateInfo info = {0};
     for (int i = 1; i < 64; i += 2)
     {
-        if (jsonTokens[i].type != JSMN_STRING)
+        if (json_tokens[i].type != JSMN_STRING)
         {
             continue;
         }
-        char* keyString = shaderJsonData + jsonTokens[i + 0].start;
-        char* valueString = shaderJsonData + jsonTokens[i + 1].start;
-        int keySize = jsonTokens[i + 0].end - jsonTokens[i + 0].start;
+        char* key_string = shader_json_data + json_tokens[i + 0].start;
+        char* value_string = shader_json_data + json_tokens[i + 1].start;
+        int key_size = json_tokens[i + 0].end - json_tokens[i + 0].start;
         Uint32* value;
-        if (!SDL_memcmp("samplers", keyString, keySize))
+        if (!SDL_memcmp("samplers", key_string, key_size))
         {
             value = &info.num_samplers;
         }
-        else if (!SDL_memcmp("readonly_storage_textures", keyString, keySize))
+        else if (!SDL_memcmp("readonly_storage_textures", key_string, key_size))
         {
             value = &info.num_readonly_storage_textures;
         }
-        else if (!SDL_memcmp("readonly_storage_buffers", keyString, keySize))
+        else if (!SDL_memcmp("readonly_storage_buffers", key_string, key_size))
         {
             value = &info.num_readonly_storage_buffers;
         }
-        else if (!SDL_memcmp("readwrite_storage_textures", keyString, keySize))
+        else if (!SDL_memcmp("readwrite_storage_textures", key_string, key_size))
         {
             value = &info.num_readwrite_storage_textures;
         }
-        else if (!SDL_memcmp("readwrite_storage_buffers", keyString, keySize))
+        else if (!SDL_memcmp("readwrite_storage_buffers", key_string, key_size))
         {
             value = &info.num_readwrite_storage_buffers;
         }
-        else if (!SDL_memcmp("uniform_buffers", keyString, keySize))
+        else if (!SDL_memcmp("uniform_buffers", key_string, key_size))
         {
             value = &info.num_uniform_buffers;
         }
-        else if (!SDL_memcmp("threadcount_x", keyString, keySize))
+        else if (!SDL_memcmp("threadcount_x", key_string, key_size))
         {
             value = &info.threadcount_x;
         }
-        else if (!SDL_memcmp("threadcount_y", keyString, keySize))
+        else if (!SDL_memcmp("threadcount_y", key_string, key_size))
         {
             value = &info.threadcount_y;
         }
-        else if (!SDL_memcmp("threadcount_z", keyString, keySize))
+        else if (!SDL_memcmp("threadcount_z", key_string, key_size))
         {
             value = &info.threadcount_z;
         }
@@ -216,10 +216,10 @@ SDL_GPUComputePipeline* LoadComputePipeline(SDL_GPUDevice* device, const char* n
         {
             continue;
         }
-        *value = *valueString - '0';
+        *value = *value_string - '0';
     }
-    info.code = shaderData;
-    info.code_size = shaderSize;
+    info.code = shader_data;
+    info.code_size = shader_size;
     info.entrypoint = entrypoint;
     info.format = format;
     SDL_GPUComputePipeline* pipeline = SDL_CreateGPUComputePipeline(device, &info);
@@ -228,7 +228,7 @@ SDL_GPUComputePipeline* LoadComputePipeline(SDL_GPUDevice* device, const char* n
         SDL_Log("Failed to create compute pipeline: %s", SDL_GetError());
         return NULL;
     }
-    SDL_free(shaderData);
-    SDL_free(shaderJsonData);
+    SDL_free(shader_data);
+    SDL_free(shader_json_data);
     return pipeline;
 }

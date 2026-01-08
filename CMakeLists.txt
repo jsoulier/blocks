@@ -24,6 +24,7 @@ add_executable(blocks WIN32
     src/main.c
     src/map.c
     src/noise.c
+    src/player.c
     src/save.c
     src/shader.c
     src/sort.c

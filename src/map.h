@@ -2,28 +2,28 @@
 
 #include <SDL3/SDL.h>
 
-typedef struct MapRow
+typedef struct map_row
 {
-    Uint8 X;
-    Uint8 Y;
-    Uint8 Z;
-    Uint8 Value;
+    Uint8 x;
+    Uint8 y;
+    Uint8 z;
+    Uint8 value;
 }
-MapRow;
+map_row_t;
 
-typedef struct Map
+typedef struct map
 {
-    MapRow* Rows;
-    Uint32 Size;
-    Uint32 Capacity;
+    map_row_t* rows;
+    Uint32 size;
+    Uint32 capacity;
 }
-Map;
+map_t;
 
-void CreateMap(Map* map);
-void DestroyMap(Map* map);
-void SetMapValue(Map* map, int x, int y, int z, int value);
-int GetMapValue(const Map* map, int x, int y, int z);
-void RemoveMapValue(Map* map, int x, int y, int z);
-void ClearMap(Map* map);
-bool IsMapRowValid(const Map* map, Uint32 index);
-MapRow GetMapRow(const Map* map, Uint32 index);
+void map_init(map_t* map, int capacity);
+void map_free(map_t* map);
+void map_set(map_t* map, int x, int y, int z, int value);
+int map_get(const map_t* map, int x, int y, int z);
+void map_remove(map_t* map, int x, int y, int z);
+void map_clear(map_t* map);
+bool map_is_row_valid(const map_t* map, Uint32 index);
+map_row_t map_get_row(const map_t* map, Uint32 index);

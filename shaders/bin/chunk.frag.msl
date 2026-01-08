@@ -36,20 +36,18 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], const device type_StructuredBuffer_Light& LightBuffer [[buffer(1)]], texture2d_array<float> AtlasTexture [[texture(0)]], sampler AtlasSampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _60 = AtlasTexture.sample(AtlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
-    float3 _61 = _60.xyz;
-    float3 _62 = fast::normalize(in.in_var_TEXCOORD1);
+    float4 _61 = AtlasTexture.sample(AtlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
     float3 _64;
     _64 = float3(0.0);
     for (uint _67 = 0u; _67 < uint(UniformBuffer.LightCount); )
     {
         float3 _101 = (float3(float(LightBuffer._m0[_67].X), float(LightBuffer._m0[_67].Y), float(LightBuffer._m0[_67].Z)) + float3(0.5)) - in.in_var_TEXCOORD0;
-        float _102 = dot(_101, _101);
-        _64 += ((float3(float(LightBuffer._m0[_67].Color & 255u) * 0.0039215688593685626983642578125, float((LightBuffer._m0[_67].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((LightBuffer._m0[_67].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * fast::clamp(dot(_62, _101 / float3(sqrt(_102))), 0.0, 1.0)) * ((float((LightBuffer._m0[_67].Color & 4278190080u) >> 24u) * 0.0392156876623630523681640625) / (1.0 + (_102 * 0.0199999995529651641845703125))));
+        float _103 = precise::max(dot(_101, _101), 0.001000000047497451305389404296875);
+        _64 += (((float3(float(LightBuffer._m0[_67].Color & 255u) * 0.0039215688593685626983642578125, float((LightBuffer._m0[_67].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((LightBuffer._m0[_67].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * precise::max(dot(in.in_var_TEXCOORD1, _101 * rsqrt(_103)), 0.0)) * (1.0 / _103)) * (float((LightBuffer._m0[_67].Color & 4278190080u) >> 24u) * 0.0392156876623630523681640625));
         _67++;
         continue;
     }
-    out.out_var_SV_Target0 = float4((_61 * _64) + (_61 * 0.100000001490116119384765625), 1.0);
+    out.out_var_SV_Target0 = float4(_61.xyz * (_64 + float3(0.20000000298023223876953125)), 1.0);
     return out;
 }
 

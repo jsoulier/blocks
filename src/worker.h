@@ -5,41 +5,36 @@
 #include "buffer.h"
 #include "chunk.h"
 
-typedef struct Save Save;
-typedef struct World World;
-
-typedef enum WorkerJobType
+typedef enum worker_job_type
 {
-    WorkerJobTypeQuit,
-    WorkerJobTypeGenerate,
-    WorkerJobTypeMesh,
+    WORKER_JOB_TYPE_NONE,
+    WORKER_JOB_TYPE_QUIT,
+    WORKER_JOB_TYPE_SET_BLOCKS,
+    WORKER_JOB_TYPE_SET_VOXELS,
+    WORKER_JOB_TYPE_SET_LIGHTS,
 }
-WorkerJobType;
+worker_job_type_t;
 
-typedef struct WorkerJob
+typedef struct worker_job
 {
-    WorkerJobType Type;
-    int X;
-    int Y;
-    int Z;
-    World* WorldRef;
-    Save* SaveRef;
-    Noise* NoiseRef;
+    worker_job_type_t type;
+    int x;
+    int z;
 }
-WorkerJob;
+worker_job_t;
 
-typedef struct Worker
+typedef struct worker
 {
-    SDL_Thread* Thread;
-    SDL_Mutex* Mutex;
-    SDL_Condition* Condition;
-    const WorkerJob* JobRef;
-    CpuBuffer CpuVoxelBuffers[ChunkMeshTypeCount];
-    CpuBuffer CpuLightBuffer;
+    SDL_Thread* thread;
+    SDL_Mutex* mutex;
+    SDL_Condition* condition;
+    const worker_job_t* job;
+    cpu_buffer_t voxels[CHUNK_MESH_TYPE_COUNT];
+    cpu_buffer_t lights;
 }
-Worker;
+worker_t;
 
-void CreateWorker(Worker* worker, SDL_GPUDevice* device);
-void DestroyWorker(Worker* worker);
-void DispatchWorker(Worker* worker, const WorkerJob* job);
-void WaitForWorker(Worker* worker);
+void worker_init(worker_t* worker, SDL_GPUDevice* device);
+void worker_free(worker_t* worker);
+void worker_dispatch(worker_t* worker, const worker_job_t* job);
+void worker_wait(const worker_t* worker);
