@@ -6,9 +6,9 @@ struct Light
     int Z;
 };
 
-Texture2DArray<float4> AtlasTexture : register(t0, space2);
-SamplerState AtlasSampler : register(s0, space2);
-StructuredBuffer<Light> LightBuffer : register(t1, space2);
+Texture2DArray<float4> atlasTexture : register(t0, space2);
+SamplerState atlasSampler : register(s0, space2);
+StructuredBuffer<Light> lightBuffer : register(t1, space2);
 
 cbuffer UniformBuffer : register(b0, space3)
 {
@@ -28,11 +28,17 @@ static const float3 kAmbient = float3(0.2f, 0.2f, 0.2f);
 
 float4 main(Input input) : SV_Target0
 {
-    float3 albedo = AtlasTexture.Sample(AtlasSampler, input.Texcoord).rgb;
+    float4 albedo = atlasTexture.Sample(atlasSampler, input.Texcoord);
+    // TODO: handle for transparents
+    if (albedo.a < kEpsilon)
+    {
+        discard;
+        return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
     float3 diffuse = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < LightCount; i++)
     {
-        Light light = LightBuffer[i];
+        Light light = lightBuffer[i];
         float3 color;
         color.r = ((light.Color & 0x000000FF) >> 0) / 255.0f;
         color.g = ((light.Color & 0x0000FF00) >> 8) / 255.0f;
@@ -47,6 +53,6 @@ float4 main(Input input) : SV_Target0
         float attenuation = 1.0f / dist2;
         diffuse += color * NdotL * attenuation * intensity;
     }
-    float3 color = albedo * (diffuse + kAmbient);
+    float3 color = albedo.rgb * (diffuse + kAmbient);
     return float4(color, 1.0);
 }

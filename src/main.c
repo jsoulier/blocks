@@ -21,6 +21,7 @@ static SDL_GPUTextureFormat depth_format;
 static SDL_GPUTexture* depth_texture;
 static SDL_GPUGraphicsPipeline* chunk_pipeline;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
+static SDL_GPUGraphicsPipeline* ui_pipeline;
 static SDL_Surface* atlas_surface;
 static SDL_GPUTexture* color_texture;
 static SDL_GPUTexture* atlas_texture;
@@ -235,11 +236,6 @@ static bool create_raycast_pipeline()
             .has_depth_stencil_target = true,
             .depth_stencil_format = depth_format,
         },
-        .depth_stencil_state =
-        {
-            .enable_depth_test = true,
-            .compare_op = SDL_GPU_COMPAREOP_LESS,
-        },
     };
     if (info.vertex_shader && info.fragment_shader)
     {
@@ -248,6 +244,47 @@ static bool create_raycast_pipeline()
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
     return raycast_pipeline != NULL;
+}
+
+static bool create_ui_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info =
+    {
+        .vertex_shader = shader_load(device, "fullscreen.vert"),
+        .fragment_shader = shader_load(device, "ui.frag"),
+        .target_info =
+        {
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[])
+            {{
+                .format = color_format,
+                .blend_state =
+                {
+                    .enable_blend = true,
+                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
+                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
+                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
+                },
+            }},
+            .has_depth_stencil_target = true,
+            .depth_stencil_format = depth_format,
+        },
+        .depth_stencil_state =
+        {
+            .enable_depth_test = true,
+            .compare_op = SDL_GPU_COMPAREOP_LESS,
+        },
+    };
+    if (info.vertex_shader && info.fragment_shader)
+    {
+        ui_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+    return ui_pipeline != NULL;
 }
 
 SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
@@ -305,6 +342,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    if (!create_ui_pipeline())
+    {
+        SDL_Log("Failed to create ui pipeline: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
@@ -326,6 +368,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUTexture(device, atlas_texture);
     SDL_ReleaseGPUTexture(device, color_texture);
     SDL_DestroySurface(atlas_surface);
+    SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, chunk_pipeline);
     SDL_ReleaseGPUTexture(device, depth_texture);
@@ -367,7 +410,7 @@ static bool resize(int width, int height)
     return true;
 }
 
-static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
+static void render_content(SDL_GPUCommandBuffer* command_buffer)
 {
     SDL_GPUColorTargetInfo color_info = {0};
     color_info.load_op = SDL_GPU_LOADOP_CLEAR;
@@ -387,25 +430,37 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    world_render_data_t data;
-    data.camera = &player.camera;
-    data.command_buffer = command_buffer;
-    data.render_pass = render_pass;
-    data.pipeline = chunk_pipeline;
-    data.sampler = nearest_sampler;
-    data.atlas_texture = atlas_texture;
-    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
-        data.type = i;
-        world_render(&data);
+        world_render_data_t data;
+        data.camera = &player.camera;
+        data.command_buffer = command_buffer;
+        data.render_pass = render_pass;
+        data.pipeline = chunk_pipeline;
+        data.sampler = nearest_sampler;
+        data.atlas_texture = atlas_texture;
+        for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
+        {
+            data.type = i;
+            world_render(&data);
+        }
     }
     if (player.query.block != BLOCK_EMPTY)
     {
-        SDL_PushGPUDebugGroup(command_buffer, "Raycast");
+        SDL_PushGPUDebugGroup(command_buffer, "raycast");
         SDL_BindGPUGraphicsPipeline(render_pass, raycast_pipeline);
         SDL_PushGPUVertexUniformData(command_buffer, 0, player.camera.matrix, 64);
         SDL_PushGPUVertexUniformData(command_buffer, 1, player.query.current, 12);
         SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
+        SDL_PopGPUDebugGroup(command_buffer);
+    }
+    {
+        SDL_PushGPUDebugGroup(command_buffer, "ui");
+        SDL_BindGPUGraphicsPipeline(render_pass, ui_pipeline);
+        Sint32 viewport[] = {player.camera.width, player.camera.height};
+        Sint32 index = block_get_index(player.block, DIRECTION_NORTH);
+        SDL_PushGPUFragmentUniformData(command_buffer, 0, viewport, sizeof(viewport));
+        SDL_PushGPUFragmentUniformData(command_buffer, 1, &index, sizeof(index));
+        SDL_DrawGPUPrimitives(render_pass, 4, 1, 0, 0);
         SDL_PopGPUDebugGroup(command_buffer);
     }
     SDL_EndGPURenderPass(render_pass);
@@ -439,7 +494,7 @@ static void render()
         return;
     }
     camera_update(&player.camera);
-    render_geometry(command_buffer);
+    render_content(command_buffer);
     SDL_GPUBlitInfo info = {0};
     info.source.texture = color_texture;
     info.source.w = player.camera.width;

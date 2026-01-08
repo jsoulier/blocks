@@ -1,1 +1,4 @@
+*.comp linguist-language=HLSL
+*.frag linguist-language=HLSL
+*.vert linguist-language=HLSL
 lib/** linguist-vendored

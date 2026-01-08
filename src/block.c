@@ -112,8 +112,8 @@ static const BLOCKS[BLOCK_COUNT] =
     },
     [BLOCK_YELLOW_TORCH] =
     {
-        .is_opaque = false,
-        .is_sprite = false,
+        .is_opaque = true,
+        .is_sprite = true,
         .is_solid = false,
         .indices = {17, 17, 17, 17, 17, 17},
         .light = {255, 255, 0, 55},

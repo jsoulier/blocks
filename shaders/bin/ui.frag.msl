@@ -1,0 +1,149 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_UniformBuffer
+{
+    int2 Viewport;
+};
+
+struct type_UniformBuffer_1
+{
+    uint Index;
+};
+
+struct main0_out
+{
+    float4 out_var_SV_Target0 [[color(0)]];
+};
+
+fragment main0_out main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]], float4 gl_FragCoord [[position]])
+{
+    main0_out out = {};
+    float4 _151;
+    do
+    {
+        float _60 = float(UniformBuffer.Viewport.y) - gl_FragCoord.y;
+        float2 _62 = float2(UniformBuffer.Viewport);
+        float2 _63 = _62 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
+        float _66 = precise::max(_63.x, _63.y);
+        float _67 = 50.0 * _66;
+        float _68 = 10.0 * _66;
+        float2 _71 = float2(_68) + float2(_67);
+        bool _77;
+        if (gl_FragCoord.x > _68)
+        {
+            _77 = gl_FragCoord.x < _71.x;
+        }
+        else
+        {
+            _77 = false;
+        }
+        bool _81;
+        if (_77)
+        {
+            _81 = _60 > _68;
+        }
+        else
+        {
+            _81 = false;
+        }
+        bool _86;
+        if (_81)
+        {
+            _86 = _60 < _71.y;
+        }
+        else
+        {
+            _86 = false;
+        }
+        if (_86)
+        {
+            float3 _99 = float3((gl_FragCoord.x - _68) / _67, 1.0 - ((_60 - _68) / _67), float(UniformBuffer_1.Index));
+            _151 = atlasTexture.sample(atlasSampler, _99.xy, uint(rint(_99.z)));
+            break;
+        }
+        float _102 = 8.0 * _66;
+        float _103 = 2.0 * _66;
+        float2 _104 = _62 * 0.5;
+        float2 _105 = float2(_102, _103);
+        float2 _106 = _104 - _105;
+        float2 _107 = _104 + _105;
+        float2 _108 = float2(_103, _102);
+        float2 _109 = _104 - _108;
+        float2 _110 = _104 + _108;
+        bool _117;
+        if (gl_FragCoord.x > _106.x)
+        {
+            _117 = _60 > _106.y;
+        }
+        else
+        {
+            _117 = false;
+        }
+        bool _122;
+        if (_117)
+        {
+            _122 = gl_FragCoord.x < _107.x;
+        }
+        else
+        {
+            _122 = false;
+        }
+        bool _127;
+        if (_122)
+        {
+            _127 = _60 < _107.y;
+        }
+        else
+        {
+            _127 = false;
+        }
+        bool _148;
+        if (!_127)
+        {
+            bool _137;
+            if (gl_FragCoord.x > _109.x)
+            {
+                _137 = _60 > _109.y;
+            }
+            else
+            {
+                _137 = false;
+            }
+            bool _142;
+            if (_137)
+            {
+                _142 = gl_FragCoord.x < _110.x;
+            }
+            else
+            {
+                _142 = false;
+            }
+            bool _147;
+            if (_142)
+            {
+                _147 = _60 < _110.y;
+            }
+            else
+            {
+                _147 = false;
+            }
+            _148 = _147;
+        }
+        else
+        {
+            _148 = true;
+        }
+        if (_148)
+        {
+            _151 = float4(1.0);
+            break;
+        }
+        discard_fragment();
+    } while(false);
+    out.out_var_SV_Target0 = _151;
+    return out;
+}
+

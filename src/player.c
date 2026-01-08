@@ -6,7 +6,7 @@
 
 static const float SPEED = 0.01f;
 static const float SENSITIVITY = 0.1f;
-static const float REACH = 10.0f;
+static const float RANGE = 10.0f;
 
 static void query(player_t* player)
 {
@@ -18,7 +18,7 @@ static void query(player_t* player)
     float dz;
     camera_get_position(&player->camera, &x, &y, &z);
     camera_get_vector(&player->camera, &dx, &dy, &dz);
-    player->query = world_query(x, y, z, dx, dy, dz, REACH);
+    player->query = world_query(x, y, z, dx, dy, dz, RANGE);
 }
 
 void player_init(player_t* player)
@@ -78,8 +78,8 @@ void player_place(player_t* player)
 
 void player_scroll(player_t* player, int dy)
 {
-    int value = player->block;
-    value = (value + dy) % BLOCK_COUNT;
-    value = SDL_max(value, 1);
-    player->block = value;
+    static const int COUNT = BLOCK_COUNT - BLOCK_EMPTY - 1;
+    int block = player->block - (BLOCK_EMPTY + 1) + dy;
+    block = (block + COUNT) % COUNT;
+    player->block = block + BLOCK_EMPTY + 1;
 }

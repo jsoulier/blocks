@@ -266,7 +266,7 @@ void world_render(const world_render_data_t* data)
     SDL_GPUSampler* sampler = data->sampler;
     SDL_GPUTexture* atlas_texture = data->atlas_texture;
     SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, sampler};
-    SDL_PushGPUDebugGroup(command_buffer, "world_render");
+    SDL_PushGPUDebugGroup(command_buffer, "world");
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
     SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
     SDL_PushGPUVertexUniformData(command_buffer, 0, camera->matrix, 64);

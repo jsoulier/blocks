@@ -92,6 +92,7 @@ function(add_shader FILE)
 endfunction()
 add_shader(chunk.frag)
 add_shader(chunk.vert shaders/voxel.hlsl src/voxel.inc)
+add_shader(fullscreen.vert)
 add_shader(raycast.frag)
 add_shader(raycast.vert)
-
+add_shader(ui.frag)

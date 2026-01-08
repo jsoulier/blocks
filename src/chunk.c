@@ -193,6 +193,12 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
         SDL_assert(row.value != BLOCK_EMPTY);
         if (block_is_sprite(row.value))
         {
+            for (int j = 0; j < 4; j++)
+            for (int k = 0; k < 4; k++)
+            {
+                voxel_t voxel = voxel_pack_sprite(row.value, row.x, row.y, row.z, j, k);
+                cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_OPAQUE], &voxel);
+            }
             continue;
         }
         for (int j = 0; j < 6; j++)
@@ -201,14 +207,24 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
             int dy = DIRECTIONS[j][1];
             int dz = DIRECTIONS[j][2];
             block_t neighbor = get_block(chunks, row.x, row.y, row.z, dx, dy, dz);
-            if (block_is_opaque(neighbor))
+            bool is_opaque = block_is_opaque(row.value);
+            bool is_forced = neighbor == BLOCK_EMPTY || block_is_sprite(neighbor);
+            bool is_opaque_next_to_transparent = is_opaque && !block_is_opaque(neighbor);
+            if (!is_forced && !is_opaque_next_to_transparent)
             {
                 continue;
             }
             for (int k = 0; k < 4; k++)
             {
                 voxel_t voxel = voxel_pack_cube(row.value, row.x, row.y, row.z, j, k);
-                cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_OPAQUE], &voxel);
+                if (is_opaque)
+                {
+                    cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_OPAQUE], &voxel);
+                }
+                else
+                {
+                    cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_TRANSPARENT], &voxel);
+                }
             }
         }
     }
