@@ -84,45 +84,63 @@ kernel void main0(texture2d<uint> voxelTexture [[texture(0)]], texture2d<float> 
             for (int _91 = -1; _91 <= 1; _81 = _89, _91++)
             {
                 uint2 _102 = uint2(float2(gl_GlobalInvocationID.xy) + (float2(float(_83), float(_91)) * 1.0));
-                bool _110;
-                if (!(_102.x >= _51))
+                bool _108;
+                if (!(_83 == 0))
                 {
-                    _110 = _102.y >= _52;
+                    _108 = _91 == 0;
                 }
                 else
                 {
-                    _110 = true;
+                    _108 = true;
                 }
-                if (_110)
+                bool _118;
+                if (!((!((!_108) ? false : true)) ? false : true))
+                {
+                    _118 = _102.x >= _51;
+                }
+                else
+                {
+                    _118 = true;
+                }
+                bool _124;
+                if (!_118)
+                {
+                    _124 = _102.y >= _52;
+                }
+                else
+                {
+                    _124 = true;
+                }
+                if (_124)
                 {
                     _89 = _81;
                     continue;
                 }
-                bool _146;
+                bool _160;
                 do
                 {
                     if (!((voxelTexture.read(uint2(_102), 0u).x & 1u) != 0u))
                     {
-                        _146 = false;
+                        _160 = false;
                         break;
                     }
-                    float4 _124 = positionTexture.read(uint2(_102), 0u);
-                    float _125 = _124.z;
-                    float _126 = _78.z;
-                    _45[0] = _125 - _126;
-                    _45[1] = _126 - _125;
-                    float _131 = _124.x;
-                    float _132 = _78.x;
-                    _45[2] = _131 - _132;
-                    _45[3] = _132 - _131;
-                    float _137 = _124.y;
-                    float _138 = _78.y;
-                    _45[4] = _137 - _138;
-                    _45[5] = _138 - _137;
-                    _146 = _45[_76] > 0.00999999977648258209228515625;
+                    float4 _138 = positionTexture.read(uint2(_102), 0u);
+                    float _139 = _138.z;
+                    float _140 = _78.z;
+                    _45[0] = _139 - _140;
+                    _45[1] = _140 - _139;
+                    float _145 = _138.x;
+                    float _146 = _78.x;
+                    _45[2] = _145 - _146;
+                    _45[3] = _146 - _145;
+                    float _151 = _138.y;
+                    float _152 = _78.y;
+                    _45[4] = _151 - _152;
+                    _45[5] = _152 - _151;
+                    _160 = _45[_76] > 0.00999999977648258209228515625;
                     break;
                 } while(false);
-                _89 = _81 + float(_146);
+                _89 = _81 + float(_160);
             }
         }
         ssaoTexture.write(float4(1.0 - _80), uint2(gl_GlobalInvocationID.xy));

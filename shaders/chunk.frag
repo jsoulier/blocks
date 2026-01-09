@@ -19,7 +19,7 @@ cbuffer UniformBuffer : register(b0, space3)
 
 struct Input
 {
-    float3 WorldPosition : TEXCOORD0;
+    float4 WorldPosition : TEXCOORD0;
     nointerpolation float3 Normal : TEXCOORD1;
     float3 Texcoord : TEXCOORD2;
     nointerpolation uint Voxel : TEXCOORD3;
@@ -28,7 +28,7 @@ struct Input
 struct Output
 {
     float4 Color : SV_Target0;
-    float3 Position : SV_Target1;
+    float4 Position : SV_Target1;
     uint Voxel : SV_Target2;
 };
 
@@ -55,7 +55,7 @@ Output main(Input input)
         Light light = lightBuffer[i];
         float radius = (light.Color & 0xFF000000) >> 24;
         float3 lightPosition = float3(light.X, light.Y, light.Z) + 0.5f;
-        float3 offset = lightPosition - input.WorldPosition;
+        float3 offset = lightPosition - input.WorldPosition.xyz;
         float distance = length(offset);
         if (distance >= radius || radius <= 0.0f)
         {

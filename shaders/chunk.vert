@@ -2,10 +2,15 @@
 
 cbuffer UniformBuffer : register(b0, space1)
 {
-    float4x4 Transform : packoffset(c0);
+    float4x4 Proj;
 };
 
 cbuffer UniformBuffer : register(b1, space1)
+{
+    float4x4 View;
+};
+
+cbuffer UniformBuffer : register(b2, space1)
 {
     float3 ChunkPosition;
 };
@@ -18,7 +23,7 @@ struct Input
 struct Output
 {
     float4 Position : SV_Position;
-    float3 WorldPosition : TEXCOORD0;
+    float4 WorldPosition : TEXCOORD0;
     nointerpolation float3 Normal : TEXCOORD1;
     float3 Texcoord : TEXCOORD2;
     nointerpolation uint Voxel : TEXCOORD3;
@@ -27,9 +32,11 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    output.WorldPosition = VoxelGetPosition(input.Voxel) + ChunkPosition;
+    output.WorldPosition.xyz = VoxelGetPosition(input.Voxel) + ChunkPosition;
     output.Normal = VoxelGetNormal(input.Voxel);
-    output.Position = mul(Transform, float4(output.WorldPosition, 1.0f));
+    output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
+    output.WorldPosition.w = output.Position.z;
+    output.Position = mul(Proj, output.Position);
     output.Texcoord = VoxelGetTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
     return output;

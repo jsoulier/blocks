@@ -46,19 +46,26 @@ struct spvUnsafeArray
 
 struct type_UniformBuffer
 {
-    float4x4 Transform;
+    float4x4 Proj;
 };
 
 struct type_UniformBuffer_1
 {
+    float4x4 View;
+};
+
+struct type_UniformBuffer_2
+{
     float3 ChunkPosition;
 };
 
-constant spvUnsafeArray<float3, 6> _54 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+constant float4 _58 = {};
+
+constant spvUnsafeArray<float3, 6> _57 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
 
 struct main0_out
 {
-    float3 out_var_TEXCOORD0 [[user(locn0)]];
+    float4 out_var_TEXCOORD0 [[user(locn0)]];
     float3 out_var_TEXCOORD1 [[user(locn1)]];
     float3 out_var_TEXCOORD2 [[user(locn2)]];
     uint out_var_TEXCOORD3 [[user(locn3)]];
@@ -70,13 +77,16 @@ struct main0_in
     uint in_var_TEXCOORD0 [[attribute(0)]];
 };
 
-vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]])
+vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]])
 {
     main0_out out = {};
-    float3 _69 = float3(float((in.in_var_TEXCOORD0 >> 4u) & 31u), float((in.in_var_TEXCOORD0 >> 9u) & 255u), float((in.in_var_TEXCOORD0 >> 17u) & 31u)) + UniformBuffer_1.ChunkPosition;
-    out.gl_Position = UniformBuffer.Transform * float4(_69, 1.0);
-    out.out_var_TEXCOORD0 = _69;
-    out.out_var_TEXCOORD1 = _54[(in.in_var_TEXCOORD0 >> 1u) & 7u];
+    float3 _73 = float3(float((in.in_var_TEXCOORD0 >> 4u) & 31u), float((in.in_var_TEXCOORD0 >> 9u) & 255u), float((in.in_var_TEXCOORD0 >> 17u) & 31u)) + UniformBuffer_2.ChunkPosition;
+    float4 _74 = float4(_73.x, _73.y, _73.z, _58.w);
+    float4 _85 = UniformBuffer_1.View * float4(_73, 1.0);
+    _74.w = _85.z;
+    out.gl_Position = UniformBuffer.Proj * _85;
+    out.out_var_TEXCOORD0 = _74;
+    out.out_var_TEXCOORD1 = _57[(in.in_var_TEXCOORD0 >> 1u) & 7u];
     out.out_var_TEXCOORD2 = float3(float((in.in_var_TEXCOORD0 >> 22u) & 1u), float((in.in_var_TEXCOORD0 >> 23u) & 1u), float((in.in_var_TEXCOORD0 >> 24u) & 63u));
     out.out_var_TEXCOORD3 = in.in_var_TEXCOORD0;
     return out;

@@ -1,0 +1,56 @@
+#define USE_FXAA 0
+
+Texture2D<float4> inputTexture : register(t0, space0);
+SamplerState samplerState : register(s0, space0);
+[[vk::image_format("rgba8")]]
+RWTexture2D<float4> outputTexture : register(u0, space1);
+
+[numthreads(8, 8, 1)]
+void main(uint3 threadID : SV_DispatchThreadID)
+{
+    uint width, height;
+    inputTexture.GetDimensions(width, height);
+    if (threadID.x >= width || threadID.y >= height)
+    {
+        return;
+    }
+#if USE_FXAA
+    float2 resolution = 1.0f / float2(width, height);
+    float2 uv = (float2(threadID.xy) + 0.5f) * resolution;
+    float3 rgbM = inputTexture.Sample(samplerState, uv).rgb;
+    float3 rgbN = inputTexture.Sample(samplerState, uv + float2(0.0f, -resolution.y)).rgb;
+    float3 rgbS = inputTexture.Sample(samplerState, uv + float2(0.0f,  resolution.y)).rgb;
+    float3 rgbW = inputTexture.Sample(samplerState, uv + float2(-resolution.x, 0.0f)).rgb;
+    float3 rgbE = inputTexture.Sample(samplerState, uv + float2( resolution.x, 0.0f)).rgb;
+    float3 luma = float3(0.299f, 0.587f, 0.114f);
+    float lumaM = dot(rgbM, luma);
+    float lumaN = dot(rgbN, luma);
+    float lumaS = dot(rgbS, luma);
+    float lumaW = dot(rgbW, luma);
+    float lumaE = dot(rgbE, luma);
+    float lumaMin = min(lumaM, min(min(lumaN, lumaS), min(lumaW, lumaE)));
+    float lumaMax = max(lumaM, max(max(lumaN, lumaS), max(lumaW, lumaE)));
+    if (lumaMax - lumaMin < 0.31f)
+    {
+        outputTexture[threadID.xy] = float4(rgbM, 1.0f);
+        return;
+    }
+    float2 direction;
+    direction.x = -((lumaW + lumaE) - 2.0f * lumaM);
+    direction.y = -((lumaN + lumaS) - 2.0f * lumaM);
+    float reduce = max((lumaN + lumaS + lumaW + lumaE) * 0.25f * 0.125f, 1.0f / 128.0f);
+    float rcp = 1.0f / (min(abs(direction.x), abs(direction.y)) + reduce);
+    direction = clamp(direction * rcp, -8.0f, 8.0f) * resolution;
+    float3 rgbA1 = inputTexture.Sample(samplerState, clamp(uv + direction * (1.0f / 3.0f - 0.5f), 0.0f, 1.0f)).rgb;
+    float3 rgbA2 = inputTexture.Sample(samplerState, clamp(uv + direction * (2.0f / 3.0f - 0.5f), 0.0f, 1.0f)).rgb;
+    float3 rgbB1 = inputTexture.Sample(samplerState, clamp(uv + direction * -0.5f, 0.0f, 1.0f)).rgb;
+    float3 rgbB2 = inputTexture.Sample(samplerState, clamp(uv + direction * 0.5f, 0.0f, 1.0f)).rgb;
+    float3 rgbA = 0.5f * (rgbA1 + rgbA2);
+    float3 rgbB = 0.5f * rgbA + 0.25f * (rgbB1 + rgbB2);
+    float lumaB = dot(rgbB, luma);
+    float3 color = (lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB;
+    outputTexture[threadID.xy] = float4(color, 1.0f);
+#else
+    outputTexture[threadID.xy] = inputTexture[threadID.xy];
+#endif
+}

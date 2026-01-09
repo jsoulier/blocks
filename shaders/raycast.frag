@@ -1,7 +1,7 @@
 struct Output
 {
     float4 Color : SV_Target0;
-    float3 Position : SV_Target1;
+    float4 Position : SV_Target1;
     uint Voxel : SV_Target2;
 };
 

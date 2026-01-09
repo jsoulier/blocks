@@ -20,9 +20,10 @@ static SDL_GPUTextureFormat color_format;
 static SDL_GPUTextureFormat depth_format;
 static SDL_GPUGraphicsPipeline* chunk_pipeline;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
-static SDL_GPUGraphicsPipeline* ui_pipeline;
+static SDL_GPUComputePipeline* ui_pipeline;
 static SDL_GPUComputePipeline* ssao_pipeline;
 static SDL_GPUComputePipeline* composite_pipeline;
+static SDL_GPUComputePipeline* fxaa_pipeline;
 static SDL_Surface* atlas_surface;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUTexture* depth_texture;
@@ -31,6 +32,7 @@ static SDL_GPUTexture* position_texture;
 static SDL_GPUTexture* voxel_texture;
 static SDL_GPUTexture* ssao_texture;
 static SDL_GPUTexture* composite_texture;
+static SDL_GPUTexture* fxaa_texture;
 static SDL_GPUSampler* linear_sampler;
 static SDL_GPUSampler* nearest_sampler;
 static player_t player;
@@ -179,7 +181,7 @@ static bool create_chunk_pipeline()
                 .format = color_format,
             },
             {
-                .format = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT,
+                .format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
             },
             {
                 .format = SDL_GPU_TEXTUREFORMAT_R8_UINT,
@@ -246,7 +248,7 @@ static bool create_raycast_pipeline()
                 },
             },
             {
-                .format = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT,
+                .format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
             },
             {
                 .format = SDL_GPU_TEXTUREFORMAT_R8_UINT,
@@ -267,53 +269,6 @@ static bool create_raycast_pipeline()
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
     return raycast_pipeline != NULL;
-}
-
-static bool create_ui_pipeline()
-{
-    SDL_GPUGraphicsPipelineCreateInfo info =
-    {
-        .vertex_shader = shader_load(device, "fullscreen.vert"),
-        .fragment_shader = shader_load(device, "ui.frag"),
-        .target_info =
-        {
-            .num_color_targets = 3,
-            .color_target_descriptions = (SDL_GPUColorTargetDescription[])
-            {{
-                .format = color_format,
-                .blend_state =
-                {
-                    .enable_blend = true,
-                    .src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-                    .dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-                    .dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
-                    .color_blend_op = SDL_GPU_BLENDOP_ADD,
-                    .alpha_blend_op = SDL_GPU_BLENDOP_ADD,
-                },
-            },
-            {
-                .format = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT,
-            },
-            {
-                .format = SDL_GPU_TEXTUREFORMAT_R8_UINT,
-            }},
-            .has_depth_stencil_target = true,
-            .depth_stencil_format = depth_format,
-        },
-        .depth_stencil_state =
-        {
-            .enable_depth_test = true,
-            .compare_op = SDL_GPU_COMPAREOP_LESS,
-        },
-    };
-    if (info.vertex_shader && info.fragment_shader)
-    {
-        ui_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
-    }
-    SDL_ReleaseGPUShader(device, info.vertex_shader);
-    SDL_ReleaseGPUShader(device, info.fragment_shader);
-    return ui_pipeline != NULL;
 }
 
 SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
@@ -371,9 +326,10 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_ui_pipeline())
+    ui_pipeline = shader_load_compute(device, "ui.comp");
+    if (!ui_pipeline)
     {
-        SDL_Log("Failed to create ui pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to load ui pipeline");
         return SDL_APP_FAILURE;
     }
     ssao_pipeline = shader_load_compute(device, "ssao.comp");
@@ -386,6 +342,12 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     if (!composite_pipeline)
     {
         SDL_Log("Failed to load composite pipeline");
+        return SDL_APP_FAILURE;
+    }
+    fxaa_pipeline = shader_load_compute(device, "fxaa.comp");
+    if (!fxaa_pipeline)
+    {
+        SDL_Log("Failed to load fxaa pipeline");
         return SDL_APP_FAILURE;
     }
     SDL_ShowWindow(window);
@@ -406,6 +368,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     save_free();
     SDL_ReleaseGPUSampler(device, linear_sampler);
     SDL_ReleaseGPUSampler(device, nearest_sampler);
+    SDL_ReleaseGPUTexture(device, fxaa_texture);
     SDL_ReleaseGPUTexture(device, composite_texture);
     SDL_ReleaseGPUTexture(device, ssao_texture);
     SDL_ReleaseGPUTexture(device, color_texture);
@@ -414,9 +377,10 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUTexture(device, depth_texture);
     SDL_ReleaseGPUTexture(device, atlas_texture);
     SDL_DestroySurface(atlas_surface);
+    SDL_ReleaseGPUComputePipeline(device, fxaa_pipeline);
     SDL_ReleaseGPUComputePipeline(device, composite_pipeline);
     SDL_ReleaseGPUComputePipeline(device, ssao_pipeline);
-    SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
+    SDL_ReleaseGPUComputePipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, chunk_pipeline);
     SDL_ReleaseWindowFromGPUDevice(device, window);
@@ -433,12 +397,14 @@ static bool resize(int width, int height)
     SDL_ReleaseGPUTexture(device, position_texture);
     SDL_ReleaseGPUTexture(device, ssao_texture);
     SDL_ReleaseGPUTexture(device, composite_texture);
+    SDL_ReleaseGPUTexture(device, fxaa_texture);
     depth_texture = NULL;
     color_texture = NULL;
     voxel_texture = NULL;
     position_texture = NULL;
     ssao_texture = NULL;
     composite_texture = NULL;
+    fxaa_texture = NULL;
     SDL_GPUTextureCreateInfo info = {0};
     info.type = SDL_GPU_TEXTURETYPE_2D;
     info.format = depth_format;
@@ -469,7 +435,7 @@ static bool resize(int width, int height)
         SDL_Log("Failed to create voxel texture: %s", SDL_GetError());
         return false;
     }
-    info.format = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
+    info.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
     info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ;
     position_texture = SDL_CreateGPUTexture(device, &info);
     if (!position_texture)
@@ -491,6 +457,14 @@ static bool resize(int width, int height)
     if (!composite_texture)
     {
         SDL_Log("Failed to create composite texture: %s", SDL_GetError());
+        return false;
+    }
+    info.format = color_format;
+    info.usage = SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    fxaa_texture = SDL_CreateGPUTexture(device, &info);
+    if (!fxaa_texture)
+    {
+        SDL_Log("Failed to create fxaa texture: %s", SDL_GetError());
         return false;
     }
     camera_set_viewport(&player.camera, width, height);
@@ -548,16 +522,6 @@ static void geometry(SDL_GPUCommandBuffer* command_buffer)
         SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
         SDL_PopGPUDebugGroup(command_buffer);
     }
-    {
-        SDL_PushGPUDebugGroup(command_buffer, "ui");
-        SDL_BindGPUGraphicsPipeline(render_pass, ui_pipeline);
-        Sint32 viewport[] = {player.camera.width, player.camera.height};
-        Sint32 index = block_get_index(player.block, DIRECTION_NORTH);
-        SDL_PushGPUFragmentUniformData(command_buffer, 0, viewport, sizeof(viewport));
-        SDL_PushGPUFragmentUniformData(command_buffer, 1, &index, sizeof(index));
-        SDL_DrawGPUPrimitives(render_pass, 4, 1, 0, 0);
-        SDL_PopGPUDebugGroup(command_buffer);
-    }
     SDL_EndGPURenderPass(render_pass);
 }
 
@@ -599,6 +563,46 @@ static void postprocess(SDL_GPUCommandBuffer* command_buffer)
         SDL_EndGPUComputePass(compute_pass);
         SDL_PopGPUDebugGroup(command_buffer);
     }
+    {
+        SDL_GPUStorageTextureReadWriteBinding write_textures = {fxaa_texture};
+        SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(command_buffer, &write_textures, 1, NULL, 0);
+        if (!compute_pass)
+        {
+            SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+            return;
+        }
+        SDL_GPUTextureSamplerBinding read_textures = {composite_texture, linear_sampler};
+        int groups_x = (player.camera.width + 8 - 1) / 8;
+        int groups_y = (player.camera.height + 8 - 1) / 8;
+        SDL_PushGPUDebugGroup(command_buffer, "fxaa");
+        SDL_BindGPUComputePipeline(compute_pass, fxaa_pipeline);
+        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_textures, 1);
+        SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
+        SDL_EndGPUComputePass(compute_pass);
+        SDL_PopGPUDebugGroup(command_buffer);
+    }
+    {
+        SDL_GPUStorageTextureReadWriteBinding write_textures = {fxaa_texture};
+        SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(command_buffer, &write_textures, 1, NULL, 0);
+        if (!compute_pass)
+        {
+            SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+            return;
+        }
+        SDL_GPUTextureSamplerBinding read_textures = {atlas_texture, nearest_sampler};
+        Sint32 viewport[] = {player.camera.width, player.camera.height};
+        Sint32 index = block_get_index(player.block, DIRECTION_NORTH);
+        int groups_x = (player.camera.width + 8 - 1) / 8;
+        int groups_y = (player.camera.height + 8 - 1) / 8;
+        SDL_PushGPUDebugGroup(command_buffer, "ui");
+        SDL_BindGPUComputePipeline(compute_pass, ui_pipeline);
+        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_textures, 1);
+        SDL_PushGPUComputeUniformData(command_buffer, 0, viewport, sizeof(viewport));
+        SDL_PushGPUComputeUniformData(command_buffer, 1, &index, sizeof(index));
+        SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
+        SDL_EndGPUComputePass(compute_pass);
+        SDL_PopGPUDebugGroup(command_buffer);
+    }
 }
 
 static void render()
@@ -632,7 +636,7 @@ static void render()
     geometry(command_buffer);
     postprocess(command_buffer);
     SDL_GPUBlitInfo info = {0};
-    info.source.texture = composite_texture;
+    info.source.texture = fxaa_texture;
     info.source.w = player.camera.width;
     info.source.h = player.camera.height;
     info.destination.texture = swapchain_texture;

@@ -1,64 +1,62 @@
-Texture2DArray<float4> atlasTexture : register(t0, space2);
-SamplerState atlasSampler : register(s0, space2);
+Texture2DArray<float4> atlasTexture : register(t0, space0);
+SamplerState atlasSampler : register(s0, space0);
+[[vk::image_format("rgba8")]]
+RWTexture2D<float4> colorTexture : register(u0, space1);
 
-cbuffer UniformBuffer : register(b0, space3)
+cbuffer UniformBuffer : register(b0, space2)
 {
     int2 Viewport;
 };
 
-cbuffer UniformBuffer : register(b1, space3)
+cbuffer UniformBuffer : register(b1, space2)
 {
     uint Index;
-};
-
-struct Output
-{
-    float4 Color : SV_Target0;
-    float3 Position : SV_Target1;
-    uint Voxel : SV_Target2;
 };
 
 static const float kEpsilon = 0.001f;
 static const float kWidth = 1280.0f;
 static const float kHeight = 720.0f;
 
-Output main(float4 position : SV_Position)
+[numthreads(8, 8, 1)]
+void main(uint3 threadID : SV_DispatchThreadID)
 {
-    Output output;
-    output.Color = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    output.Voxel = 0;
-    float2 pixel = float2(position.x, Viewport.y - position.y);
+    uint width, height;
+    colorTexture.GetDimensions(width, height);
+    if (threadID.x >= width || threadID.y >= height)
+    {
+        return;
+    }
     float2 ratio = float2(Viewport) / float2(kWidth, kHeight);
     float scale = max(ratio.x, ratio.y);
     float blockWidth = 50.0f * scale;
     float2 blockStart = float2(10.0f * scale, 10.0f * scale);
     float2 blockEnd = blockStart + blockWidth;
+    float2 pixel = float2(threadID.x, Viewport.y - threadID.y);
     if (pixel.x > blockStart.x && pixel.x < blockEnd.x &&
         pixel.y > blockStart.y && pixel.y < blockEnd.y)
     {
         float x = (pixel.x - blockStart.x) / blockWidth;
         float y = (pixel.y - blockStart.y) / blockWidth;
-        output.Color = atlasTexture.Sample(atlasSampler, float3(x, 1.0f - y, Index));
-        if (output.Color.a > kEpsilon)
+        float4 color = atlasTexture.Sample(atlasSampler, float3(x, 1.0f - y, Index));
+        if (color.a > kEpsilon)
         {
-            return output;
+            colorTexture[threadID.xy] = color;
+            return;
         }
     }
     float crossWidth = 8.0f * scale;
     float crossThickness = 2.0f * scale;
     float2 crossCenter = float2(Viewport) * 0.5f;
     float2 crossStart1 = crossCenter - float2(crossWidth, crossThickness);
-    float2 crossEnd1 = crossCenter + float2(crossWidth, crossThickness);
+    float2 crossEnd1   = crossCenter + float2(crossWidth, crossThickness);
     float2 crossStart2 = crossCenter - float2(crossThickness, crossWidth);
-    float2 crossEnd2 = crossCenter + float2(crossThickness, crossWidth);
+    float2 crossEnd2   = crossCenter + float2(crossThickness, crossWidth);
     if ((pixel.x > crossStart1.x && pixel.y > crossStart1.y &&
          pixel.x < crossEnd1.x   && pixel.y < crossEnd1.y) ||
         (pixel.x > crossStart2.x && pixel.y > crossStart2.y &&
          pixel.x < crossEnd2.x   && pixel.y < crossEnd2.y))
     {
-        output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-        return output;
+        colorTexture[threadID.xy] = float4(1.0f, 1.0f, 1.0f, 1.0f);
+        return;
     }
-    discard;
-    return output;
 }
