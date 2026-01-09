@@ -27,6 +27,7 @@ add_executable(blocks WIN32
     src/player.c
     src/save.c
     src/shader.c
+    src/sky.c
     src/sort.c
     src/voxel.c
     src/worker.c
@@ -90,9 +91,15 @@ function(add_shader FILE)
     endif()
     package(${JSON})
 endfunction()
-add_shader(chunk.frag)
+add_shader(chunk.frag shaders/voxel.hlsl src/voxel.inc)
 add_shader(chunk.vert shaders/voxel.hlsl src/voxel.inc)
+add_shader(composite.comp)
+add_shader(depth.frag)
+add_shader(depth.vert shaders/voxel.hlsl src/voxel.inc)
 add_shader(fullscreen.vert)
 add_shader(raycast.frag)
 add_shader(raycast.vert)
+add_shader(sky.frag)
+add_shader(sky.vert)
+add_shader(ssao.comp shaders/voxel.hlsl src/voxel.inc)
 add_shader(ui.frag)

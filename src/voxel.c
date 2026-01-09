@@ -23,13 +23,14 @@ static voxel_t pack(block_t block, int x, int y, int z, int u, int v, direction_
     SDL_assert(index <= VOXEL_INDEX_MASK);
     SDL_assert(direction <= VOXEL_DIRECTION_MASK);
     voxel_t voxel = 0;
+    voxel |= 1 << VOXEL_VALID_OFFSET;
+    voxel |= direction << VOXEL_DIRECTION_OFFSET;
     voxel |= x << VOXEL_X_OFFSET;
     voxel |= y << VOXEL_Y_OFFSET;
     voxel |= z << VOXEL_Z_OFFSET;
     voxel |= u << VOXEL_U_OFFSET;
     voxel |= v << VOXEL_V_OFFSET;
     voxel |= index << VOXEL_INDEX_OFFSET;
-    voxel |= direction << VOXEL_DIRECTION_OFFSET;
     return voxel;
 }
 

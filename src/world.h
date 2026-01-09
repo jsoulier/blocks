@@ -19,7 +19,7 @@ typedef struct world_query
 }
 world_query_t;
 
-typedef struct world_render
+typedef struct world_render_data
 {
     camera_t* camera;
     chunk_mesh_type_t type;

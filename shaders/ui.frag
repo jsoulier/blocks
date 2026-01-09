@@ -11,11 +11,21 @@ cbuffer UniformBuffer : register(b1, space3)
     uint Index;
 };
 
+struct Output
+{
+    float4 Color : SV_Target0;
+    uint Voxel : SV_Target1;
+};
+
+static const float kEpsilon = 0.001f;
 static const float kWidth = 1280.0f;
 static const float kHeight = 720.0f;
 
-float4 main(float4 position : SV_Position) : SV_Target0
+Output main(float4 position : SV_Position)
 {
+    Output output;
+    output.Color = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    output.Voxel = 0;
     float2 pixel = float2(position.x, Viewport.y - position.y);
     float2 ratio = float2(Viewport) / float2(kWidth, kHeight);
     float scale = max(ratio.x, ratio.y);
@@ -27,7 +37,11 @@ float4 main(float4 position : SV_Position) : SV_Target0
     {
         float x = (pixel.x - blockStart.x) / blockWidth;
         float y = (pixel.y - blockStart.y) / blockWidth;
-        return atlasTexture.Sample(atlasSampler, float3(x, 1.0f - y, Index));
+        output.Color = atlasTexture.Sample(atlasSampler, float3(x, 1.0f - y, Index));
+        if (output.Color.a > kEpsilon)
+        {
+            return output;
+        }
     }
     float crossWidth = 8.0f * scale;
     float crossThickness = 2.0f * scale;
@@ -41,8 +55,9 @@ float4 main(float4 position : SV_Position) : SV_Target0
         (pixel.x > crossStart2.x && pixel.y > crossStart2.y &&
          pixel.x < crossEnd2.x   && pixel.y < crossEnd2.y))
     {
-        return float4(1.0f, 1.0f, 1.0f, 1.0f);
+        output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+        return output;
     }
     discard;
-    return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    return output;
 }

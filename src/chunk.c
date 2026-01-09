@@ -127,6 +127,7 @@ static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[CHUNK_MESH_TYPE_CO
     bool has_voxels = false;
     for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
+        gpu_buffer_clear(&chunk->gpu_voxels[i]);
         has_voxels |= voxels[i].size > 0;
     }
     if (!has_voxels)
@@ -156,6 +157,7 @@ static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[CHUNK_MESH_TYPE_CO
 
 static void upload_lights(chunk_t* chunk, cpu_buffer_t* lights)
 {
+    gpu_buffer_clear(&chunk->gpu_lights);
     if (!lights->size)
     {
         return;

@@ -21,6 +21,7 @@ struct Output
     float3 WorldPosition : TEXCOORD0;
     nointerpolation float3 Normal : TEXCOORD1;
     float3 Texcoord : TEXCOORD2;
+    nointerpolation uint Voxel : TEXCOORD3;
 };
 
 Output main(Input input)
@@ -30,5 +31,6 @@ Output main(Input input)
     output.Normal = VoxelGetNormal(input.Voxel);
     output.Position = mul(Transform, float4(output.WorldPosition, 1.0f));
     output.Texcoord = VoxelGetTexcoord(input.Voxel);
+    output.Voxel = input.Voxel;
     return output;
 }

@@ -128,3 +128,8 @@ void gpu_buffer_update(gpu_buffer_t* gpu, SDL_GPUCopyPass* copy_pass, cpu_buffer
     SDL_UploadToGPUBuffer(copy_pass, &location, &region, true);
     gpu->size = size;
 }
+
+void gpu_buffer_clear(gpu_buffer_t* gpu)
+{
+    gpu->size = 0;
+}

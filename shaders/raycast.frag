@@ -1,4 +1,13 @@
-float4 main() : SV_Target0
+struct Output
 {
-    return float4(1.0f, 1.0f, 1.0f, 0.1f);
+    float4 Color : SV_Target0;
+    uint Voxel : SV_Target1;
+};
+
+Output main()
+{
+    Output output;
+    output.Color = float4(1.0f, 1.0f, 1.0f, 0.1f);
+    output.Voxel = 0;
+    return output;
 }

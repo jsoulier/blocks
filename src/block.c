@@ -116,7 +116,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .indices = {17, 17, 17, 17, 17, 17},
-        .light = {255, 255, 0, 55},
+        .light = {255, 255, 0, 10},
     },
 };
 
@@ -142,7 +142,7 @@ int block_get_index(block_t block, direction_t direction)
 
 bool block_is_light(block_t block)
 {
-    return BLOCKS[block].light.intensity > 0;
+    return BLOCKS[block].light.radius > 0;
 }
 
 light_t block_get_light(block_t block)

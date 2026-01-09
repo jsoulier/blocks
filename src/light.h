@@ -7,7 +7,7 @@ typedef struct light
     Uint8 red;
     Uint8 green;
     Uint8 blue;
-    Uint8 intensity;
+    Uint8 radius;
     Sint32 x;
     Sint32 y;
     Sint32 z;
