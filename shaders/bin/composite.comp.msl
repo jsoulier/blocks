@@ -7,21 +7,21 @@ kernel void main0(texture2d<float> colorTexture [[texture(0)]], texture2d<float>
 {
     do
     {
-        uint2 _31 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _43;
-        if (!(gl_GlobalInvocationID.x >= _31.x))
+        uint2 _30 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _42;
+        if (!(gl_GlobalInvocationID.x >= _30.x))
         {
-            _43 = gl_GlobalInvocationID.y >= _31.y;
+            _42 = gl_GlobalInvocationID.y >= _30.y;
         }
         else
         {
-            _43 = true;
+            _42 = true;
         }
-        if (_43)
+        if (_42)
         {
             break;
         }
-        compositeTexture.write(colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u) * (1.0 - ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x), uint2(gl_GlobalInvocationID.xy));
+        compositeTexture.write(colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u) * ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x, uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

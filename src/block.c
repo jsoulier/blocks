@@ -7,6 +7,7 @@ struct
     bool is_opaque;
     bool is_sprite;
     bool is_solid;
+    bool is_occluded;
     int indices[6];
     light_t light;
 }
@@ -17,6 +18,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = { 2,  2,  2,  2,  1,  3}
     },
     [BLOCK_DIRT] =
@@ -24,6 +26,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = { 3,  3,  3,  3,  3,  3}
     },
     [BLOCK_SAND] =
@@ -31,6 +34,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = { 5,  5,  5,  5,  5,  5}
     },
     [BLOCK_SNOW] =
@@ -38,6 +42,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = { 6,  6,  6,  6,  6,  6}
     },
     [BLOCK_STONE] =
@@ -45,6 +50,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = { 4,  4,  4,  4,  4,  4}
     },
     [BLOCK_LOG] =
@@ -52,6 +58,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = { 8,  8,  8,  8,  7,  7}
     },
     [BLOCK_LEAVES] =
@@ -59,6 +66,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = true,
         .indices = {10, 10, 10, 10, 10, 10}
     },
     [BLOCK_CLOUD] =
@@ -133,6 +141,11 @@ bool block_is_sprite(block_t block)
 bool block_is_solid(block_t block)
 {
     return BLOCKS[block].is_solid;
+}
+
+bool block_is_occluded(block_t block)
+{
+    return BLOCKS[block].is_occluded;
 }
 
 int block_get_index(block_t block, direction_t direction)

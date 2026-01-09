@@ -14,7 +14,8 @@ cbuffer UniformBuffer : register(b1, space3)
 struct Output
 {
     float4 Color : SV_Target0;
-    uint Voxel : SV_Target1;
+    float3 Position : SV_Target1;
+    uint Voxel : SV_Target2;
 };
 
 static const float kEpsilon = 0.001f;

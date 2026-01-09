@@ -1,7 +1,8 @@
 struct Output
 {
     float4 Color : SV_Target0;
-    uint Voxel : SV_Target1;
+    float3 Position : SV_Target1;
+    uint Voxel : SV_Target2;
 };
 
 Output main()

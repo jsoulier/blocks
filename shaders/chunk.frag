@@ -28,11 +28,13 @@ struct Input
 struct Output
 {
     float4 Color : SV_Target0;
-    uint Voxel : SV_Target1;
+    float3 Position : SV_Target1;
+    uint Voxel : SV_Target2;
 };
 
 static const float kEpsilon = 0.001f;
 static const float3 kAmbient = float3(0.2f, 0.2f, 0.2f);
+static const float kSkipNormalDistance = 0.2f;
 
 Output main(Input input)
 {
@@ -60,10 +62,18 @@ Output main(Input input)
             continue;
         }
         float3 lightDirection = offset / distance;
-        float NdotL = saturate(dot(input.Normal, lightDirection));
-        if (NdotL <= 0.0f)
+        float NdotL;
+        if (distance > kSkipNormalDistance)
         {
-            continue;
+            NdotL = saturate(dot(input.Normal, lightDirection));
+            if (distance > kSkipNormalDistance && NdotL <= 0.0f)
+            {
+                continue;
+            }
+        }
+        else
+        {
+            NdotL = 1.0f;
         }
         float attenuation = 1.0f - (distance / radius);
         attenuation = saturate(attenuation);
@@ -76,8 +86,8 @@ Output main(Input input)
     }
     float3 color = albedo.rgb * (diffuse + kAmbient);
     output.Color = float4(color, 1.0f);
-    // TODO: transparents aren't valid
-    output.Voxel |= 1 << VOXEL_VALID_OFFSET;
+    output.Position = input.WorldPosition;
+    output.Voxel |= input.Voxel & (VOXEL_OCCLUSION_MASK << VOXEL_OCCLUSION_OFFSET);
     output.Voxel |= input.Voxel & (VOXEL_DIRECTION_MASK << VOXEL_DIRECTION_OFFSET);
     return output;
 }

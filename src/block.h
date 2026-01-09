@@ -32,6 +32,7 @@ enum /* Block */
 bool block_is_opaque(block_t block);
 bool block_is_sprite(block_t block);
 bool block_is_solid(block_t block);
+bool block_is_occluded(block_t block);
 int block_get_index(block_t block, direction_t direction);
 bool block_is_light(block_t block);
 light_t block_get_light(block_t block);

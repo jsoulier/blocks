@@ -13,9 +13,14 @@ static const float3 kVoxelNormals[6] =
     float3( 0.0f,-1.0f, 0.0f)
 };
 
-bool VoxelIsValid(uint voxel)
+bool VoxelGetOcclusion(uint voxel)
 {
-    return (voxel >> VOXEL_VALID_OFFSET) & VOXEL_VALID_MASK;
+    return (voxel >> VOXEL_OCCLUSION_OFFSET) & VOXEL_OCCLUSION_MASK;
+}
+
+uint VoxelGetDirection(uint voxel)
+{
+    return (voxel >> VOXEL_DIRECTION_OFFSET) & VOXEL_DIRECTION_MASK;
 }
 
 float3 VoxelGetPosition(uint voxel)
@@ -26,11 +31,6 @@ float3 VoxelGetPosition(uint voxel)
 float3 VoxelGetTexcoord(uint voxel)
 {
     return float3((voxel >> VOXEL_U_OFFSET) & VOXEL_U_MASK, (voxel >> VOXEL_V_OFFSET) & VOXEL_V_MASK, (voxel >> VOXEL_INDEX_OFFSET) & VOXEL_INDEX_MASK);
-}
-
-uint VoxelGetDirection(uint voxel)
-{
-    return (voxel >> VOXEL_DIRECTION_OFFSET) & VOXEL_DIRECTION_MASK;
 }
 
 float3 VoxelGetNormal(uint voxel)

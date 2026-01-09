@@ -6,14 +6,14 @@ using namespace metal;
 struct main0_out
 {
     float4 out_var_SV_Target0 [[color(0)]];
-    uint out_var_SV_Target1 [[color(1)]];
+    uint out_var_SV_Target2 [[color(2)]];
 };
 
 fragment main0_out main0()
 {
     main0_out out = {};
     out.out_var_SV_Target0 = float4(1.0, 1.0, 1.0, 0.100000001490116119384765625);
-    out.out_var_SV_Target1 = 0u;
+    out.out_var_SV_Target2 = 0u;
     return out;
 }
 
