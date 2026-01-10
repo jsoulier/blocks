@@ -19,6 +19,7 @@ static SDL_GPUDevice* device;
 static SDL_GPUTextureFormat color_format;
 static SDL_GPUTextureFormat depth_format;
 static SDL_GPUGraphicsPipeline* chunk_pipeline;
+static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
 static SDL_GPUComputePipeline* ui_pipeline;
 static SDL_GPUComputePipeline* ssao_pipeline;
@@ -239,6 +240,41 @@ static bool create_chunk_pipeline()
     return chunk_pipeline != NULL;
 }
 
+static bool create_sky_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info =
+    {
+        .vertex_shader = shader_load(device, "sky.vert"),
+        .fragment_shader = shader_load(device, "sky.frag"),
+        .target_info =
+        {
+            .num_color_targets = 4,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[])
+            {{
+                .format = color_format,
+            },
+            {
+                .format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
+            },
+            {
+                .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+            },
+            {
+                .format = SDL_GPU_TEXTUREFORMAT_R8_UINT,
+            }},
+            .has_depth_stencil_target = true,
+            .depth_stencil_format = depth_format,
+        },
+    };
+    if (info.vertex_shader && info.fragment_shader)
+    {
+        sky_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+    return sky_pipeline != NULL;
+}
+
 static bool create_raycast_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
@@ -339,6 +375,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create chunk pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    if (!create_sky_pipeline())
+    {
+        SDL_Log("Failed to create sky pipeline: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
     if (!create_raycast_pipeline())
     {
         SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
@@ -410,6 +451,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUComputePipeline(device, ssao_pipeline);
     SDL_ReleaseGPUComputePipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, chunk_pipeline);
     SDL_ReleaseWindowFromGPUDevice(device, window);
     SDL_DestroyGPUDevice(device);
@@ -550,6 +592,14 @@ static void geometry(SDL_GPUCommandBuffer* command_buffer)
     {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
+    }
+    {
+        SDL_PushGPUDebugGroup(command_buffer, "sky");
+        SDL_BindGPUGraphicsPipeline(render_pass, sky_pipeline);
+        SDL_PushGPUVertexUniformData(command_buffer, 0, player.camera.proj, 64);
+        SDL_PushGPUVertexUniformData(command_buffer, 1, player.camera.view, 64);
+        SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
+        SDL_PopGPUDebugGroup(command_buffer);
     }
     {
         world_render_data_t data;

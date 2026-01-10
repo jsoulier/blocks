@@ -1,1 +1,1 @@
-{ "samplers": 0, "storage_textures": 0, "storage_buffers": 0, "uniform_buffers": 0, "inputs": [], "outputs": [{ "name": "out.var.SV_Target0", "type": "float4", "location": 0 }] }
+{ "samplers": 0, "storage_textures": 0, "storage_buffers": 0, "uniform_buffers": 0, "inputs": [{ "name": "in.var.TEXCOORD0", "type": "float3", "location": 0 }], "outputs": [{ "name": "out.var.SV_Target0", "type": "float4", "location": 0 }, { "name": "out.var.SV_Target3", "type": "uint", "location": 3 }] }
