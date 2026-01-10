@@ -5,6 +5,8 @@ Texture2D<float> ssaoTexture : register(t2, space0);
 RWTexture2D<float4> compositeTexture : register(u0, space1);
 
 static const float3 kAmbient = float3(0.5f, 0.5f, 0.5f);
+static const float kDiffuse = 2.0f;
+static const float kSSAO = 3.0f;
 
 [numthreads(8, 8, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
@@ -16,11 +18,11 @@ void main(uint3 threadID : SV_DispatchThreadID)
     {
         return;
     }
-    float3 light = lightTexture[threadID.xy].rgb;
+    float3 diffuse = lightTexture[threadID.xy].rgb;
     float4 color = colorTexture[threadID.xy];
     float3 albedo = color.rgb;
     float alpha = color.a;
     float ssao = ssaoTexture[threadID.xy];
-    float3 finalColor = albedo * (light * 2.0f + kAmbient - ssao * 2.0f);
+    float3 finalColor = albedo * (diffuse * kDiffuse + kAmbient - ssao * kSSAO);
     compositeTexture[threadID.xy] = float4(finalColor, alpha);
 }

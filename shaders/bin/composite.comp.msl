@@ -7,22 +7,22 @@ kernel void main0(texture2d<float> colorTexture [[texture(0)]], texture2d<float>
 {
     do
     {
-        uint2 _35 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _47;
-        if (!(gl_GlobalInvocationID.x >= _35.x))
+        uint2 _36 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _48;
+        if (!(gl_GlobalInvocationID.x >= _36.x))
         {
-            _47 = gl_GlobalInvocationID.y >= _35.y;
+            _48 = gl_GlobalInvocationID.y >= _36.y;
         }
         else
         {
-            _47 = true;
+            _48 = true;
         }
-        if (_47)
+        if (_48)
         {
             break;
         }
-        float4 _55 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        compositeTexture.write(float4(_55.xyz * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz * 2.0) + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 2.0)), _55.w), uint2(gl_GlobalInvocationID.xy));
+        float4 _56 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        compositeTexture.write(float4(_56.xyz * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz * 2.0) + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)), _56.w), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

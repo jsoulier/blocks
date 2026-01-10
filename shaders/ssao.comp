@@ -13,6 +13,8 @@ static const int kKernel = 2;
 bool IsOccluded(uint2 id, uint direction, float3 position)
 {
     uint voxel = voxelTexture[id].x;
+    // TODO: Removing improves performance a lot
+    // From 0.28 ms to 0.23 ms average on RTX 4050
     if (!VoxelGetOcclusion(voxel))
     {
         return false;

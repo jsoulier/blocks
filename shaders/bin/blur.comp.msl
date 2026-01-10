@@ -1,0 +1,44 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+kernel void main0(texture2d<float> inputTexture [[texture(0)]], texture2d<float, access::write> outputTexture [[texture(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    do
+    {
+        uint2 _35 = uint2(outputTexture.get_width(), outputTexture.get_height());
+        uint _36 = _35.x;
+        uint _37 = _35.y;
+        bool _47;
+        if (!(gl_GlobalInvocationID.x >= _36))
+        {
+            _47 = gl_GlobalInvocationID.y >= _37;
+        }
+        else
+        {
+            _47 = true;
+        }
+        if (_47)
+        {
+            break;
+        }
+        float _51;
+        _51 = 0.0;
+        float _52;
+        for (int _54 = -2; _54 <= 2; _51 = _52, _54++)
+        {
+            int _65 = int(clamp(gl_GlobalInvocationID.y + uint(_54), 0u, _37 - 1u));
+            _52 = _51;
+            for (int _69 = -2; _69 <= 2; )
+            {
+                _52 += inputTexture.read(uint2(uint2(uint(int(clamp(gl_GlobalInvocationID.x + uint(_69), 0u, _36 - 1u))), uint(_65))), 0u).x;
+                _69++;
+                continue;
+            }
+        }
+        outputTexture.write(float4(_51 * 0.039999999105930328369140625), uint2(gl_GlobalInvocationID.xy));
+        break;
+    } while(false);
+}
+
