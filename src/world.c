@@ -102,7 +102,7 @@ void world_init(SDL_GPUDevice* handle)
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
-        chunks[x][z] = SDL_malloc(sizeof(chunk_t));
+        chunks[x][z] = SDL_calloc(1, sizeof(chunk_t));
         chunk_init(chunks[x][z], device);
     }
     for (int x = 0; x < WORLD_WIDTH - 2; x++)

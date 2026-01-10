@@ -49,15 +49,15 @@ SDL_GPUShader* shader_load(SDL_GPUDevice* device, const char* name)
         return NULL;
     }
     jsmn_parser json_parser;
-    jsmntok_t json_tokens[64];
+    jsmntok_t json_tokens[128];
     jsmn_init(&json_parser);
-    if (jsmn_parse(&json_parser, shader_json_data, shader_json_size, json_tokens, 64) <= 0)
+    if (jsmn_parse(&json_parser, shader_json_data, shader_json_size, json_tokens, 128) <= 0)
     {
         SDL_Log("Failed to parse json: %s", shader_json_path);
         return NULL;
     }
     SDL_GPUShaderCreateInfo info = {0};
-    for (int i = 1; i < 64; i += 2)
+    for (int i = 1; i < 128; i += 2)
     {
         if (json_tokens[i].type != JSMN_STRING)
         {
@@ -158,15 +158,15 @@ SDL_GPUComputePipeline* shader_load_compute(SDL_GPUDevice* device, const char* n
         return NULL;
     }
     jsmn_parser json_parser;
-    jsmntok_t json_tokens[64];
+    jsmntok_t json_tokens[128];
     jsmn_init(&json_parser);
-    if (jsmn_parse(&json_parser, shader_json_data, shader_json_size, json_tokens, 64) <= 0)
+    if (jsmn_parse(&json_parser, shader_json_data, shader_json_size, json_tokens, 128) <= 0)
     {
         SDL_Log("Failed to parse json: %s", shader_json_path);
         return NULL;
     }
     SDL_GPUComputePipelineCreateInfo info = {0};
-    for (int i = 1; i < 64; i += 2)
+    for (int i = 1; i < 128; i += 2)
     {
         if (json_tokens[i].type != JSMN_STRING)
         {

@@ -29,26 +29,28 @@ struct Output
 {
     float4 Color : SV_Target0;
     float4 Position : SV_Target1;
-    uint Voxel : SV_Target2;
+    float4 Light : SV_Target2;
+    uint Voxel : SV_Target3;
 };
 
 static const float kEpsilon = 0.001f;
-static const float3 kAmbient = float3(0.2f, 0.2f, 0.2f);
 static const float kSkipNormalDistance = 0.2f;
 
 Output main(Input input)
 {
     Output output;
-    output.Color = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    output.Color = atlasTexture.Sample(atlasSampler, input.Texcoord);
+    output.Position = input.WorldPosition;
+    output.Light = float4(0.0f, 0.0f, 0.0f, 0.0f);
     output.Voxel = 0;
-    float4 albedo = atlasTexture.Sample(atlasSampler, input.Texcoord);
     // TODO: handle for transparents
-    if (albedo.a < kEpsilon)
+    if (output.Color.a < kEpsilon)
     {
         discard;
         return output;
     }
-    float3 diffuse = float3(0.0f, 0.0f, 0.0f);
+    output.Voxel |= input.Voxel & (VOXEL_OCCLUSION_MASK << VOXEL_OCCLUSION_OFFSET);
+    output.Voxel |= input.Voxel & (VOXEL_DIRECTION_MASK << VOXEL_DIRECTION_OFFSET);
     for (uint i = 0; i < LightCount; i++)
     {
         // TODO: performance with branches
@@ -82,12 +84,7 @@ Output main(Input input)
         color.r = ((light.Color & 0x000000FF) >> 0) / 255.0f;
         color.g = ((light.Color & 0x0000FF00) >> 8) / 255.0f;
         color.b = ((light.Color & 0x00FF0000) >> 16) / 255.0f;
-        diffuse += color * NdotL * attenuation;
+        output.Light.rgb += color * NdotL * attenuation;
     }
-    float3 color = albedo.rgb * (diffuse + kAmbient);
-    output.Color = float4(color, 1.0f);
-    output.Position = input.WorldPosition;
-    output.Voxel |= input.Voxel & (VOXEL_OCCLUSION_MASK << VOXEL_OCCLUSION_OFFSET);
-    output.Voxel |= input.Voxel & (VOXEL_DIRECTION_MASK << VOXEL_DIRECTION_OFFSET);
     return output;
 }

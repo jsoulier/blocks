@@ -37,7 +37,7 @@ void main(uint3 threadID : SV_DispatchThreadID)
     {
         float x = (pixel.x - blockStart.x) / blockWidth;
         float y = (pixel.y - blockStart.y) / blockWidth;
-        float4 color = atlasTexture.Sample(atlasSampler, float3(x, 1.0f - y, Index));
+        float4 color = atlasTexture.SampleLevel(atlasSampler, float3(x, 1.0f - y, Index), 0);
         if (color.a > kEpsilon)
         {
             colorTexture[threadID.xy] = color;
