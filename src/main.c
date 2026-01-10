@@ -36,6 +36,7 @@ static SDL_GPUTexture* composite_texture;
 static SDL_GPUTexture* fxaa_texture;
 static SDL_GPUSampler* linear_sampler;
 static SDL_GPUSampler* nearest_sampler;
+static SDL_GPUSampler* nearest_anisotropy_sampler;
 static player_t player;
 static Uint64 ticks1;
 
@@ -163,6 +164,14 @@ static bool create_samplers()
     if (!nearest_sampler)
     {
         SDL_Log("Failed to create nearest sampler: %s", SDL_GetError());
+        return false;
+    }
+    info.enable_anisotropy = true;
+    info.max_anisotropy = 16.0f;
+    nearest_anisotropy_sampler = SDL_CreateGPUSampler(device, &info);
+    if (!nearest_anisotropy_sampler)
+    {
+        SDL_Log("Failed to create nearest anisotropy sampler: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -373,6 +382,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_HideWindow(window);
     world_free();
     save_free();
+    SDL_ReleaseGPUSampler(device, nearest_anisotropy_sampler);
     SDL_ReleaseGPUSampler(device, linear_sampler);
     SDL_ReleaseGPUSampler(device, nearest_sampler);
     SDL_ReleaseGPUTexture(device, fxaa_texture);
@@ -527,7 +537,7 @@ static void geometry(SDL_GPUCommandBuffer* command_buffer)
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
         data.pipeline = chunk_pipeline;
-        data.sampler = nearest_sampler;
+        data.sampler = nearest_anisotropy_sampler;
         data.atlas_texture = atlas_texture;
         for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
         {
