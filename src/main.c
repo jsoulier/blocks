@@ -7,18 +7,21 @@
 #include "player.h"
 #include "save.h"
 #include "shader.h"
+#include "sky.h"
 #include "world.h"
 
 static const float ATLAS_WIDTH = 512.0f;
 static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
 static const char* SAVE_PATH = "blocks.sqlite3";
+static const int SHADOW_RESOLUTION = 1024.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
 static SDL_GPUTextureFormat color_format;
 static SDL_GPUTextureFormat depth_format;
 static SDL_GPUGraphicsPipeline* chunk_pipeline;
+static SDL_GPUGraphicsPipeline* depth_pipeline;
 static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
 static SDL_GPUComputePipeline* ui_pipeline;
@@ -37,10 +40,12 @@ static SDL_GPUTexture* ssao_texture;
 static SDL_GPUTexture* ssao_blur_texture;
 static SDL_GPUTexture* composite_texture;
 static SDL_GPUTexture* fxaa_texture;
+static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* linear_sampler;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* nearest_anisotropy_sampler;
 static player_t player;
+static sky_t sky;
 static Uint64 ticks1;
 
 static bool create_atlas()
@@ -240,6 +245,47 @@ static bool create_chunk_pipeline()
     return chunk_pipeline != NULL;
 }
 
+static bool create_depth_pipeline()
+{
+    SDL_GPUGraphicsPipelineCreateInfo info =
+    {
+        .vertex_shader = shader_load(device, "depth.vert"),
+        .fragment_shader = shader_load(device, "depth.frag"),
+        .target_info =
+        {
+            .has_depth_stencil_target = true,
+            .depth_stencil_format = depth_format,
+        },
+        .vertex_input_state =
+        {
+            .num_vertex_attributes = 1,
+            .vertex_attributes = (SDL_GPUVertexAttribute[])
+            {{
+                .format = SDL_GPU_VERTEXELEMENTFORMAT_UINT,
+            }},
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = (SDL_GPUVertexBufferDescription[])
+            {{
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+                .pitch = 4,
+            }},
+        },
+        .depth_stencil_state =
+        {
+            .enable_depth_test = true,
+            .enable_depth_write = true,
+            .compare_op = SDL_GPU_COMPAREOP_LESS,
+        },
+    };
+    if (info.vertex_shader && info.fragment_shader)
+    {
+        depth_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+    return depth_pipeline != NULL;
+}
+
 static bool create_sky_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
@@ -375,6 +421,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create chunk pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    if (!create_depth_pipeline())
+    {
+        SDL_Log("Failed to create depth pipeline: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
     if (!create_sky_pipeline())
     {
         SDL_Log("Failed to create sky pipeline: %s", SDL_GetError());
@@ -415,12 +466,29 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to load blur pipeline");
         return SDL_APP_FAILURE;
     }
+    {
+        SDL_GPUTextureCreateInfo info = {0};
+        info.type = SDL_GPU_TEXTURETYPE_2D;
+        info.format = depth_format;
+        info.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+        info.width = SHADOW_RESOLUTION;
+        info.height = SHADOW_RESOLUTION;
+        info.layer_count_or_depth = 1;
+        info.num_levels = 1;
+        shadow_texture = SDL_CreateGPUTexture(device, &info);
+        if (!shadow_texture)
+        {
+            SDL_Log("Failed to create shadow texture: %s", SDL_GetError());
+            return false;
+        }
+    }
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
     save_init(SAVE_PATH);
     world_init(device);
     player_init(&player);
+    sky_init(&sky);
     save_get_player(&player);
     ticks1 = SDL_GetTicks();
     return SDL_APP_CONTINUE;
@@ -434,6 +502,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUSampler(device, nearest_anisotropy_sampler);
     SDL_ReleaseGPUSampler(device, linear_sampler);
     SDL_ReleaseGPUSampler(device, nearest_sampler);
+    SDL_ReleaseGPUTexture(device, shadow_texture);
     SDL_ReleaseGPUTexture(device, fxaa_texture);
     SDL_ReleaseGPUTexture(device, composite_texture);
     SDL_ReleaseGPUTexture(device, ssao_blur_texture);
@@ -452,6 +521,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUComputePipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, depth_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, chunk_pipeline);
     SDL_ReleaseWindowFromGPUDevice(device, window);
     SDL_DestroyGPUDevice(device);
@@ -561,7 +631,37 @@ static bool resize(int width, int height)
     return true;
 }
 
-static void geometry(SDL_GPUCommandBuffer* command_buffer)
+static void render_sky(SDL_GPUCommandBuffer* command_buffer)
+{
+    SDL_GPUDepthStencilTargetInfo depth_info = {0};
+    depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
+    depth_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
+    depth_info.store_op = SDL_GPU_STOREOP_STORE;
+    depth_info.texture = shadow_texture;
+    depth_info.clear_depth = 1.0f;
+    depth_info.cycle = true;
+    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, NULL, 0, &depth_info);
+    if (!render_pass)
+    {
+        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
+        return;
+    }
+    {
+        world_render_data_t data;
+        data.camera = &sky.camera;
+        data.command_buffer = command_buffer;
+        data.render_pass = render_pass;
+        data.pipeline = depth_pipeline;
+        data.sampler = NULL;
+        data.atlas_texture = NULL;
+        data.use_lights = false;
+        data.type = CHUNK_MESH_TYPE_OPAQUE;
+        world_render(&data);
+    }
+    SDL_EndGPURenderPass(render_pass);
+}
+
+static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
 {
     SDL_GPUColorTargetInfo color_info[4] = {0};
     color_info[0].load_op = SDL_GPU_LOADOP_CLEAR;
@@ -609,6 +709,7 @@ static void geometry(SDL_GPUCommandBuffer* command_buffer)
         data.pipeline = chunk_pipeline;
         data.sampler = nearest_anisotropy_sampler;
         data.atlas_texture = atlas_texture;
+        data.use_lights = true;
         for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
         {
             data.type = i;
@@ -673,12 +774,18 @@ static void postprocess(SDL_GPUCommandBuffer* command_buffer)
             SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
             return;
         }
-        SDL_GPUTexture* read_textures[3] = {color_texture, light_texture, ssao_blur_texture};
+        SDL_GPUTexture* read_textures[5] = {color_texture, light_texture, ssao_blur_texture, voxel_texture, position_texture};
+        SDL_GPUTextureSamplerBinding read_samplers = {shadow_texture, nearest_sampler};
         int groups_x = (player.camera.width + 8 - 1) / 8;
         int groups_y = (player.camera.height + 8 - 1) / 8;
+        float vector[3] = {0};
+        camera_get_vector(&sky.camera, &vector[0], &vector[1], &vector[2]);
         SDL_PushGPUDebugGroup(command_buffer, "composite");
         SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
-        SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 3);
+        SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 5);
+        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
+        SDL_PushGPUComputeUniformData(command_buffer, 0, &sky.camera.matrix, 64);
+        SDL_PushGPUComputeUniformData(command_buffer, 1, vector, sizeof(vector));
         SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
         SDL_EndGPUComputePass(compute_pass);
         SDL_PopGPUDebugGroup(command_buffer);
@@ -691,12 +798,12 @@ static void postprocess(SDL_GPUCommandBuffer* command_buffer)
             SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
             return;
         }
-        SDL_GPUTextureSamplerBinding read_textures = {composite_texture, linear_sampler};
+        SDL_GPUTextureSamplerBinding read_samplers = {composite_texture, linear_sampler};
         int groups_x = (player.camera.width + 8 - 1) / 8;
         int groups_y = (player.camera.height + 8 - 1) / 8;
         SDL_PushGPUDebugGroup(command_buffer, "fxaa");
         SDL_BindGPUComputePipeline(compute_pass, fxaa_pipeline);
-        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_textures, 1);
+        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
         SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
         SDL_EndGPUComputePass(compute_pass);
         SDL_PopGPUDebugGroup(command_buffer);
@@ -753,7 +860,8 @@ static void render()
         return;
     }
     camera_update(&player.camera);
-    geometry(command_buffer);
+    render_sky(command_buffer);
+    render_geometry(command_buffer);
     postprocess(command_buffer);
     SDL_GPUBlitInfo info = {0};
     info.source.texture = fxaa_texture;
@@ -778,6 +886,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
         player_move(&player, dt);
         save_set_player(&player);
     }
+    sky_update(&sky, &player.camera, dt);
     world_update(&player.camera);
     render();
     return SDL_APP_CONTINUE;

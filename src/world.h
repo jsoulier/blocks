@@ -28,6 +28,7 @@ typedef struct world_render_data
     SDL_GPUGraphicsPipeline* pipeline;
     SDL_GPUSampler* sampler;
     SDL_GPUTexture* atlas_texture;
+    bool use_lights;
 }
 world_render_data_t;
 

@@ -268,7 +268,11 @@ void world_render(const world_render_data_t* data)
     SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, sampler};
     SDL_PushGPUDebugGroup(command_buffer, "world");
     SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
-    SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
+    if (atlas_binding.texture)
+    {
+        SDL_assert(atlas_binding.sampler);
+        SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
+    }
     SDL_PushGPUVertexUniformData(command_buffer, 0, camera->proj, 64);
     SDL_PushGPUVertexUniformData(command_buffer, 1, camera->view, 64);
     for (int x = 0; x < WORLD_WIDTH - 2; x++)
@@ -291,10 +295,13 @@ void world_render(const world_render_data_t* data)
         float position[] = {chunk->x, 0, chunk->z};
         SDL_GPUBufferBinding voxel_binding = {gpu_voxels->buffer};
         SDL_GPUBufferBinding index_binding = {gpu_indices.buffer};
-        Sint32 num_lights = chunk->gpu_lights.size;
-        gpu_buffer_t* gpu_lights = num_lights ? &chunk->gpu_lights : &gpu_empty_lights;
-        SDL_BindGPUFragmentStorageBuffers(render_pass, 0, &gpu_lights->buffer, 1);
-        SDL_PushGPUFragmentUniformData(command_buffer, 0, &num_lights, sizeof(num_lights));
+        if (data->use_lights)
+        {
+            Sint32 num_lights = chunk->gpu_lights.size;
+            gpu_buffer_t* gpu_lights = num_lights ? &chunk->gpu_lights : &gpu_empty_lights;
+            SDL_BindGPUFragmentStorageBuffers(render_pass, 0, &gpu_lights->buffer, 1);
+            SDL_PushGPUFragmentUniformData(command_buffer, 0, &num_lights, sizeof(num_lights));
+        }
         SDL_PushGPUVertexUniformData(command_buffer, 2, position, sizeof(position));
         SDL_BindGPUVertexBuffers(render_pass, 0, &voxel_binding, 1);
         SDL_BindGPUIndexBuffer(render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);

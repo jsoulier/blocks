@@ -216,8 +216,8 @@ void camera_move(camera_t* camera, float x, float y, float z)
 
 void camera_rotate(camera_t* camera, float pitch, float yaw)
 {
-    float a = camera->pitch + RADIANS(pitch);
-    float b = camera->yaw + RADIANS(yaw);
+    float a = DEGREES(camera->pitch) + pitch;
+    float b = DEGREES(camera->yaw) + yaw;
     camera_set_rotation(camera, a, b, 0.0f);
 }
 
@@ -237,16 +237,16 @@ void camera_get_position(const camera_t* camera, float* x, float* y, float* z)
 
 void camera_set_rotation(camera_t* camera, float pitch, float yaw, float roll)
 {
-    camera->pitch = SDL_clamp(pitch, -MAX_PITCH, MAX_PITCH);
-    camera->yaw = yaw;
-    camera->roll = roll;
+    camera->pitch = SDL_clamp(RADIANS(pitch), -MAX_PITCH, MAX_PITCH);
+    camera->yaw = RADIANS(yaw);
+    camera->roll = RADIANS(roll);
 }
 
 void camera_get_rotation(const camera_t* camera, float* pitch, float* yaw, float* roll)
 {
-    *pitch = camera->pitch;
-    *yaw = camera->yaw;
-    *roll = camera->roll;
+    *pitch = DEGREES(camera->pitch);
+    *yaw = DEGREES(camera->yaw);
+    *roll = DEGREES(camera->roll);
 }
 
 void camera_get_vector(const camera_t* camera, float* x, float* y, float* z)

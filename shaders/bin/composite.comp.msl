@@ -1,28 +1,152 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
 
-kernel void main0(texture2d<float> colorTexture [[texture(0)]], texture2d<float> lightTexture [[texture(1)]], texture2d<float> ssaoTexture [[texture(2)]], texture2d<float, access::write> compositeTexture [[texture(3)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+    
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+    
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+    
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+    
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct type_UniformBuffer
+{
+    float4x4 ShadowTransform;
+};
+
+struct type_UniformBuffer_1
+{
+    float3 ShadowVector;
+};
+
+constant spvUnsafeArray<float3, 6> _69 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+
+kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], texture2d<float> shadowTexture [[texture(0)]], texture2d<float> colorTexture [[texture(1)]], texture2d<float> lightTexture [[texture(2)]], texture2d<float> ssaoTexture [[texture(3)]], texture2d<uint> voxelTexture [[texture(4)]], texture2d<float> positionTexture [[texture(5)]], texture2d<float, access::write> compositeTexture [[texture(6)]], sampler samplerState [[sampler(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
 {
     do
     {
-        uint2 _36 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _48;
-        if (!(gl_GlobalInvocationID.x >= _36.x))
+        uint2 _77 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _89;
+        if (!(gl_GlobalInvocationID.x >= _77.x))
         {
-            _48 = gl_GlobalInvocationID.y >= _36.y;
+            _89 = gl_GlobalInvocationID.y >= _77.y;
         }
         else
         {
-            _48 = true;
+            _89 = true;
         }
-        if (_48)
+        if (_89)
         {
             break;
         }
-        float4 _56 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        compositeTexture.write(float4(_56.xyz * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz * 2.0) + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)), _56.w), uint2(gl_GlobalInvocationID.xy));
+        float4 _94 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        float3 _95 = _94.xyz;
+        uint4 _98 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        uint _99 = _98.x;
+        float3 _182;
+        if ((_99 & 1u) != 0u)
+        {
+            float _174;
+            do
+            {
+                float4 _127 = UniformBuffer.ShadowTransform * float4(positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz, 1.0);
+                float3 _131 = _127.xyz / float3(_127.w);
+                float2 _134 = (_131.xy * 0.5) + float2(0.5);
+                float _136 = 1.0 - _134.y;
+                float2 _137 = _134;
+                _137.y = _136;
+                float _138 = _134.x;
+                bool _144;
+                if (!(_138 < 0.0))
+                {
+                    _144 = _138 > 1.0;
+                }
+                else
+                {
+                    _144 = true;
+                }
+                bool _149;
+                if (!_144)
+                {
+                    _149 = _136 < 0.0;
+                }
+                else
+                {
+                    _149 = true;
+                }
+                bool _154;
+                if (!_149)
+                {
+                    _154 = _136 > 1.0;
+                }
+                else
+                {
+                    _154 = true;
+                }
+                if (_154)
+                {
+                    _174 = 0.0;
+                    break;
+                }
+                if (dot(_69[(_99 >> 1u) & 7u], UniformBuffer_1.ShadowVector) > 0.0)
+                {
+                    _174 = 1.0;
+                    break;
+                }
+                if ((_131.z - 0.00015000000712461769580841064453125) <= shadowTexture.sample(samplerState, _137, level(0.0)).x)
+                {
+                    _174 = 0.0;
+                    break;
+                }
+                else
+                {
+                    _174 = 1.0;
+                    break;
+                }
+                break; // unreachable workaround
+            } while(false);
+            _182 = _95 * ((((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz * 2.0) + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_174 * 0.4000000059604644775390625));
+        }
+        else
+        {
+            _182 = _95;
+        }
+        compositeTexture.write(float4(_182, _94.w), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

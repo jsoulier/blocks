@@ -1,10 +1,12 @@
 #pragma once
 
-typedef struct sky_render_data
+#include "camera.h"
+
+typedef struct sky
 {
-
+    camera_t camera;
 }
-sky_render_data_t;
+sky_t;
 
-void sky_init();
-void sky_free();
+void sky_init(sky_t* sky);
+void sky_update(sky_t* sky, camera_t* camera, float dt);
