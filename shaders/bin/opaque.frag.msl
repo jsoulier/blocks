@@ -68,37 +68,28 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& 
             _84 = _83;
             continue;
         }
-        bool _118 = _107 > 0.20000000298023223876953125;
-        float _130;
-        if (_118)
+        float _127;
+        if (_107 > 0.20000000298023223876953125)
         {
             float _123 = fast::clamp(dot(in.in_var_TEXCOORD1, _106 / float3(_107)), 0.0, 1.0);
-            bool _127;
-            if (_118)
-            {
-                _127 = _123 <= 0.0;
-            }
-            else
-            {
-                _127 = false;
-            }
-            if (_127)
+            if (_123 <= 0.0)
             {
                 _84 = _83;
                 continue;
             }
-            _130 = _123;
+            _127 = _123;
         }
         else
         {
-            _130 = 1.0;
+            _127 = 1.0;
         }
-        float _133 = fast::clamp(1.0 - (_107 / _99), 0.0, 1.0);
-        _84 = _83 + ((float3(float(lightBuffer._m0[_86].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _130) * (_133 * _133));
+        float _130 = fast::clamp(1.0 - (_107 / _99), 0.0, 1.0);
+        _84 = _83 + ((float3(float(lightBuffer._m0[_86].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _127) * (_130 * _130));
     }
+    float3 _147 = _83 * 2.0;
     out.out_var_SV_Target0 = _71;
     out.out_var_SV_Target1 = in.in_var_TEXCOORD0;
-    out.out_var_SV_Target2 = float4(_83.x, _83.y, _83.z, float4(0.0).w);
+    out.out_var_SV_Target2 = float4(_147.x, _147.y, _147.z, float4(0.0).w);
     out.out_var_SV_Target3 = (in.in_var_TEXCOORD3 & 1u) | (in.in_var_TEXCOORD3 & 14u);
     return out;
 }

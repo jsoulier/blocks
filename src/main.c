@@ -1,5 +1,3 @@
-// TODO: investigate mipmap_mode
-
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -759,11 +757,9 @@ static void render_sky(SDL_GPUCommandBuffer* command_buffer)
         data.camera = &sky.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.pipeline = shadow_pipeline;
-        data.sampler = NULL;
-        data.atlas_texture = NULL;
         data.use_lights = false;
         data.type = CHUNK_MESH_TYPE_OPAQUE;
+        SDL_BindGPUGraphicsPipeline(render_pass, shadow_pipeline);
         world_render(&data);
     }
     SDL_EndGPURenderPass(render_pass);
@@ -815,10 +811,10 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
         data.camera = &player.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.pipeline = opaque_pipeline;
-        data.sampler = nearest_anisotropy_sampler;
-        data.atlas_texture = atlas_texture;
         data.use_lights = true;
+        SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_anisotropy_sampler};
+        SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
+        SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
         world_render(&data);
     }
     SDL_EndGPURenderPass(render_pass);
@@ -874,14 +870,11 @@ static void postprocess(SDL_GPUCommandBuffer* command_buffer)
         SDL_GPUTextureSamplerBinding read_samplers = {shadow_texture, nearest_sampler};
         int groups_x = (player.camera.width + 8 - 1) / 8;
         int groups_y = (player.camera.height + 8 - 1) / 8;
-        float vector[3] = {0};
-        camera_get_vector(&sky.camera, &vector[0], &vector[1], &vector[2]);
         SDL_PushGPUDebugGroup(command_buffer, "composite");
         SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
         SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 5);
         SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
         SDL_PushGPUComputeUniformData(command_buffer, 0, &sky.camera.matrix, 64);
-        SDL_PushGPUComputeUniformData(command_buffer, 1, vector, sizeof(vector));
         SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
         SDL_EndGPUComputePass(compute_pass);
         SDL_PopGPUDebugGroup(command_buffer);
@@ -906,10 +899,8 @@ static void render_predepth(SDL_GPUCommandBuffer* command_buffer)
         data.camera = &player.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.pipeline = predepth_pipeline;
-        data.sampler = NULL;
-        data.atlas_texture = NULL;
         data.use_lights = false;
+        SDL_BindGPUGraphicsPipeline(render_pass, predepth_pipeline);
         world_render(&data);
     }
     SDL_EndGPURenderPass(render_pass);
@@ -937,10 +928,13 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         data.camera = &player.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.pipeline = transparent_pipeline;
-        data.sampler = nearest_anisotropy_sampler;
-        data.atlas_texture = atlas_texture;
         data.use_lights = true;
+        SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_anisotropy_sampler};
+        SDL_GPUTextureSamplerBinding shadow_binding = {shadow_texture, nearest_sampler};
+        SDL_BindGPUGraphicsPipeline(render_pass, transparent_pipeline);
+        SDL_PushGPUFragmentUniformData(command_buffer, 1, &sky.camera.matrix, 64);
+        SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
+        SDL_BindGPUFragmentSamplers(render_pass, 1, &shadow_binding, 1);
         world_render(&data);
     }
     if (player.query.block != BLOCK_EMPTY)

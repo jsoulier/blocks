@@ -25,9 +25,6 @@ typedef struct world_render_data
     chunk_mesh_type_t type;
     SDL_GPUCommandBuffer* command_buffer;
     SDL_GPURenderPass* render_pass;
-    SDL_GPUGraphicsPipeline* pipeline;
-    SDL_GPUSampler* sampler;
-    SDL_GPUTexture* atlas_texture;
     bool use_lights;
 }
 world_render_data_t;

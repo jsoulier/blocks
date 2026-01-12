@@ -11,8 +11,8 @@ struct Light
 
 float3 LightGet(StructuredBuffer<Light> lights, uint lightCount, float4 position, float3 normal)
 {
-    static const float kSkipNormalDistance = 0.2f;
-
+    static const float kBias = 0.2f;
+    static const float kLight = 2.0f;
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < lightCount; i++)
     {
@@ -28,10 +28,10 @@ float3 LightGet(StructuredBuffer<Light> lights, uint lightCount, float4 position
         }
         float3 lightDirection = offset / distance;
         float NdotL;
-        if (distance > kSkipNormalDistance)
+        if (distance > kBias)
         {
             NdotL = saturate(dot(normal, lightDirection));
-            if (distance > kSkipNormalDistance && NdotL <= 0.0f)
+            if (NdotL <= 0.0f)
             {
                 continue;
             }
@@ -49,7 +49,7 @@ float3 LightGet(StructuredBuffer<Light> lights, uint lightCount, float4 position
         color.b = ((light.Color & 0x00FF0000) >> 16) / 255.0f;
         finalColor += color * NdotL * attenuation;
     }
-    return finalColor;
+    return finalColor * kLight;
 }
 
 #endif

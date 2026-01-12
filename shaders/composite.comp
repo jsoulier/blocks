@@ -1,7 +1,8 @@
+#include "shadow.hlsl"
 #include "voxel.hlsl"
 
 Texture2D<float> shadowTexture : register(t0, space0);
-SamplerState samplerState : register(s0, space0);
+SamplerState shadowSampler : register(s0, space0);
 Texture2D<float4> colorTexture : register(t1, space0);
 Texture2D<float4> lightTexture : register(t2, space0);
 Texture2D<float> ssaoTexture : register(t3, space0);
@@ -15,43 +16,10 @@ cbuffer UniformBuffer : register(b0, space2)
     float4x4 ShadowTransform;
 };
 
-cbuffer UniformBuffer : register(b1, space2)
-{
-    float3 ShadowVector;
-};
-
-static const float kBias = 0.00015f;
+// TODO: sky
 static const float3 kAmbient = float3(0.5f, 0.5f, 0.5f);
-static const float kDiffuse = 2.0f;
-static const float kSSAO = 3.0f;
-static const float kShadow = 0.4f;
 
-float GetShadow(float3 position, float3 normal)
-{
-    float4 shadowPosition = mul(ShadowTransform, float4(position, 1.0f));
-    shadowPosition.xyz /= shadowPosition.w;
-    float2 uv = shadowPosition.xy * 0.5f + 0.5f;
-    uv.y = 1.0f - uv.y;
-    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f)
-    {
-        return 0.0f;
-    }
-    float depth = shadowPosition.z;
-    float closestDepth = shadowTexture.SampleLevel(samplerState, uv, 0);
-    float ratio = dot(normal, ShadowVector);
-    if (ratio > 0.0f)
-    {
-        return 1.0f;
-    }
-    if (depth - kBias <= closestDepth)
-    {
-        return 0.0f;
-    }
-    else
-    {
-        return 1.0f;
-    }
-}
+static const float kSSAO = 3.0f;
 
 [numthreads(8, 8, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
@@ -71,11 +39,11 @@ void main(uint3 threadID : SV_DispatchThreadID)
     // TODO: fix condition
     if (VoxelGetOcclusion(voxel))
     {
-        float3 diffuse = lightTexture[threadID.xy].rgb * kDiffuse;
+        float3 diffuse = lightTexture[threadID.xy].rgb;
         float3 normal = VoxelGetNormal(voxel);
         float ssao = ssaoTexture[threadID.xy] * kSSAO;
         float3 position = positionTexture[threadID.xy].xyz;
-        float shadow = GetShadow(position, normal) * kShadow;
+        float shadow = ShadowGet(shadowTexture, shadowSampler, ShadowTransform, position, normal);
         finalColor = albedo * (diffuse + kAmbient - ssao - shadow);
     }
     else

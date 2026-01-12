@@ -262,17 +262,7 @@ void world_render(const world_render_data_t* data)
     const camera_t* camera = data->camera;
     SDL_GPUCommandBuffer* command_buffer = data->command_buffer;
     SDL_GPURenderPass* render_pass = data->render_pass;
-    SDL_GPUGraphicsPipeline* pipeline = data->pipeline;
-    SDL_GPUSampler* sampler = data->sampler;
-    SDL_GPUTexture* atlas_texture = data->atlas_texture;
-    SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, sampler};
     SDL_PushGPUDebugGroup(command_buffer, "world");
-    SDL_BindGPUGraphicsPipeline(render_pass, pipeline);
-    if (atlas_binding.texture)
-    {
-        SDL_assert(atlas_binding.sampler);
-        SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
-    }
     SDL_PushGPUVertexUniformData(command_buffer, 0, camera->proj, 64);
     SDL_PushGPUVertexUniformData(command_buffer, 1, camera->view, 64);
     for (int x = 0; x < WORLD_WIDTH - 2; x++)
