@@ -1,0 +1,37 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_UniformBuffer
+{
+    float4x4 Proj;
+};
+
+struct type_UniformBuffer_1
+{
+    float4x4 View;
+};
+
+struct type_UniformBuffer_2
+{
+    float3 ChunkPosition;
+};
+
+struct main0_out
+{
+    float4 gl_Position [[position]];
+};
+
+struct main0_in
+{
+    uint in_var_TEXCOORD0 [[attribute(0)]];
+};
+
+vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]])
+{
+    main0_out out = {};
+    out.gl_Position = UniformBuffer.Proj * (UniformBuffer_1.View * float4(float3(float((in.in_var_TEXCOORD0 >> 5u) & 31u), float((in.in_var_TEXCOORD0 >> 10u) & 255u), float((in.in_var_TEXCOORD0 >> 18u) & 31u)) + UniformBuffer_2.ChunkPosition, 1.0));
+    return out;
+}
+

@@ -1,1 +1,0 @@
-{ "samplers": 1, "storage_textures": 0, "storage_buffers": 0, "uniform_buffers": 2, "inputs": [], "outputs": [{ "name": "out.var.SV_Target0", "type": "float4", "location": 0 }, { "name": "out.var.SV_Target2", "type": "uint", "location": 2 }] }

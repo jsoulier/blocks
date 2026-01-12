@@ -23,6 +23,11 @@ uint VoxelGetDirection(uint voxel)
     return (voxel >> VOXEL_DIRECTION_OFFSET) & VOXEL_DIRECTION_MASK;
 }
 
+bool VoxelGetShadow(uint voxel)
+{
+    return (voxel >> VOXEL_SHADOW_OFFSET) & VOXEL_SHADOW_MASK;
+}
+
 float3 VoxelGetPosition(uint voxel)
 {
     return float3((voxel >> VOXEL_X_OFFSET) & VOXEL_X_MASK, (voxel >> VOXEL_Y_OFFSET) & VOXEL_Y_MASK, (voxel >> VOXEL_Z_OFFSET) & VOXEL_Z_MASK);

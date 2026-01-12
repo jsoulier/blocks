@@ -1,0 +1,36 @@
+#include "voxel.hlsl"
+
+cbuffer UniformBuffer : register(b0, space1)
+{
+    float4x4 Proj;
+};
+
+cbuffer UniformBuffer : register(b1, space1)
+{
+    float4x4 View;
+};
+
+cbuffer UniformBuffer : register(b2, space1)
+{
+    float3 ChunkPosition;
+};
+
+struct Input
+{
+    uint Voxel : TEXCOORD0;
+};
+
+struct Output
+{
+    float4 Position : SV_Position;
+    float ClipDistance : SV_ClipDistance0;
+};
+
+Output main(Input input)
+{
+    Output output;
+    float3 position = VoxelGetPosition(input.Voxel) + ChunkPosition;
+    output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
+    output.ClipDistance = VoxelGetShadow(input.Voxel) ? 1.0f : -1.0f;
+    return output;
+}

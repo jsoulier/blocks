@@ -1,0 +1,105 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Light
+{
+    uint Color;
+    int X;
+    int Y;
+    int Z;
+};
+
+struct type_StructuredBuffer_Light
+{
+    Light _m0[1];
+};
+
+struct type_UniformBuffer
+{
+    int LightCount;
+};
+
+struct main0_out
+{
+    float4 out_var_SV_Target0 [[color(0)]];
+    float4 out_var_SV_Target1 [[color(1)]];
+    float4 out_var_SV_Target2 [[color(2)]];
+    uint out_var_SV_Target3 [[color(3)]];
+};
+
+struct main0_in
+{
+    float4 in_var_TEXCOORD0 [[user(locn0)]];
+    float3 in_var_TEXCOORD1 [[user(locn1), flat]];
+    float3 in_var_TEXCOORD2 [[user(locn2)]];
+    uint in_var_TEXCOORD3 [[user(locn3)]];
+};
+
+fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(1)]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]])
+{
+    main0_out out = {};
+    float4 _71 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
+    if (_71.w < 0.001000000047497451305389404296875)
+    {
+        discard_fragment();
+    }
+    uint _81 = uint(UniformBuffer.LightCount);
+    float3 _83;
+    _83 = float3(0.0);
+    float3 _84;
+    for (uint _86 = 0u; _86 < _81; _83 = _84, _86++)
+    {
+        float _99 = float((lightBuffer._m0[_86].Color & 4278190080u) >> 24u);
+        float3 _106 = (float3(float(lightBuffer._m0[_86].X), float(lightBuffer._m0[_86].Y), float(lightBuffer._m0[_86].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _107 = length(_106);
+        bool _113;
+        if (!(_107 >= _99))
+        {
+            _113 = _99 <= 0.0;
+        }
+        else
+        {
+            _113 = true;
+        }
+        if (_113)
+        {
+            _84 = _83;
+            continue;
+        }
+        bool _118 = _107 > 0.20000000298023223876953125;
+        float _130;
+        if (_118)
+        {
+            float _123 = fast::clamp(dot(in.in_var_TEXCOORD1, _106 / float3(_107)), 0.0, 1.0);
+            bool _127;
+            if (_118)
+            {
+                _127 = _123 <= 0.0;
+            }
+            else
+            {
+                _127 = false;
+            }
+            if (_127)
+            {
+                _84 = _83;
+                continue;
+            }
+            _130 = _123;
+        }
+        else
+        {
+            _130 = 1.0;
+        }
+        float _133 = fast::clamp(1.0 - (_107 / _99), 0.0, 1.0);
+        _84 = _83 + ((float3(float(lightBuffer._m0[_86].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _130) * (_133 * _133));
+    }
+    out.out_var_SV_Target0 = _71;
+    out.out_var_SV_Target1 = in.in_var_TEXCOORD0;
+    out.out_var_SV_Target2 = float4(_83.x, _83.y, _83.z, float4(0.0).w);
+    out.out_var_SV_Target3 = (in.in_var_TEXCOORD3 & 1u) | (in.in_var_TEXCOORD3 & 14u);
+    return out;
+}
+
