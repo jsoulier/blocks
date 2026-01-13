@@ -246,33 +246,29 @@ static void update_chunks()
             {
                 return;
             }
+            continue;
         }
-    }
-    for (int i = 0; i < WORKERS; i++)
-    {
-        if (worker_is_working(&workers[i]) && workers[i].job.type == WORKER_JOB_TYPE_SET_BLOCKS)
-        {
-            return;
-        }
-    }
-    for (int x = 0; x < WORLD_WIDTH; x++)
-    for (int z = 0; z < WORLD_WIDTH; z++)
-    {
-        chunk_t* chunk = chunks[x][z];
-        SDL_assert(SDL_GetAtomicInt(&chunk->has_blocks));
-    }
-    for (int x = 0; x < WORLD_WIDTH; x++)
-    for (int z = 0; z < WORLD_WIDTH; z++)
-    {
-        int a = sorted_chunks[x][z][0];
-        int b = sorted_chunks[x][z][1];
         if (is_bordering(a, b))
         {
             continue;
         }
-        chunk_t* chunk = chunks[a][b];
-        if ((SDL_GetAtomicInt(&chunk->set_voxels) || SDL_GetAtomicInt(&chunk->set_lights)))
+        if (SDL_GetAtomicInt(&chunk->set_voxels) || SDL_GetAtomicInt(&chunk->set_lights))
         {
+            bool should_work = true;
+            chunk_t* local_chunks[3][3];
+            world_get_chunks(a, b, local_chunks);
+            for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+            {
+                if (!SDL_GetAtomicInt(&local_chunks[i][j]->has_blocks))
+                {
+                    should_work = false;
+                }
+            }
+            if (!should_work)
+            {
+                continue;
+            }
             num_workers--;
             if (SDL_GetAtomicInt(&chunk->set_voxels))
             {

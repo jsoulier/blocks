@@ -38,17 +38,6 @@ static int worker_func(void* args)
         {
             chunk_t* chunks[3][3];
             world_get_chunks(job.x, job.z, chunks);
-            // TODO: remove
-            for (int z = 0; z < 10000000; z++)
-            {
-                for (int i = 0; i < 2; i++)
-                for (int j = 0; j < 2; j++)
-                {
-                    SDL_assert(chunks[i][j]);
-                    chunk_t* neighbor = chunks[i][j];
-                    SDL_assert(SDL_GetAtomicInt(&neighbor->has_blocks));
-                }
-            }
             if (job.type == WORKER_JOB_TYPE_SET_VOXELS)
             {
                 chunk_set_voxels(chunks, worker->voxels);
@@ -120,6 +109,7 @@ void worker_dispatch(worker_t* worker, const worker_job_t* job)
 {
     if (job->type != WORKER_JOB_TYPE_QUIT)
     {
+        SDL_assert(!worker_is_working(worker));
         chunk_t* chunk = world_get_chunk(job->x, job->z);
         switch (job->type)
         {
@@ -139,7 +129,10 @@ void worker_dispatch(worker_t* worker, const worker_job_t* job)
             SDL_assert(false);
         }
     }
-    SDL_Log("dispatch: %d, %d, %d", job->type, job->x, job->z);
+    else
+    {
+        worker_wait(worker);
+    }
     SDL_LockMutex(worker->mutex);
     SDL_assert(worker->job.type == WORKER_JOB_TYPE_NONE);
     worker->job = *job;
