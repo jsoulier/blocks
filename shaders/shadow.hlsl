@@ -3,7 +3,7 @@
 
 float ShadowGet(Texture2D<float> texture, SamplerState sampler, float4x4 transform, float3 position, float3 normal)
 {
-    static const float kBias = 0.00015f;
+    static const float kBias = 0.001f;
     static const float kShadow = 0.4f;
     float4 shadowPosition = mul(transform, float4(position, 1.0f));
     shadowPosition.xyz /= shadowPosition.w;

@@ -123,7 +123,7 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], text
                     _170 = 0.4000000059604644775390625;
                     break;
                 }
-                if ((_128.z - 0.00015000000712461769580841064453125) <= shadowTexture.sample(shadowSampler, _134, level(0.0)).x)
+                if ((_128.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _134, level(0.0)).x)
                 {
                     _170 = 0.0;
                     break;

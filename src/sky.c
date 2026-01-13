@@ -4,7 +4,8 @@
 #include "sky.h"
 #include "world.h"
 
-static const float kOrtho = 100.0f;
+static const float kOrtho = 300.0f;
+static const float kFar = 300.0f;
 static const float kPitch = -45.0f;
 static const float kYaw = 45.0f;
 static const float kY = 30.0f;
@@ -13,6 +14,7 @@ void sky_init(sky_t* sky)
 {
     camera_init(&sky->camera, CAMERA_TYPE_ORTHO);
     sky->camera.ortho = kOrtho;
+    sky->camera.far = kFar;
 }
 
 void sky_update(sky_t* sky, camera_t* camera, float dt)

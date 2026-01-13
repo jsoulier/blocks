@@ -38,7 +38,7 @@ void chunk_init(chunk_t* chunk, SDL_GPUDevice* device)
     SDL_SetAtomicInt(&chunk->set_lights, false);
     chunk->x = 0;
     chunk->z = 0;
-    map_init(&chunk->blocks, 32);
+    // map_init(&chunk->blocks, 32);
     map_init(&chunk->lights, 1);
     for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
     {
@@ -54,7 +54,7 @@ void chunk_free(chunk_t* chunk)
     {
         gpu_buffer_free(&chunk->gpu_voxels[i]);
     }
-    map_free(&chunk->blocks);
+    // map_free(&chunk->blocks);
     map_free(&chunk->lights);
     chunk->x = 0;
     chunk->z = 0;
@@ -70,14 +70,15 @@ block_t chunk_set_block(chunk_t* chunk, int x, int y, int z, block_t block)
     SDL_SetAtomicInt(&chunk->set_voxels, true);
     SDL_SetAtomicInt(&chunk->has_voxels, false);
     chunk_world_to_local(chunk, &x, &y, &z);
-    if (block != BLOCK_EMPTY)
-    {
-        map_set(&chunk->blocks, x, y, z, block);
-    }
-    else
-    {
-        map_remove(&chunk->blocks, x, y, z);
-    }
+    chunk->blocks[x][y][z] = block;
+    // if (block != BLOCK_EMPTY)
+    // {
+    //     map_set(&chunk->blocks, x, y, z, block);
+    // }
+    // else
+    // {
+    //     map_remove(&chunk->blocks, x, y, z);
+    // }
     block_t old_block = map_get(&chunk->lights, x, y, z);
     if (!block_is_light(block) && !block_is_light(old_block))
     {
@@ -100,7 +101,8 @@ block_t chunk_get_block(chunk_t* chunk, int x, int y, int z)
 {
     SDL_assert(SDL_GetAtomicInt(&chunk->has_blocks));
     chunk_world_to_local(chunk, &x, &y, &z);
-    return map_get(&chunk->blocks, x, y, z);
+    // return map_get(&chunk->blocks, x, y, z);
+    return chunk->blocks[x][y][z];
 }
 
 static block_t get_block(chunk_t* chunks[3][3], int x, int y, int z, int dx, int dy, int dz)
@@ -122,7 +124,8 @@ static block_t get_block(chunk_t* chunks[3][3], int x, int y, int z, int dx, int
     }
     if (is_local(x, y, z))
     {
-        return map_get(&chunk->blocks, x, y, z);
+        // return map_get(&chunk->blocks, x, y, z);
+        return chunk->blocks[x][y][z];
     }
     chunk_local_to_world(chunk, &x, &y, &z);
     chunk_t* neighbor = chunks[dx + 1][dz + 1];
@@ -195,20 +198,21 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
     SDL_assert(!SDL_GetAtomicInt(&chunk->set_blocks));
     SDL_assert(!SDL_GetAtomicInt(&chunk->has_voxels));
     SDL_assert(!SDL_GetAtomicInt(&chunk->set_voxels));
-    for (Uint32 i = 0; i < chunk->blocks.capacity; i++)
+    for (Uint32 x = 0; x < CHUNK_WIDTH; x++)
+    for (Uint32 y = 0; y < CHUNK_HEIGHT; y++)
+    for (Uint32 z = 0; z < CHUNK_WIDTH; z++)
     {
-        if (!map_is_row_valid(&chunk->blocks, i))
+        block_t block = chunk->blocks[x][y][z];
+        if (block == BLOCK_EMPTY)
         {
             continue;
         }
-        map_row_t row = map_get_row(&chunk->blocks, i);
-        SDL_assert(row.value != BLOCK_EMPTY);
-        if (block_is_sprite(row.value))
+        if (block_is_sprite(block))
         {
             for (int j = 0; j < 4; j++)
             for (int k = 0; k < 4; k++)
             {
-                voxel_t voxel = voxel_pack_sprite(row.value, row.x, row.y, row.z, j, k);
+                voxel_t voxel = voxel_pack_sprite(block, x, y, z, j, k);
                 cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_OPAQUE], &voxel);
             }
             continue;
@@ -218,8 +222,8 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
             int dx = DIRECTIONS[j][0];
             int dy = DIRECTIONS[j][1];
             int dz = DIRECTIONS[j][2];
-            block_t neighbor = get_block(chunks, row.x, row.y, row.z, dx, dy, dz);
-            bool is_opaque = block_is_opaque(row.value);
+            block_t neighbor = get_block(chunks, x, y, z, dx, dy, dz);
+            bool is_opaque = block_is_opaque(block);
             bool is_forced = neighbor == BLOCK_EMPTY || block_is_sprite(neighbor);
             bool is_opaque_next_to_transparent = is_opaque && !block_is_opaque(neighbor);
             if (!is_forced && !is_opaque_next_to_transparent)
@@ -228,7 +232,7 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
             }
             for (int k = 0; k < 4; k++)
             {
-                voxel_t voxel = voxel_pack_cube(row.value, row.x, row.y, row.z, j, k);
+                voxel_t voxel = voxel_pack_cube(block, x, y, z, j, k);
                 if (is_opaque)
                 {
                     cpu_buffer_append(&voxels[CHUNK_MESH_TYPE_OPAQUE], &voxel);
@@ -281,7 +285,8 @@ void chunk_set_blocks(chunk_t* chunk)
 {
     SDL_assert(!SDL_GetAtomicInt(&chunk->has_blocks));
     SDL_assert(!SDL_GetAtomicInt(&chunk->set_blocks));
-    map_clear(&chunk->blocks);
+    SDL_memset(chunk->blocks, 0, sizeof(chunk->blocks));
+    // map_clear(&chunk->blocks);
     map_clear(&chunk->lights);
     noise_generate(chunk, chunk->x, chunk->z);
     SDL_SetAtomicInt(&chunk->has_blocks, true);

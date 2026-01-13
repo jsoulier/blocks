@@ -7,7 +7,7 @@
 #include "chunk.h"
 #include "worker.h"
 
-#define WORLD_WIDTH 10
+#define WORLD_WIDTH 20
 
 typedef struct camera camera_t;
 

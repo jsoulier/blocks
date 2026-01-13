@@ -28,7 +28,7 @@ typedef struct chunk
     SDL_AtomicInt has_lights;
     int x;
     int z;
-    map_t blocks;
+    block_t blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     map_t lights;
     gpu_buffer_t gpu_voxels[CHUNK_MESH_TYPE_COUNT];
     gpu_buffer_t gpu_lights;

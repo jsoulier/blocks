@@ -130,7 +130,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& 
             _204 = 0.4000000059604644775390625;
             break;
         }
-        if ((_162.z - 0.00015000000712461769580841064453125) <= shadowTexture.sample(shadowSampler, _168, level(0.0)).x)
+        if ((_162.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _168, level(0.0)).x)
         {
             _204 = 0.0;
             break;

@@ -14,7 +14,7 @@ static const float ATLAS_WIDTH = 512.0f;
 static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
 static const char* SAVE_PATH = "blocks.sqlite3";
-static const int SHADOW_RESOLUTION = 1024.0f;
+static const int SHADOW_RESOLUTION = 4096.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
