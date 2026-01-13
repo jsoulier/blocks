@@ -1,3 +1,5 @@
+// make this whole thing callback based
+
 #pragma once
 
 #include <SDL3/SDL.h>

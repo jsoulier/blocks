@@ -1,3 +1,5 @@
+// moved voxels, workers, chunks, noise, lights, sort, in here
+
 #include <SDL3/SDL.h>
 
 #include "block.h"
@@ -7,6 +9,7 @@
 #include "light.h"
 #include "save.h"
 #include "sort.h"
+#include "voxel.h"
 #include "worker.h"
 #include "world.h"
 
@@ -24,6 +27,8 @@ static chunk_t* chunks[WORLD_WIDTH][WORLD_WIDTH];
 static int sorted_chunks[WORLD_WIDTH][WORLD_WIDTH][2];
 static bool should_move;
 static SDL_Mutex* mutex;
+static cpu_buffer_t gpu_voxels[CHUNK_MESH_TYPE_COUNT];
+static cpu_buffer_t gpu_lights;
 
 static bool is_local(int x, int z)
 {
@@ -102,6 +107,11 @@ void world_init(SDL_GPUDevice* handle)
     gpu_buffer_init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);
     cpu_buffer_init(&cpu_empty_lights, device, sizeof(light_t));
     gpu_buffer_init(&gpu_empty_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
+    {
+        cpu_buffer_init(&gpu_voxels[i], device, sizeof(voxel_t));
+    }
+    cpu_buffer_init(&gpu_lights, device, sizeof(light_t));
     for (int i = 0; i < WORKERS; i++)
     {
         worker_init(&workers[i], device);
@@ -146,6 +156,11 @@ void world_free()
     gpu_buffer_free(&gpu_indices);
     cpu_buffer_free(&cpu_empty_lights);
     gpu_buffer_free(&gpu_empty_lights);
+    for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
+    {
+        cpu_buffer_free(&gpu_voxels[i]);
+    }
+    cpu_buffer_free(&gpu_lights);
 }
 
 static int get_working_count()
@@ -408,6 +423,19 @@ block_t world_get_block(int index[3])
     return chunk_get_block(chunk, index[0], index[1], index[2]);
 }
 
+static void set_voxels(int x, int z)
+{
+    SDL_assert(!is_bordering(x, z));
+    chunk_t* chunks[3][3] = {0};
+    world_get_chunks(x, z, chunks);
+
+    // todo: this shit has gotta be at the chunk level like do_request_set_blocks
+    SDL_SetAtomicInt(&chunks[1][1]->set_voxels, false);
+    SDL_SetAtomicInt(&chunks[1][1]->has_voxels, false);
+
+    chunk_set_voxels(chunks, gpu_voxels);
+}
+
 void world_set_block(int index[3], block_t block)
 {
     if (index[1] < 0 || index[1] >= CHUNK_HEIGHT)
@@ -432,27 +460,28 @@ void world_set_block(int index[3], block_t block)
         return;
     }
     block_t old_block = chunk_set_block(chunk, index[0], index[1], index[2], block);
-    chunk_t* chunks[3][3] = {0};
-    world_get_chunks(chunk_x, chunk_z, chunks);
+    set_voxels(chunk_x, chunk_z);
+    // chunk_t* chunks[3][3] = {0};
+    // world_get_chunks(chunk_x, chunk_z, chunks);
     int local_x = index[0];
     int local_y = index[1];
     int local_z = index[2];
     chunk_world_to_local(chunk, &local_x, &local_y, &local_z);
     if (local_x == 0)
     {
-        SDL_SetAtomicInt(&chunks[0][1]->set_voxels, true);
+        set_voxels(chunk_x - 1, chunk_z);
     }
     else if (local_x == CHUNK_WIDTH - 1)
     {
-        SDL_SetAtomicInt(&chunks[2][1]->set_voxels, true);
+        set_voxels(chunk_x + 1, chunk_z);
     }
     if (local_z == 0)
     {
-        SDL_SetAtomicInt(&chunks[1][0]->set_voxels, true);
+        set_voxels(chunk_x, chunk_z - 1);
     }
     else if (local_z == CHUNK_WIDTH - 1)
     {
-        SDL_SetAtomicInt(&chunks[1][2]->set_voxels, true);
+        set_voxels(chunk_x, chunk_z + 1);
     }
     if (block_is_light(block) || block_is_light(old_block))
     {

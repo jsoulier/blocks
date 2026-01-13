@@ -30,6 +30,7 @@ static const float kEpsilon = 0.001f;
 
 Output main(Input input)
 {
+    // TODO: if IsSprite and abs(dot(CameraVector, Normal)) < 0.01f, discard. will fix weird flickering way facing side of sprite
     Output output;
     output.Color = atlasTexture.Sample(atlasSampler, input.Texcoord);
     output.Position = input.WorldPosition;
