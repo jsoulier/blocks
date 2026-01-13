@@ -184,7 +184,7 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
 {
     chunk_t* chunk = chunks[1][1];
     SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_BLOCKS));
-    SDL_assert(chunk->flag & CHUNK_FLAG_SET_VOXELS);
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_VOXELS));
     for (Uint32 i = 0; i < chunk->blocks.capacity; i++)
     {
         if (!map_is_row_valid(&chunk->blocks, i))
@@ -231,7 +231,6 @@ void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE
         }
     }
     upload_voxels(chunk, voxels);
-    chunk->flag &= ~CHUNK_FLAG_SET_VOXELS;
 }
 
 void chunk_set_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights)
@@ -239,7 +238,7 @@ void chunk_set_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights)
     chunk_t* chunk = chunks[1][1];
     SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_BLOCKS));
     SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_VOXELS));
-    SDL_assert(chunk->flag & CHUNK_FLAG_SET_LIGHTS);
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_LIGHTS));
     for (int i = -1; i <= 1; i++)
     for (int j = -1; j <= 1; j++)
     {
@@ -262,15 +261,13 @@ void chunk_set_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights)
         }
     }
     upload_lights(chunk, lights);
-    chunk->flag &= ~CHUNK_FLAG_SET_LIGHTS;
 }
 
 void chunk_set_blocks(chunk_t* chunk)
 {
-    SDL_assert(chunk->flag & CHUNK_FLAG_SET_BLOCKS);
+    SDL_assert(!(chunk->flag & CHUNK_FLAG_SET_BLOCKS));
     map_clear(&chunk->blocks);
     map_clear(&chunk->lights);
     noise_generate(chunk, chunk->x, chunk->z);
-    chunk->flag &= ~CHUNK_FLAG_SET_BLOCKS;
     chunk->flag |= CHUNK_FLAG_SET_LIGHTS;
 }

@@ -22,6 +22,8 @@ static cpu_buffer_t cpu_empty_lights;
 static gpu_buffer_t gpu_empty_lights;
 static chunk_t* chunks[WORLD_WIDTH][WORLD_WIDTH];
 static int sorted_chunks[WORLD_WIDTH - 2][WORLD_WIDTH - 2][2];
+static bool should_move;
+static SDL_Mutex* mutex;
 
 static bool is_local(int x, int z)
 {
@@ -114,10 +116,17 @@ void world_init(SDL_GPUDevice* handle)
     int w = WORLD_WIDTH - 2;
     sort_xy(w / 2 + 1, w / 2 + 1, (int*) sorted_chunks, w * w);
     create_empty_lights();
+    create_indices(4096);
+    mutex = SDL_CreateMutex();
+    if (!mutex)
+    {
+        SDL_Log("Failed to create mutex: %s", SDL_GetError());
+    }
 }
 
 void world_free()
 {
+    SDL_DestroyMutex(mutex);
     for (int i = 0; i < WORKERS; i++)
     {
         worker_free(&workers[i]);
@@ -134,6 +143,16 @@ void world_free()
     gpu_buffer_free(&gpu_empty_lights);
 }
 
+static int get_working_count()
+{
+    int count = 0;
+    for (int i = 0; i < WORKERS; i++)
+    {
+        count += worker_is_working(&workers[i]);
+    }
+    return count;
+}
+
 static void move_chunks(const camera_t* camera)
 {
     const int camera_x = camera->x / CHUNK_WIDTH - WORLD_WIDTH / 2;
@@ -144,6 +163,12 @@ static void move_chunks(const camera_t* camera)
     {
         return;
     }
+    if (get_working_count())
+    {
+        should_move = true;
+        return;
+    }
+    should_move = false;
     world_x = camera_x;
     world_z = camera_z;
     chunk_t* in[WORLD_WIDTH][WORLD_WIDTH] = {0};
@@ -183,8 +208,23 @@ static void move_chunks(const camera_t* camera)
     SDL_assert(!size);
 }
 
-static void update_chunks(worker_job_t jobs[WORKERS], int* num_jobs)
+static void update_chunks()
 {
+    worker_t* local_workers[WORKERS] = {0};
+    worker_job_t jobs[WORKERS] = {0};
+    int num_workers = 0;
+    for (int i = 0; i < WORKERS; i++)
+    {
+        if (!worker_is_working(&workers[i]))
+        {
+            local_workers[num_workers++] = &workers[i];
+        }
+    }
+    if (num_workers == 0)
+    {
+        return;
+    }
+    bool has_set_blocks = false;
     for (int x = 0; x < WORLD_WIDTH; x++)
     for (int z = 0; z < WORLD_WIDTH; z++)
     {
@@ -193,19 +233,19 @@ static void update_chunks(worker_job_t jobs[WORKERS], int* num_jobs)
         {
             continue;
         }
-        jobs[*num_jobs] = (worker_job_t) {WORKER_JOB_TYPE_SET_BLOCKS, x, z};
-        worker_dispatch(&workers[*num_jobs], &jobs[*num_jobs]);
-        if (++(*num_jobs) >= WORKERS)
+        num_workers--;
+        jobs[num_workers] = (worker_job_t) {WORKER_JOB_TYPE_SET_BLOCKS, x, z};
+        SDL_assert(!worker_is_working(local_workers[num_workers]));
+        worker_dispatch(local_workers[num_workers], &jobs[num_workers]);
+        has_set_blocks = true;
+        if (num_workers == 0)
         {
             return;
         }
     }
-    for (int i = 0; i < *num_jobs; i++)
+    if (has_set_blocks)
     {
-        if (jobs[i].type == WORKER_JOB_TYPE_SET_BLOCKS)
-        {
-            return;
-        }
+        return;
     }
     for (int x = 0; x < WORLD_WIDTH - 2; x++)
     for (int z = 0; z < WORLD_WIDTH - 2; z++)
@@ -217,20 +257,22 @@ static void update_chunks(worker_job_t jobs[WORKERS], int* num_jobs)
         {
             continue;
         }
+        num_workers--;
         if (chunk->flag & CHUNK_FLAG_SET_VOXELS)
         {
-            jobs[*num_jobs] = (worker_job_t) {WORKER_JOB_TYPE_SET_VOXELS, a, b};
+            jobs[num_workers] = (worker_job_t) {WORKER_JOB_TYPE_SET_VOXELS, a, b};
         }
         else if (chunk->flag & CHUNK_FLAG_SET_LIGHTS)
         {
-            jobs[*num_jobs] = (worker_job_t) {WORKER_JOB_TYPE_SET_LIGHTS, a, b};
+            jobs[num_workers] = (worker_job_t) {WORKER_JOB_TYPE_SET_LIGHTS, a, b};
         }
         else
         {
             SDL_assert(false);
         }
-        worker_dispatch(&workers[*num_jobs], &jobs[*num_jobs]);
-        if (++(*num_jobs) >= WORKERS)
+        SDL_assert(!worker_is_working(local_workers[num_workers]));
+        worker_dispatch(local_workers[num_workers], &jobs[num_workers]);
+        if (num_workers == 0)
         {
             return;
         }
@@ -240,25 +282,19 @@ static void update_chunks(worker_job_t jobs[WORKERS], int* num_jobs)
 void world_update(const camera_t* camera)
 {
     move_chunks(camera);
-    worker_job_t jobs[WORKERS] = {0};
-    int num_jobs = 0;
-    update_chunks(jobs, &num_jobs);
-    for (int i = 0; i < num_jobs; i++)
+    if (!should_move)
     {
-        worker_t* worker = &workers[i];
-        worker_wait(worker);
-        worker_job_t* job = &jobs[i];
-        chunk_t* chunk = world_get_chunk(job->x, job->z);
-        SDL_assert(chunk);
-        for (int i = 0; i < CHUNK_MESH_TYPE_COUNT; i++)
-        {
-            create_indices(chunk->gpu_voxels[i].size * 1.5);
-        }
+        update_chunks();
     }
 }
 
 void world_render(const world_render_data_t* data)
 {
+    // TODO: per chunk
+    if (get_working_count())
+    {
+        return;
+    }
     const camera_t* camera = data->camera;
     SDL_GPUCommandBuffer* command_buffer = data->command_buffer;
     SDL_GPURenderPass* render_pass = data->render_pass;
@@ -485,4 +521,11 @@ world_query_t world_query(float x, float y, float z, float dx, float dy, float d
     }
     query.block = BLOCK_EMPTY;
     return query;
+}
+
+void world_create_indices(Uint32 size)
+{
+    SDL_LockMutex(mutex);
+    create_indices(size * 1.5);
+    SDL_UnlockMutex(mutex);
 }

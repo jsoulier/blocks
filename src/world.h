@@ -7,7 +7,7 @@
 #include "chunk.h"
 #include "worker.h"
 
-#define WORLD_WIDTH 20
+#define WORLD_WIDTH 5
 
 typedef struct camera camera_t;
 
@@ -38,3 +38,4 @@ void world_get_chunks(int x, int z, chunk_t* chunks[3][3]);
 block_t world_get_block(int index[3]);
 void world_set_block(int index[3], block_t block);
 world_query_t world_query(float x, float y, float z, float dx, float dy, float dz, float length);
+void world_create_indices(Uint32 size);

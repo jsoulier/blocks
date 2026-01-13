@@ -1,4 +1,4 @@
-#define USE_FXAA 1
+#define USE_FXAA 0
 
 Texture2D<float4> inputTexture : register(t0, space0);
 SamplerState samplerState : register(s0, space0);

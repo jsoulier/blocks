@@ -28,7 +28,7 @@ typedef struct worker
     SDL_Thread* thread;
     SDL_Mutex* mutex;
     SDL_Condition* condition;
-    const worker_job_t* job;
+    worker_job_t job;
     cpu_buffer_t voxels[CHUNK_MESH_TYPE_COUNT];
     cpu_buffer_t lights;
 }
@@ -38,3 +38,4 @@ void worker_init(worker_t* worker, SDL_GPUDevice* device);
 void worker_free(worker_t* worker);
 void worker_dispatch(worker_t* worker, const worker_job_t* job);
 void worker_wait(const worker_t* worker);
+bool worker_is_working(const worker_t* worker);

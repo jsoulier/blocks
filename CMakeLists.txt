@@ -17,6 +17,7 @@ configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)
 add_subdirectory(lib/SDL)
 add_executable(blocks WIN32
     lib/sqlite3/sqlite3.c
+    lib/stb/stb.c
     src/block.c
     src/buffer.c
     src/camera.c
@@ -34,9 +35,9 @@ add_executable(blocks WIN32
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
-target_include_directories(blocks PUBLIC lib/FastNoiseLite)
 target_include_directories(blocks PUBLIC lib/jsmn)
 target_include_directories(blocks PUBLIC lib/sqlite3)
+target_include_directories(blocks PUBLIC lib/stb)
 target_link_libraries(blocks PRIVATE SDL3::SDL3)
 
 function(add_shader FILE)
