@@ -17,19 +17,15 @@ typedef enum chunk_mesh_type
 }
 chunk_mesh_type_t;
 
-typedef enum chunk_flag
-{
-    CHUNK_FLAG_NONE       = 0,
-    CHUNK_FLAG_SET_BLOCKS = 1,
-    CHUNK_FLAG_SET_VOXELS = 2,
-    CHUNK_FLAG_SET_LIGHTS = 4,
-}
-chunk_flag_t;
-
 typedef struct chunk
 {
     SDL_GPUDevice* device;
-    chunk_flag_t flag;
+    SDL_AtomicInt set_blocks;
+    SDL_AtomicInt set_voxels;
+    SDL_AtomicInt set_lights;
+    SDL_AtomicInt has_blocks;
+    SDL_AtomicInt has_voxels;
+    SDL_AtomicInt has_lights;
     int x;
     int z;
     map_t blocks;
@@ -44,7 +40,7 @@ void chunk_local_to_world(const chunk_t* chunk, int* x, int* y, int* z);
 void chunk_init(chunk_t* chunk, SDL_GPUDevice* device);
 void chunk_free(chunk_t* chunk);
 block_t chunk_set_block(chunk_t* chunk, int x, int y, int z, block_t block);
-block_t chunk_get_block(const chunk_t* chunk, int x, int y, int z);
+block_t chunk_get_block(chunk_t* chunk, int x, int y, int z);
 void chunk_set_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[CHUNK_MESH_TYPE_COUNT]);
 void chunk_set_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights);
 void chunk_set_blocks(chunk_t* chunk);
