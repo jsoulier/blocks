@@ -461,8 +461,6 @@ void world_set_block(int index[3], block_t block)
     }
     block_t old_block = chunk_set_block(chunk, index[0], index[1], index[2], block);
     set_voxels(chunk_x, chunk_z);
-    // chunk_t* chunks[3][3] = {0};
-    // world_get_chunks(chunk_x, chunk_z, chunks);
     int local_x = index[0];
     int local_y = index[1];
     int local_z = index[2];
@@ -483,12 +481,14 @@ void world_set_block(int index[3], block_t block)
     {
         set_voxels(chunk_x, chunk_z + 1);
     }
+    chunk_t* local_chunks[3][3] = {0};
+    world_get_chunks(chunk_x, chunk_z, local_chunks);
     if (block_is_light(block) || block_is_light(old_block))
     {
         for (int i = -1; i <= 1; i++)
         for (int j = -1; j <= 1; j++)
         {
-            SDL_SetAtomicInt(&chunks[i + 1][j + 1]->set_lights, true);
+            SDL_SetAtomicInt(&local_chunks[i + 1][j + 1]->set_lights, true);
         }
     }
     save_set_block(chunk, index[0], index[1], index[2], block);
