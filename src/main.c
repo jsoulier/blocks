@@ -729,31 +729,31 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    ui_pipeline = shader_load_compute(device, "ui.comp");
+    ui_pipeline = shader_load(device, "ui.comp");
     if (!ui_pipeline)
     {
         SDL_Log("Failed to load ui pipeline");
         return SDL_APP_FAILURE;
     }
-    ssao_pipeline = shader_load_compute(device, "ssao.comp");
+    ssao_pipeline = shader_load(device, "ssao.comp");
     if (!ssao_pipeline)
     {
         SDL_Log("Failed to load ssao pipeline");
         return SDL_APP_FAILURE;
     }
-    composite_pipeline = shader_load_compute(device, "composite.comp");
+    composite_pipeline = shader_load(device, "composite.comp");
     if (!composite_pipeline)
     {
         SDL_Log("Failed to load composite pipeline");
         return SDL_APP_FAILURE;
     }
-    fxaa_pipeline = shader_load_compute(device, "fxaa.comp");
+    fxaa_pipeline = shader_load(device, "fxaa.comp");
     if (!fxaa_pipeline)
     {
         SDL_Log("Failed to load fxaa pipeline");
         return SDL_APP_FAILURE;
     }
-    blur_pipeline = shader_load_compute(device, "blur.comp");
+    blur_pipeline = shader_load(device, "blur.comp");
     if (!blur_pipeline)
     {
         SDL_Log("Failed to load blur pipeline");
