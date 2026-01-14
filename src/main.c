@@ -1,5 +1,3 @@
-// window icon
-
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -28,7 +26,7 @@ typedef struct player
 {
     int id;
     camera_t camera;
-    world_query_t query;
+    world_raycast_t query;
     block_t block;
 }
 player_t;
@@ -104,7 +102,7 @@ static void query(player_t* player)
     float dz;
     camera_get_position(&player->camera, &x, &y, &z);
     camera_get_vector(&player->camera, &dx, &dy, &dz);
-    player->query = world_query(x, y, z, dx, dy, dz, RANGE);
+    player->query = world_raycast(x, y, z, dx, dy, dz, RANGE);
 }
 
 void player_init(player_t* player)
@@ -943,12 +941,12 @@ static void render_sky(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        world_render_data_t data;
+        world_pass_t data;
         data.camera = &sky.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.use_lights = false;
-        data.type = CHUNK_MESH_TYPE_OPAQUE;
+        data.lights = false;
+        data.mesh = WORLD_MESH_OPAQUE;
         SDL_BindGPUGraphicsPipeline(render_pass, shadow_pipeline);
         world_render(&data);
     }
@@ -996,12 +994,12 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
         SDL_PopGPUDebugGroup(command_buffer);
     }
     {
-        world_render_data_t data;
-        data.type = CHUNK_MESH_TYPE_OPAQUE;
+        world_pass_t data;
+        data.mesh = WORLD_MESH_OPAQUE;
         data.camera = &player.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.use_lights = true;
+        data.lights = true;
         SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_anisotropy_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
@@ -1084,12 +1082,12 @@ static void render_predepth(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        world_render_data_t data;
-        data.type = CHUNK_MESH_TYPE_TRANSPARENT;
+        world_pass_t data;
+        data.mesh = WORLD_MESH_TRANSPARENT;
         data.camera = &player.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.use_lights = false;
+        data.lights = false;
         SDL_BindGPUGraphicsPipeline(render_pass, predepth_pipeline);
         world_render(&data);
     }
@@ -1113,12 +1111,12 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        world_render_data_t data;
-        data.type = CHUNK_MESH_TYPE_TRANSPARENT;
+        world_pass_t data;
+        data.mesh = WORLD_MESH_TRANSPARENT;
         data.camera = &player.camera;
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
-        data.use_lights = true;
+        data.lights = true;
         SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_anisotropy_sampler};
         SDL_GPUTextureSamplerBinding shadow_binding = {shadow_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, transparent_pipeline);

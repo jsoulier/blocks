@@ -9,39 +9,38 @@
 #define CHUNK_HEIGHT 240
 #define WORLD_WIDTH 20
 
-typedef enum chunk_mesh_type
-{
-    CHUNK_MESH_TYPE_OPAQUE,
-    CHUNK_MESH_TYPE_TRANSPARENT,
-    CHUNK_MESH_TYPE_COUNT,
-}
-chunk_mesh_type_t;
-
 typedef struct camera camera_t;
 
-typedef struct world_query
+typedef enum world_mesh
+{
+    WORLD_MESH_OPAQUE,
+    WORLD_MESH_TRANSPARENT,
+    WORLD_MESH_COUNT,
+}
+world_mesh_t;
+
+typedef struct world_raycast
 {
     block_t block;
     int current[3];
     int previous[3];
 }
-world_query_t;
+world_raycast_t;
 
-// remove
-typedef struct world_render_data
+typedef struct world_pass
 {
-    camera_t* camera;
-    chunk_mesh_type_t type;
+    world_mesh_t mesh;
     SDL_GPUCommandBuffer* command_buffer;
     SDL_GPURenderPass* render_pass;
-    bool use_lights;
+    camera_t* camera;
+    bool lights;
 }
-world_render_data_t;
+world_pass_t;
 
 void world_init(SDL_GPUDevice* device);
 void world_free();
 void world_update(const camera_t* camera);
-void world_render(const world_render_data_t* data);
+void world_render(const world_pass_t* data);
 block_t world_get_block(int index[3]);
 void world_set_block(int index[3], block_t block);
-world_query_t world_query(float x, float y, float z, float dx, float dy, float dz, float length);
+world_raycast_t world_raycast(float x, float y, float z, float dx, float dy, float dz, float length);

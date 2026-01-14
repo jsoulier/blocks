@@ -20,7 +20,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = { 2,  2,  2,  2,  1,  3}
+        .indices = {2, 2, 2, 2, 1, 3},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_DIRT] =
     {
@@ -29,7 +30,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = { 3,  3,  3,  3,  3,  3}
+        .indices = {3, 3, 3, 3, 3, 3},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_SAND] =
     {
@@ -38,7 +40,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = { 5,  5,  5,  5,  5,  5}
+        .indices = {5, 5, 5, 5, 5, 5},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_SNOW] =
     {
@@ -47,7 +50,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = { 6,  6,  6,  6,  6,  6}
+        .indices = {6, 6, 6, 6, 6, 6},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_STONE] =
     {
@@ -56,7 +60,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = { 4,  4,  4,  4,  4,  4}
+        .indices = {4, 4, 4, 4, 4, 4},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_LOG] =
     {
@@ -65,7 +70,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = { 8,  8,  8,  8,  7,  7}
+        .indices = {8, 8, 8, 8, 7, 7},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_LEAVES] =
     {
@@ -74,69 +80,85 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_occluded = true,
         .has_shadow = true,
-        .indices = {10, 10, 10, 10, 10, 10}
+        .indices = {10, 10, 10, 10, 10, 10},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_CLOUD] =
     {
         .is_opaque = true,
         .is_sprite = false,
         .is_solid = true,
+        .is_occluded = false,
         .has_shadow = true,
-        .indices = { 9,  9,  9,  9,  9,  9}
+        .indices = {9, 9, 9, 9, 9, 9},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_BUSH] =
     {
         .is_opaque = true,
         .is_sprite = true,
         .is_solid = false,
+        .is_occluded = false,
         .has_shadow = false,
-        .indices = {15, 15, 15, 15, 15, 15}
+        .indices = {15, 15, 15, 15, 15, 15},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_BLUEBELL] =
     {
         .is_opaque = true,
         .is_sprite = true,
         .is_solid = false,
+        .is_occluded = false,
         .has_shadow = false,
-        .indices = {13, 13, 13, 13, 13, 13}
+        .indices = {13, 13, 13, 13, 13, 13},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_DANDELION] =
     {
         .is_opaque = true,
         .is_sprite = true,
         .is_solid = false,
+        .is_occluded = false,
         .has_shadow = false,
-        .indices = {12, 12, 12, 12, 12, 12}
+        .indices = {12, 12, 12, 12, 12, 12},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_ROSE] =
     {
         .is_opaque = true,
         .is_sprite = true,
         .is_solid = false,
+        .is_occluded = false,
         .has_shadow = false,
-        .indices = {11, 11, 11, 11, 11, 11}
+        .indices = {11, 11, 11, 11, 11, 11},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_LAVENDER] =
     {
         .is_opaque = true,
         .is_sprite = true,
         .is_solid = false,
+        .is_occluded = false,
         .has_shadow = false,
-        .indices = {14, 14, 14, 14, 14, 14}
+        .indices = {14, 14, 14, 14, 14, 14},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_WATER] =
     {
         .is_opaque = false,
         .is_sprite = false,
         .is_solid = false,
+        .is_occluded = false,
         .has_shadow = false,
-        .indices = {16, 16, 16, 16, 16, 16}
+        .indices = {16, 16, 16, 16, 16, 16},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_YELLOW_TORCH] =
     {
         .is_opaque = true,
         .is_sprite = true,
         .is_solid = false,
+        .is_occluded = false,
         .indices = {17, 17, 17, 17, 17, 17},
         .has_shadow = false,
         .light = {255, 255, 0, 10},

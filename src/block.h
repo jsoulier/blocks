@@ -5,7 +5,7 @@
 #include "direction.h"
 
 typedef Uint8 block_t;
-enum /* Block */
+enum // block_t
 {
     BLOCK_EMPTY,
 
