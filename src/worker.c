@@ -7,6 +7,12 @@
 #include "worker.h"
 #include "world.h"
 
+static void get_blocks(void* userdata, int bx, int by, int bz, block_t block)
+{
+    chunk_t* chunk = userdata;
+    chunk_set_block(chunk, bx, by, bz, block);
+}
+
 static int worker_func(void* args)
 {
     worker_t* worker = args;
@@ -32,7 +38,7 @@ static int worker_func(void* args)
         if (job.type == WORKER_JOB_TYPE_SET_BLOCKS)
         {
             chunk_set_blocks(chunk);
-            save_get_chunk(chunk);
+            save_get_blocks(chunk, chunk->x, chunk->z, get_blocks);
         }
         else
         {

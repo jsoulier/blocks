@@ -438,6 +438,8 @@ static void set_voxels(int x, int z)
 
 void world_set_block(int index[3], block_t block)
 {
+    // TODO: you're able to set on something that is working
+    // convert has_blocks/set_blocks -> job_state
     if (index[1] < 0 || index[1] >= CHUNK_HEIGHT)
     {
         return;
@@ -491,7 +493,7 @@ void world_set_block(int index[3], block_t block)
             SDL_SetAtomicInt(&local_chunks[i + 1][j + 1]->set_lights, true);
         }
     }
-    save_set_block(chunk, index[0], index[1], index[2], block);
+    save_set_block(chunk->x, chunk->z, index[0], index[1], index[2], block);
 }
 
 world_query_t world_query(float x, float y, float z, float dx, float dy, float dz, float length)

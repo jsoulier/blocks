@@ -3,6 +3,7 @@
 #include "camera.h"
 #include "player.h"
 #include "world.h"
+#include "save.h"
 
 static const float SPEED = 0.01f;
 static const float SENSITIVITY = 0.1f;
@@ -82,4 +83,36 @@ void player_scroll(player_t* player, int dy)
     int block = player->block - (BLOCK_EMPTY + 1) + dy;
     block = (block + COUNT) % COUNT;
     player->block = block + BLOCK_EMPTY + 1;
+}
+
+typedef struct player_save_data
+{
+    float x;
+    float y;
+    float z;
+    float pitch;
+    float yaw;
+    float roll;
+    block_t block;
+}
+player_save_data_t;
+
+void player_load(player_t* player)
+{
+    player_save_data_t data;
+    if (save_get_player(player->id, &data, sizeof(data)))
+    {
+        player->block = data.block;
+        camera_set_position(&player->camera, data.x, data.y, data.z);
+        camera_set_rotation(&player->camera, data.pitch, data.yaw, data.roll);
+    }
+}
+
+void player_save(player_t* player)
+{
+    player_save_data_t data;
+    camera_get_position(&player->camera, &data.x, &data.y, &data.z);
+    camera_get_rotation(&player->camera, &data.pitch, &data.yaw, &data.roll);
+    data.block = player->block;
+    save_set_player(player->id, &data, sizeof(data));
 }

@@ -595,7 +595,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     world_init(device);
     player_init(&player);
     sky_init(&sky);
-    save_get_player(&player);
+    player_load(&player);
     ticks1 = SDL_GetTicks();
     return SDL_APP_CONTINUE;
 }
@@ -1050,7 +1050,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     if (SDL_GetWindowRelativeMouseMode(window))
     {
         player_move(&player, dt);
-        save_set_player(&player);
+        player_save(&player);
     }
     sky_update(&sky, &player.camera, dt);
     world_update(&player.camera);

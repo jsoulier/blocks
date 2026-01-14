@@ -20,3 +20,5 @@ void player_rotate(player_t* player, float pitch, float yaw);
 void player_break(player_t* player);
 void player_place(player_t* player);
 void player_scroll(player_t* player, int dy);
+void player_load(player_t* player);
+void player_save(player_t* player);
