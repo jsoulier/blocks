@@ -248,7 +248,7 @@ static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[WORLD_MESH_COUNT])
     {
         return;
     }
-    if (!gpu_begin_upload(device))
+    if (!gpu_buffer_begin_upload(device))
     {
         return;
     }
@@ -256,7 +256,7 @@ static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[WORLD_MESH_COUNT])
     {
         gpu_buffer_upload(&chunk->gpu_voxels[i], &voxels[i]);
     }
-    gpu_end_upload(device);
+    gpu_buffer_end_upload(device);
 }
 
 static void upload_lights(chunk_t* chunk, cpu_buffer_t* lights)
@@ -266,12 +266,12 @@ static void upload_lights(chunk_t* chunk, cpu_buffer_t* lights)
     {
         return;
     }
-    if (!gpu_begin_upload(device))
+    if (!gpu_buffer_begin_upload(device))
     {
         return;
     }
     gpu_buffer_upload(&chunk->gpu_lights, lights);
-    gpu_end_upload(device);
+    gpu_buffer_end_upload(device);
 }
 
 static bool is_face_visible(block_t block, block_t neighbor)
@@ -390,7 +390,7 @@ static void gen_indices_impl(Uint32 size)
     {
         return;
     }
-    if (!gpu_begin_upload(device))
+    if (!gpu_buffer_begin_upload(device))
     {
         return;
     }
@@ -402,7 +402,7 @@ static void gen_indices_impl(Uint32 size)
         cpu_buffer_append(&cpu_indices, &index);
     }
     gpu_buffer_upload(&gpu_indices, &cpu_indices);
-    gpu_end_upload(device);
+    gpu_buffer_end_upload(device);
 }
 
 static void gen_indices(Uint32 size)
@@ -580,14 +580,14 @@ static int sort_compare_func(void* userdata, const void* lhs, const void* rhs)
 
 static void create_empty_lights()
 {
-    if (!gpu_begin_upload(device))
+    if (!gpu_buffer_begin_upload(device))
     {
         return;
     }
     light_t light = {0};
     cpu_buffer_append(&cpu_empty_lights, &light);
     gpu_buffer_upload(&gpu_empty_lights, &cpu_empty_lights);
-    gpu_end_upload(device);
+    gpu_buffer_end_upload(device);
 }
 
 void world_init(SDL_GPUDevice* handle)

@@ -6,36 +6,6 @@
 static _Thread_local SDL_GPUCommandBuffer* command_buffer;
 static _Thread_local SDL_GPUCopyPass* copy_pass;
 
-bool gpu_begin_upload(SDL_GPUDevice* device)
-{
-    CHECK(!command_buffer);
-    CHECK(!copy_pass);
-    command_buffer = SDL_AcquireGPUCommandBuffer(device);
-    if (!command_buffer)
-    {
-        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
-        return false;
-    }
-    copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-    if (!copy_pass)
-    {
-        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
-        SDL_CancelGPUCommandBuffer(command_buffer);
-        return false;
-    }
-    return true;
-}
-
-void gpu_end_upload(SDL_GPUDevice* device)
-{
-    CHECK(copy_pass);
-    CHECK(command_buffer);
-    SDL_EndGPUCopyPass(copy_pass);
-    SDL_SubmitGPUCommandBuffer(command_buffer);
-    copy_pass = NULL;
-    command_buffer = NULL;
-}
-
 void cpu_buffer_init(cpu_buffer_t* cpu, SDL_GPUDevice* device, Uint32 stride)
 {
     CHECK(stride);
@@ -173,4 +143,34 @@ void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu)
 void gpu_buffer_clear(gpu_buffer_t* gpu)
 {
     gpu->size = 0;
+}
+
+bool gpu_buffer_begin_upload(SDL_GPUDevice* device)
+{
+    CHECK(!command_buffer);
+    CHECK(!copy_pass);
+    command_buffer = SDL_AcquireGPUCommandBuffer(device);
+    if (!command_buffer)
+    {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return false;
+    }
+    copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+    if (!copy_pass)
+    {
+        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
+        SDL_CancelGPUCommandBuffer(command_buffer);
+        return false;
+    }
+    return true;
+}
+
+void gpu_buffer_end_upload(SDL_GPUDevice* device)
+{
+    CHECK(copy_pass);
+    CHECK(command_buffer);
+    SDL_EndGPUCopyPass(copy_pass);
+    SDL_SubmitGPUCommandBuffer(command_buffer);
+    copy_pass = NULL;
+    command_buffer = NULL;
 }

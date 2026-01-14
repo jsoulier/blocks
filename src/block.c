@@ -7,7 +7,7 @@ struct
     bool is_sprite;
     bool is_solid;
     bool is_occluded;
-    bool has_shadow;
+    bool is_shadowed;
     int indices[6];
     light_t light;
 }
@@ -19,7 +19,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {2, 2, 2, 2, 1, 3},
         .light = {0, 0, 0, 0},
     },
@@ -29,7 +29,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {3, 3, 3, 3, 3, 3},
         .light = {0, 0, 0, 0},
     },
@@ -39,7 +39,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {5, 5, 5, 5, 5, 5},
         .light = {0, 0, 0, 0},
     },
@@ -49,7 +49,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {6, 6, 6, 6, 6, 6},
         .light = {0, 0, 0, 0},
     },
@@ -59,7 +59,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {4, 4, 4, 4, 4, 4},
         .light = {0, 0, 0, 0},
     },
@@ -69,7 +69,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {8, 8, 8, 8, 7, 7},
         .light = {0, 0, 0, 0},
     },
@@ -79,7 +79,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = true,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {10, 10, 10, 10, 10, 10},
         .light = {0, 0, 0, 0},
     },
@@ -89,7 +89,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = true,
         .is_occluded = false,
-        .has_shadow = true,
+        .is_shadowed = true,
         .indices = {9, 9, 9, 9, 9, 9},
         .light = {0, 0, 0, 0},
     },
@@ -99,7 +99,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .is_occluded = false,
-        .has_shadow = false,
+        .is_shadowed = false,
         .indices = {15, 15, 15, 15, 15, 15},
         .light = {0, 0, 0, 0},
     },
@@ -109,7 +109,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .is_occluded = false,
-        .has_shadow = false,
+        .is_shadowed = false,
         .indices = {13, 13, 13, 13, 13, 13},
         .light = {0, 0, 0, 0},
     },
@@ -119,7 +119,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .is_occluded = false,
-        .has_shadow = false,
+        .is_shadowed = false,
         .indices = {12, 12, 12, 12, 12, 12},
         .light = {0, 0, 0, 0},
     },
@@ -129,7 +129,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .is_occluded = false,
-        .has_shadow = false,
+        .is_shadowed = false,
         .indices = {11, 11, 11, 11, 11, 11},
         .light = {0, 0, 0, 0},
     },
@@ -139,7 +139,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .is_occluded = false,
-        .has_shadow = false,
+        .is_shadowed = false,
         .indices = {14, 14, 14, 14, 14, 14},
         .light = {0, 0, 0, 0},
     },
@@ -149,7 +149,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = false,
         .is_solid = false,
         .is_occluded = false,
-        .has_shadow = false,
+        .is_shadowed = false,
         .indices = {16, 16, 16, 16, 16, 16},
         .light = {0, 0, 0, 0},
     },
@@ -159,8 +159,8 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_sprite = true,
         .is_solid = false,
         .is_occluded = false,
+        .is_shadowed = false,
         .indices = {17, 17, 17, 17, 17, 17},
-        .has_shadow = false,
         .light = {255, 255, 0, 10},
     },
 };
@@ -185,9 +185,9 @@ bool block_is_occluded(block_t block)
     return BLOCKS[block].is_occluded;
 }
 
-bool block_has_shadow(block_t block)
+bool block_is_shadowed(block_t block)
 {
-    return BLOCKS[block].has_shadow;
+    return BLOCKS[block].is_shadowed;
 }
 
 int block_get_index(block_t block, direction_t direction)
