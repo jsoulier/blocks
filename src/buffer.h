@@ -16,6 +16,7 @@ cpu_buffer_t;
 void cpu_buffer_init(cpu_buffer_t* cpu, SDL_GPUDevice* device, Uint32 stride);
 void cpu_buffer_free(cpu_buffer_t* cpu);
 void cpu_buffer_append(cpu_buffer_t* cpu, void* item);
+void cpu_buffer_clear(cpu_buffer_t* cpu);
 
 typedef struct gpu_buffer
 {

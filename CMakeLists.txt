@@ -21,17 +21,12 @@ add_executable(blocks WIN32
     src/block.c
     src/buffer.c
     src/camera.c
-    src/chunk.c
     src/main.c
     src/map.c
     src/noise.c
-    src/player.c
     src/save.c
     src/shader.c
-    src/sky.c
-    src/sort.c
     src/voxel.c
-    src/worker.c
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)

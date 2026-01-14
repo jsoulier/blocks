@@ -1,16 +1,16 @@
 #include <SDL3/SDL.h>
 #include <stb_perlin.h>
 
-#include "chunk.h"
 #include "noise.h"
+#include "world.h"
 
-void noise_generate(chunk_t* chunk, int x, int z)
+void noise_set_blocks(void* userdata, int cx, int cz, noise_set_blocks_cb_t cb)
 {
     for (int a = 0; a < CHUNK_WIDTH; a++)
     for (int b = 0; b < CHUNK_WIDTH; b++)
     {
-        const int s = x + a;
-        const int t = z + b;
+        const int s = cx + a;
+        const int t = cz + b;
         bool low = false;
         bool grass = false;
         float height = stb_perlin_fbm_noise3(s * 0.005f, 0.0f, t * 0.005f, 2.0f, 0.5f, 6);
@@ -55,12 +55,12 @@ void noise_generate(chunk_t* chunk, int x, int z)
         int y = 0;
         for (; y < height; y++)
         {
-            chunk_set_block(chunk, s, y, t, bottom);
+            cb(userdata, s, y, t, bottom);
         }
-        chunk_set_block(chunk, s, y, t, top);
+        cb(userdata, s, y, t, top);
         for (; y < 30; y++)
         {
-            chunk_set_block(chunk, s, y, t, BLOCK_WATER);
+            cb(userdata, s, y, t, BLOCK_WATER);
         }
         if (low && grass)
         {
@@ -70,7 +70,7 @@ void noise_generate(chunk_t* chunk, int x, int z)
                 const int log = 3 + plant * 2.0f;
                 for (int dy = 0; dy < log; dy++)
                 {
-                    chunk_set_block(chunk, s, y + dy + 1, t, BLOCK_LOG);
+                    cb(userdata, s, y + dy + 1, t, BLOCK_LOG);
                 }
                 for (int dx = -1; dx <= 1; dx++)
                 for (int dz = -1; dz <= 1; dz++)
@@ -78,19 +78,19 @@ void noise_generate(chunk_t* chunk, int x, int z)
                 {
                     if (dx || dz || dy)
                     {
-                        chunk_set_block(chunk, s + dx, y + log + dy, t + dz, BLOCK_LEAVES);
+                        cb(userdata, s + dx, y + log + dy, t + dz, BLOCK_LEAVES);
                     }
                 }
             }
             else if (plant > 0.55f)
             {
-                chunk_set_block(chunk, s, y + 1, t, BLOCK_BUSH);
+                cb(userdata, s, y + 1, t, BLOCK_BUSH);
             }
             else if (plant > 0.52f)
             {
                 const int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
                 const block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_DANDELION, BLOCK_LAVENDER, BLOCK_ROSE};
-                chunk_set_block(chunk, s, y + 1, t, flowers[value]);
+                cb(userdata, s, y + 1, t, flowers[value]);
             }
         }
         if (height > 130)
@@ -113,7 +113,7 @@ void noise_generate(chunk_t* chunk, int x, int z)
         }
         for (int y = -scale; y <= scale; y++)
         {
-            chunk_set_block(chunk, s, 155 - y, t, BLOCK_CLOUD);
+            cb(userdata, s, 155 - y, t, BLOCK_CLOUD);
         }
     }
 }

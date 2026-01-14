@@ -6,10 +6,8 @@
 
 #include "camera.h"
 #include "noise.h"
-#include "player.h"
 #include "save.h"
 #include "shader.h"
-#include "sky.h"
 #include "world.h"
 
 static const float ATLAS_WIDTH = 512.0f;
@@ -17,6 +15,29 @@ static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
 static const char* SAVE_PATH = "blocks.sqlite3";
 static const int SHADOW_RESOLUTION = 4096.0f;
+static const float SPEED = 0.01f;
+static const float SENSITIVITY = 0.1f;
+static const float RANGE = 10.0f;
+static const float SHADOW_ORTHO = 300.0f;
+static const float SHADOW_FAR = 300.0f;
+static const float SHADOW_PITCH = -45.0f;
+static const float SHADOW_YAW = 45.0f;
+static const float SHADOW_Y = 30.0f;
+
+typedef struct player
+{
+    int id;
+    camera_t camera;
+    world_query_t query;
+    block_t block;
+}
+player_t;
+
+typedef struct sky
+{
+    camera_t camera;
+}
+sky_t;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -52,6 +73,134 @@ static player_t player;
 static sky_t sky;
 static Uint64 ticks1;
 
+void sky_init(sky_t* sky)
+{
+    camera_init(&sky->camera, CAMERA_TYPE_ORTHO);
+    sky->camera.ortho = SHADOW_ORTHO;
+    sky->camera.far = SHADOW_FAR;
+}
+
+void sky_update(sky_t* sky, camera_t* camera, float dt)
+{
+    float x;
+    float y;
+    float z;
+    camera_get_position(camera, &x, &y, &z);
+    x = SDL_floor(x / CHUNK_WIDTH) * CHUNK_WIDTH;
+    y = SHADOW_Y;
+    z = SDL_floor(z / CHUNK_WIDTH) * CHUNK_WIDTH;
+    camera_set_position(&sky->camera, x, y, z);
+    camera_set_rotation(&sky->camera, SHADOW_PITCH, SHADOW_YAW, 0.0f);
+    camera_update(&sky->camera);
+}
+
+static void query(player_t* player)
+{
+    float x;
+    float y;
+    float z;
+    float dx;
+    float dy;
+    float dz;
+    camera_get_position(&player->camera, &x, &y, &z);
+    camera_get_vector(&player->camera, &dx, &dy, &dz);
+    player->query = world_query(x, y, z, dx, dy, dz, RANGE);
+}
+
+void player_init(player_t* player)
+{
+    player->id = 0;
+    camera_init(&player->camera, CAMERA_TYPE_PERSPECTIVE);
+    player->block = BLOCK_YELLOW_TORCH;
+}
+
+void player_move(player_t* player, float dt)
+{
+    float speed = SPEED;
+    float dx = 0.0f;
+    float dy = 0.0f;
+    float dz = 0.0f;
+    const bool* state = SDL_GetKeyboardState(NULL);
+    dx += state[SDL_SCANCODE_D];
+    dx -= state[SDL_SCANCODE_A];
+    dy += state[SDL_SCANCODE_E] || state[SDL_SCANCODE_SPACE];
+    dy -= state[SDL_SCANCODE_Q] || state[SDL_SCANCODE_LSHIFT];
+    dz += state[SDL_SCANCODE_W];
+    dz -= state[SDL_SCANCODE_S];
+    if (state[SDL_SCANCODE_LCTRL])
+    {
+        speed *= 5.0f;
+    }
+    dx *= speed * dt;
+    dy *= speed * dt;
+    dz *= speed * dt;
+    camera_move(&player->camera, dx, dy, dz);
+    query(player);
+}
+
+void player_rotate(player_t* player, float pitch, float yaw)
+{
+    pitch *= -SENSITIVITY;
+    yaw *= SENSITIVITY;
+    camera_rotate(&player->camera, pitch, yaw);
+    query(player);
+}
+
+void player_break(player_t* player)
+{
+    if (player->query.block != BLOCK_EMPTY)
+    {
+        world_set_block(player->query.current, BLOCK_EMPTY);
+    }
+}
+
+void player_place(player_t* player)
+{
+    if (player->query.block != BLOCK_EMPTY)
+    {
+        world_set_block(player->query.previous, player->block);
+    }
+}
+
+void player_scroll(player_t* player, int dy)
+{
+    static const int COUNT = BLOCK_COUNT - BLOCK_EMPTY - 1;
+    int block = player->block - (BLOCK_EMPTY + 1) + dy;
+    block = (block + COUNT) % COUNT;
+    player->block = block + BLOCK_EMPTY + 1;
+}
+
+typedef struct player_save_data
+{
+    float x;
+    float y;
+    float z;
+    float pitch;
+    float yaw;
+    float roll;
+    block_t block;
+}
+player_save_data_t;
+
+void player_load(player_t* player)
+{
+    player_save_data_t data;
+    if (save_get_player(player->id, &data, sizeof(data)))
+    {
+        player->block = data.block;
+        camera_set_position(&player->camera, data.x, data.y, data.z);
+        camera_set_rotation(&player->camera, data.pitch, data.yaw, data.roll);
+    }
+}
+
+void player_save(player_t* player)
+{
+    player_save_data_t data;
+    camera_get_position(&player->camera, &data.x, &data.y, &data.z);
+    camera_get_rotation(&player->camera, &data.pitch, &data.yaw, &data.roll);
+    data.block = player->block;
+    save_set_player(player->id, &data, sizeof(data));
+}
 static bool create_atlas()
 {
     char path[512] = {0};

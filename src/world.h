@@ -4,10 +4,18 @@
 
 #include "block.h"
 #include "buffer.h"
-#include "chunk.h"
-#include "worker.h"
 
+#define CHUNK_WIDTH 30
+#define CHUNK_HEIGHT 240
 #define WORLD_WIDTH 20
+
+typedef enum chunk_mesh_type
+{
+    CHUNK_MESH_TYPE_OPAQUE,
+    CHUNK_MESH_TYPE_TRANSPARENT,
+    CHUNK_MESH_TYPE_COUNT,
+}
+chunk_mesh_type_t;
 
 typedef struct camera camera_t;
 
@@ -19,6 +27,7 @@ typedef struct world_query
 }
 world_query_t;
 
+// remove
 typedef struct world_render_data
 {
     camera_t* camera;
@@ -33,9 +42,6 @@ void world_init(SDL_GPUDevice* device);
 void world_free();
 void world_update(const camera_t* camera);
 void world_render(const world_render_data_t* data);
-chunk_t* world_get_chunk(int x, int z);
-void world_get_chunks(int x, int z, chunk_t* chunks[3][3]);
 block_t world_get_block(int index[3]);
 void world_set_block(int index[3], block_t block);
 world_query_t world_query(float x, float y, float z, float dx, float dy, float dz, float length);
-void world_create_indices(Uint32 size);

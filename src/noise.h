@@ -2,7 +2,8 @@
 
 #include <SDL3/SDL.h>
 
-typedef struct chunk chunk_t;
+#include "block.h"
 
-void noise_init(Uint32 seed);
-void noise_generate(chunk_t* chunk, int x, int z);
+typedef void (*noise_set_blocks_cb_t)(void* userdata, int bx, int by, int bz, block_t block);
+
+void noise_set_blocks(void* userdata, int cx, int cz, noise_set_blocks_cb_t cb);

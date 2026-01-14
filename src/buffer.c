@@ -71,6 +71,11 @@ void cpu_buffer_append(cpu_buffer_t* cpu, void* item)
     cpu->size++;
 }
 
+void cpu_buffer_clear(cpu_buffer_t* cpu)
+{
+    cpu->size = 0;
+}
+
 void gpu_buffer_init(gpu_buffer_t* gpu, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage)
 {
     gpu->device = device;

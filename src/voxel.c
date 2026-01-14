@@ -55,6 +55,7 @@ voxel_t voxel_pack_sprite(block_t block, int x, int y, int z, direction_t direct
         {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
         {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
     };
+    // TODO: adjusted normals. need another 4 directions (6/8 used)
     int a = POSITIONS[direction][i][0] + x;
     int b = POSITIONS[direction][i][1] + y;
     int c = POSITIONS[direction][i][2] + z;

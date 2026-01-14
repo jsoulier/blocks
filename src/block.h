@@ -3,7 +3,6 @@
 #include <SDL3/SDL.h>
 
 #include "direction.h"
-#include "light.h"
 
 typedef Uint8 block_t;
 enum /* Block */
@@ -28,6 +27,18 @@ enum /* Block */
 
     BLOCK_COUNT,
 };
+
+typedef struct light
+{
+    Uint8 red;
+    Uint8 green;
+    Uint8 blue;
+    Uint8 radius;
+    Sint32 x;
+    Sint32 y;
+    Sint32 z;
+}
+light_t;
 
 bool block_is_opaque(block_t block);
 bool block_is_sprite(block_t block);

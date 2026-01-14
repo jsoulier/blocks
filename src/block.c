@@ -1,6 +1,5 @@
 #include "block.h"
 #include "direction.h"
-#include "light.h"
 
 struct
 {
