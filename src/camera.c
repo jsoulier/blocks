@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include "camera.h"
+#include "check.h"
 
 #define DEGREES(rad) ((rad) * 180.0f / SDL_PI_F)
 #define RADIANS(deg) ((deg) * SDL_PI_F / 180.0f)
@@ -197,8 +198,8 @@ void camera_update(camera_t* camera)
 
 void camera_set_viewport(camera_t* camera, int width, int height)
 {
-    SDL_assert(width > 0.0f);
-    SDL_assert(height > 0.0f);
+    CHECK(width > 0.0f);
+    CHECK(height > 0.0f);
     camera->width = width;
     camera->height = height;
 }

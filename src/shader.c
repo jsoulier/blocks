@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <jsmn.h>
 
+#include "check.h"
 #include "shader.h"
 
 void* shader_load(SDL_GPUDevice* device, const char* name)
@@ -28,7 +29,7 @@ void* shader_load(SDL_GPUDevice* device, const char* name)
     }
     else
     {
-        SDL_assert(false);
+        CHECK(false);
     }
     char shader_path[512] = {0};
     char shader_json_path[512] = {0};

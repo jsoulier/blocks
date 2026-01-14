@@ -2,6 +2,9 @@
 
 #include <SDL3/SDL.h>
 
+bool gpu_begin_upload(SDL_GPUDevice* device);
+void gpu_end_upload(SDL_GPUDevice* device);
+
 typedef struct cpu_buffer
 {
     SDL_GPUDevice* device;
@@ -30,5 +33,6 @@ gpu_buffer_t;
 
 void gpu_buffer_init(gpu_buffer_t* gpu, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
 void gpu_buffer_free(gpu_buffer_t* gpu);
-void gpu_buffer_update(gpu_buffer_t* gpu, SDL_GPUCopyPass* copy_pass, cpu_buffer_t* cpu);
+void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu);
 void gpu_buffer_clear(gpu_buffer_t* gpu);
+

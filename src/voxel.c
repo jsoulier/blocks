@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include "block.h"
+#include "check.h"
 #include "direction.h"
 #include "voxel.h"
 #include "voxel.inc"
@@ -15,13 +16,13 @@ static voxel_t pack(block_t block, int x, int y, int z, int u, int v, direction_
     SDL_COMPILE_TIME_ASSERT("", VOXEL_INDEX_OFFSET + VOXEL_INDEX_BITS <= 32);
     SDL_COMPILE_TIME_ASSERT("", VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32);
     int index = block_get_index(block, direction);
-    SDL_assert(x <= VOXEL_X_MASK);
-    SDL_assert(y <= VOXEL_Y_MASK);
-    SDL_assert(z <= VOXEL_Z_MASK);
-    SDL_assert(u <= VOXEL_U_MASK);
-    SDL_assert(v <= VOXEL_V_MASK);
-    SDL_assert(index <= VOXEL_INDEX_MASK);
-    SDL_assert(direction <= VOXEL_DIRECTION_MASK);
+    CHECK(x <= VOXEL_X_MASK);
+    CHECK(y <= VOXEL_Y_MASK);
+    CHECK(z <= VOXEL_Z_MASK);
+    CHECK(u <= VOXEL_U_MASK);
+    CHECK(v <= VOXEL_V_MASK);
+    CHECK(index <= VOXEL_INDEX_MASK);
+    CHECK(direction <= VOXEL_DIRECTION_MASK);
     voxel_t voxel = 0;
     voxel |= block_is_occluded(block) << VOXEL_OCCLUSION_OFFSET;
     voxel |= direction << VOXEL_DIRECTION_OFFSET;
@@ -37,10 +38,10 @@ static voxel_t pack(block_t block, int x, int y, int z, int u, int v, direction_
 
 voxel_t voxel_pack_sprite(block_t block, int x, int y, int z, direction_t direction, int i)
 {
-    SDL_assert(block > BLOCK_EMPTY);
-    SDL_assert(block < BLOCK_COUNT);
-    SDL_assert(direction < 4);
-    SDL_assert(i < 4);
+    CHECK(block > BLOCK_EMPTY);
+    CHECK(block < BLOCK_COUNT);
+    CHECK(direction < 4);
+    CHECK(i < 4);
     static const int POSITIONS[][4][3] =
     {
         {{0, 0, 0}, {0, 1, 0}, {1, 0, 1}, {1, 1, 1}},
@@ -66,10 +67,10 @@ voxel_t voxel_pack_sprite(block_t block, int x, int y, int z, direction_t direct
 
 voxel_t voxel_pack_cube(block_t block, int x, int y, int z, direction_t direction, int i)
 {
-    SDL_assert(block > BLOCK_EMPTY);
-    SDL_assert(block < BLOCK_COUNT);
-    SDL_assert(direction < 6);
-    SDL_assert(i < 4);
+    CHECK(block > BLOCK_EMPTY);
+    CHECK(block < BLOCK_COUNT);
+    CHECK(direction < 6);
+    CHECK(i < 4);
     static const int POSITIONS[][4][3] =
     {
         {{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}},

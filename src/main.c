@@ -3,7 +3,7 @@
 #include <SDL3/SDL_main.h>
 
 #include "camera.h"
-#include "noise.h"
+#include "check.h"
 #include "save.h"
 #include "shader.h"
 #include "world.h"

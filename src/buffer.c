@@ -1,10 +1,44 @@
 #include <SDL3/SDL.h>
 
 #include "buffer.h"
+#include "check.h"
+
+static _Thread_local SDL_GPUCommandBuffer* command_buffer;
+static _Thread_local SDL_GPUCopyPass* copy_pass;
+
+bool gpu_begin_upload(SDL_GPUDevice* device)
+{
+    CHECK(!command_buffer);
+    CHECK(!copy_pass);
+    command_buffer = SDL_AcquireGPUCommandBuffer(device);
+    if (!command_buffer)
+    {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return false;
+    }
+    copy_pass = SDL_BeginGPUCopyPass(command_buffer);
+    if (!copy_pass)
+    {
+        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
+        SDL_CancelGPUCommandBuffer(command_buffer);
+        return false;
+    }
+    return true;
+}
+
+void gpu_end_upload(SDL_GPUDevice* device)
+{
+    CHECK(copy_pass);
+    CHECK(command_buffer);
+    SDL_EndGPUCopyPass(copy_pass);
+    SDL_SubmitGPUCommandBuffer(command_buffer);
+    copy_pass = NULL;
+    command_buffer = NULL;
+}
 
 void cpu_buffer_init(cpu_buffer_t* cpu, SDL_GPUDevice* device, Uint32 stride)
 {
-    SDL_assert(stride);
+    CHECK(stride);
     cpu->device = device;
     cpu->buffer = NULL;
     cpu->data = NULL;
@@ -28,7 +62,7 @@ void cpu_buffer_append(cpu_buffer_t* cpu, void* item)
 {
     if (!cpu->data && cpu->buffer)
     {
-        SDL_assert(!cpu->size);
+        CHECK(!cpu->size);
         cpu->data = SDL_MapGPUTransferBuffer(cpu->device, cpu->buffer, true);
         if (!cpu->data)
         {
@@ -36,7 +70,7 @@ void cpu_buffer_append(cpu_buffer_t* cpu, void* item)
             return;
         }
     }
-    SDL_assert(cpu->size <= cpu->capacity);
+    CHECK(cpu->size <= cpu->capacity);
     if (cpu->size == cpu->capacity)
     {
         int capacity = SDL_max(64, cpu->size * 2);
@@ -66,7 +100,7 @@ void cpu_buffer_append(cpu_buffer_t* cpu, void* item)
         cpu->buffer = buffer;
         cpu->data = data;
     }
-    SDL_assert(cpu->data);
+    CHECK(cpu->data);
     SDL_memcpy(cpu->data + cpu->size * cpu->stride, item, cpu->stride);
     cpu->size++;
 }
@@ -94,8 +128,10 @@ void gpu_buffer_free(gpu_buffer_t* gpu)
     gpu->size = 0;
 }
 
-void gpu_buffer_update(gpu_buffer_t* gpu, SDL_GPUCopyPass* copy_pass, cpu_buffer_t* cpu)
+void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu)
 {
+    CHECK(command_buffer);
+    CHECK(copy_pass);
     gpu->size = 0;
     if (cpu->data)
     {

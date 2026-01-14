@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 
+#include "check.h"
 #include "map.h"
 
 static const int EMPTY = 0;
@@ -13,7 +14,7 @@ static bool is_equal(const map_row_t row, int x, int y, int z)
 
 void map_init(map_t* map, int capacity)
 {
-    SDL_assert(SDL_HasExactlyOneBitSet32(capacity));
+    CHECK(SDL_HasExactlyOneBitSet32(capacity));
     map->rows = SDL_calloc(capacity, sizeof(map_row_t));
     map->capacity = capacity;
     map->size = 0;
@@ -59,8 +60,8 @@ static void grow(map_t* map)
 
 void map_set(map_t* map, int x, int y, int z, int value)
 {
-    SDL_assert(value <= UINT8_MAX);
-    SDL_assert(value != EMPTY && value != TOMBSTONE);
+    CHECK(value <= UINT8_MAX);
+    CHECK(value != EMPTY && value != TOMBSTONE);
     if ((float) (map->size + 1) / map->capacity > MAX_LOAD)
     {
         grow(map);
@@ -154,6 +155,6 @@ bool map_is_row_valid(const map_t* map, Uint32 index)
 
 map_row_t map_get_row(const map_t* map, Uint32 index)
 {
-    SDL_assert(map_is_row_valid(map, index));
+    CHECK(map_is_row_valid(map, index));
     return map->rows[index];
 }
