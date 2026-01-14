@@ -304,6 +304,44 @@ static bool create_atlas()
     return true;
 }
 
+SDL_Surface* create_icon(block_t block)
+{
+    if (!atlas_surface)
+    {
+        return NULL;
+    }
+    SDL_Surface* icon = SDL_CreateSurface(BLOCK_WIDTH, BLOCK_WIDTH, SDL_PIXELFORMAT_RGBA32);
+    if (!icon)
+    {
+        SDL_Log("Failed to create icon surface: %s", SDL_GetError());
+        return NULL;
+    }
+    SDL_Rect src;
+    src.x = block_get_index(block, DIRECTION_NORTH) * BLOCK_WIDTH;
+    src.y = 0;
+    src.w = BLOCK_WIDTH;
+    src.h = BLOCK_WIDTH;
+    SDL_Rect dst;
+    dst.x = 0;
+    dst.y = 0;
+    dst.w = BLOCK_WIDTH;
+    dst.h = BLOCK_WIDTH;
+    if (!SDL_BlitSurface(atlas_surface, &src, icon, &dst))
+    {
+        SDL_Log("Failed to blit icon surface: %s", SDL_GetError());
+        SDL_DestroySurface(icon);
+        return NULL;
+    }
+    return icon;
+}
+
+static void set_icon()
+{
+    SDL_Surface* icon = create_icon(BLOCK_GRASS);
+    SDL_SetWindowIcon(window, icon);
+    SDL_DestroySurface(icon);
+}
+
 static bool create_samplers()
 {
     SDL_GPUSamplerCreateInfo info = {0};
@@ -740,6 +778,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
+    set_icon();
     save_init(SAVE_PATH);
     world_init(device);
     player_init(&player);
