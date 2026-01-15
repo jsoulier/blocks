@@ -15,6 +15,11 @@ cbuffer UniformBuffer : register(b0, space2)
     float4x4 ShadowTransform;
 };
 
+cbuffer UniformBuffer : register(b1, space2)
+{
+    float3 PlayerPosition;
+};
+
 // TODO: sky
 static const float3 kAmbient = float3(0.5f, 0.5f, 0.5f);
 
@@ -34,20 +39,29 @@ void main(uint3 threadID : SV_DispatchThreadID)
     float3 albedo = color.rgb;
     float alpha = color.a;
     uint voxel = voxelTexture[threadID.xy].x;
+    float3 position = positionTexture[threadID.xy].xyz;
     float3 finalColor;
-    // TODO: fix condition
     if (GetVoxelOcclusion(voxel))
     {
         float3 diffuse = lightTexture[threadID.xy].rgb;
         float3 normal = GetVoxelNormal(voxel);
         float ssao = ssaoTexture[threadID.xy] * kSSAO;
-        float3 position = positionTexture[threadID.xy].xyz;
         float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position, normal);
         finalColor = albedo * (diffuse + kAmbient - ssao - shadow);
+    }
+    else if (voxel != 0)
+    {
+        finalColor = albedo * kAmbient;
     }
     else
     {
         finalColor = albedo;
     }
-    compositeTexture[threadID.xy] = float4(finalColor, alpha);
+    if (voxel != 0)
+    {
+        float3 skyColor = GetSkyColor(position - PlayerPosition);
+        float fog = GetFog(distance(position.xz, PlayerPosition.xz));
+        finalColor = lerp(finalColor, skyColor, fog);
+    }
+    compositeTexture[threadID.xy] = float4(finalColor, 1.0f);
 }

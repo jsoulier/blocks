@@ -5,7 +5,7 @@
 #include "camera.h"
 #include "check.h"
 #include "map.h"
-#include "noise.h"
+#include "rand.h"
 #include "save.h"
 #include "voxel.h"
 #include "world.h"
@@ -299,7 +299,7 @@ static void gen_blocks(chunk_t* chunk)
     CHECK(SDL_GetAtomicInt(&chunk->block_job) == JOB_STATE_RUNNING);
     SDL_memset(chunk->blocks, 0, sizeof(chunk->blocks));
     map_clear(&chunk->lights);
-    noise_set_blocks(chunk, chunk->x, chunk->z, set_blocks_func);
+    rand_set_blocks(chunk, chunk->x, chunk->z, set_blocks_func);
     save_get_blocks(chunk, chunk->x, chunk->z, set_blocks_func);
     SDL_SetAtomicInt(&chunk->block_job, JOB_STATE_COMPLETED);
     if (SDL_GetAtomicInt(&chunk->voxel_job) == JOB_STATE_REQUESTED)

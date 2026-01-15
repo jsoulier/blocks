@@ -17,12 +17,17 @@ typedef struct camera
     float view[4][4];
     float proj[4][4];
     float planes[6][4];
+
+    // TODO: let's do a union here to make these more convenient to use
     float x;
     float y;
     float z;
+
+    // TODO: same here
     float pitch;
     float yaw;
     float roll;
+
     int width;
     int height;
     float fov;

@@ -122,6 +122,11 @@ float3 GetSkyColor(float3 position)
     return lerp(kBottom, kTop, alpha);
 }
 
+float GetFog(const float x)
+{
+    return min(pow(x / 250.0f, 2.5f), 1.0f);
+}
+
 bool GetVoxelOcclusion(uint voxel)
 {
     return (voxel >> VOXEL_OCCLUSION_OFFSET) & VOXEL_OCCLUSION_MASK;

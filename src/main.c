@@ -1046,11 +1046,13 @@ static void postprocess(SDL_GPUCommandBuffer* command_buffer)
         SDL_GPUTextureSamplerBinding read_samplers = {shadow_texture, nearest_sampler};
         int groups_x = (player_camera.width + 8 - 1) / 8;
         int groups_y = (player_camera.height + 8 - 1) / 8;
+        float position[3] = {player_camera.x, player_camera.y, player_camera.z};
         SDL_PushGPUDebugGroup(command_buffer, "composite");
         SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
         SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 5);
         SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
         SDL_PushGPUComputeUniformData(command_buffer, 0, &sun_camera.matrix, 64);
+        SDL_PushGPUComputeUniformData(command_buffer, 1, position, sizeof(position));
         SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
         SDL_EndGPUComputePass(compute_pass);
         SDL_PopGPUDebugGroup(command_buffer);
@@ -1099,6 +1101,7 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
+        float position[3] = {player_camera.x, player_camera.y, player_camera.z};
         world_pass_t data;
         data.mesh = WORLD_MESH_TRANSPARENT;
         data.camera = &player_camera;
@@ -1109,6 +1112,7 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         SDL_GPUTextureSamplerBinding shadow_binding = {shadow_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, transparent_pipeline);
         SDL_PushGPUFragmentUniformData(command_buffer, 1, &sun_camera.matrix, 64);
+        SDL_PushGPUFragmentUniformData(command_buffer, 2, position, sizeof(position));
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
         SDL_BindGPUFragmentSamplers(render_pass, 1, &shadow_binding, 1);
         world_render(&data);

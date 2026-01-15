@@ -49,98 +49,122 @@ struct type_UniformBuffer
     float4x4 ShadowTransform;
 };
 
-constant spvUnsafeArray<float3, 6> _65 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+struct type_UniformBuffer_1
+{
+    float3 PlayerPosition;
+};
 
-kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], texture2d<float> shadowTexture [[texture(0)]], texture2d<float> colorTexture [[texture(1)]], texture2d<float> lightTexture [[texture(2)]], texture2d<float> ssaoTexture [[texture(3)]], texture2d<uint> voxelTexture [[texture(4)]], texture2d<float> positionTexture [[texture(5)]], texture2d<float, access::write> compositeTexture [[texture(6)]], sampler shadowSampler [[sampler(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+constant spvUnsafeArray<float3, 6> _71 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+
+kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], texture2d<float> shadowTexture [[texture(0)]], texture2d<float> colorTexture [[texture(1)]], texture2d<float> lightTexture [[texture(2)]], texture2d<float> ssaoTexture [[texture(3)]], texture2d<uint> voxelTexture [[texture(4)]], texture2d<float> positionTexture [[texture(5)]], texture2d<float, access::write> compositeTexture [[texture(6)]], sampler shadowSampler [[sampler(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
 {
     do
     {
-        uint2 _72 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _84;
-        if (!(gl_GlobalInvocationID.x >= _72.x))
+        uint2 _82 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _94;
+        if (!(gl_GlobalInvocationID.x >= _82.x))
         {
-            _84 = gl_GlobalInvocationID.y >= _72.y;
+            _94 = gl_GlobalInvocationID.y >= _82.y;
         }
         else
         {
-            _84 = true;
+            _94 = true;
         }
-        if (_84)
+        if (_94)
         {
             break;
         }
-        float4 _89 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        float3 _90 = _89.xyz;
-        uint4 _93 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        uint _94 = _93.x;
-        float3 _172;
-        if ((_94 & 1u) != 0u)
+        float3 _100 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
+        uint4 _102 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        uint _103 = _102.x;
+        float4 _105 = positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        float3 _188;
+        if ((_103 & 1u) != 0u)
         {
-            float _165;
+            float _181;
             do
             {
-                float4 _123 = UniformBuffer.ShadowTransform * float4(positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz, 1.0);
-                float2 _126 = (_123.xy * 0.5) + float2(0.5);
-                float _128 = 1.0 - _126.y;
-                float2 _129 = _126;
-                _129.y = _128;
-                float _130 = _126.x;
-                bool _136;
-                if (!(_130 < 0.0))
+                float4 _139 = UniformBuffer.ShadowTransform * float4(_105.xyz, 1.0);
+                float2 _142 = (_139.xy * 0.5) + float2(0.5);
+                float _144 = 1.0 - _142.y;
+                float2 _145 = _142;
+                _145.y = _144;
+                float _146 = _142.x;
+                bool _152;
+                if (!(_146 < 0.0))
                 {
-                    _136 = _130 > 1.0;
+                    _152 = _146 > 1.0;
                 }
                 else
                 {
-                    _136 = true;
+                    _152 = true;
                 }
-                bool _141;
-                if (!_136)
+                bool _157;
+                if (!_152)
                 {
-                    _141 = _128 < 0.0;
-                }
-                else
-                {
-                    _141 = true;
-                }
-                bool _146;
-                if (!_141)
-                {
-                    _146 = _128 > 1.0;
+                    _157 = _144 < 0.0;
                 }
                 else
                 {
-                    _146 = true;
+                    _157 = true;
                 }
-                if (_146)
+                bool _162;
+                if (!_157)
                 {
-                    _165 = 0.0;
+                    _162 = _144 > 1.0;
+                }
+                else
+                {
+                    _162 = true;
+                }
+                if (_162)
+                {
+                    _181 = 0.0;
                     break;
                 }
-                if (dot(_65[(_94 >> 1u) & 7u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz)) > 0.0)
+                if (dot(_71[(_103 >> 1u) & 7u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz)) > 0.0)
                 {
-                    _165 = 0.4000000059604644775390625;
+                    _181 = 0.4000000059604644775390625;
                     break;
                 }
-                if ((_123.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _129, level(0.0)).x)
+                if ((_139.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _145, level(0.0)).x)
                 {
-                    _165 = 0.0;
+                    _181 = 0.0;
                     break;
                 }
                 else
                 {
-                    _165 = 0.4000000059604644775390625;
+                    _181 = 0.4000000059604644775390625;
                     break;
                 }
                 break; // unreachable workaround
             } while(false);
-            _172 = _90 * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_165));
+            _188 = _100 * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_181));
         }
         else
         {
-            _172 = _90;
+            float3 _117;
+            if (_103 != 0u)
+            {
+                _117 = _100 * float3(0.5);
+            }
+            else
+            {
+                _117 = _100;
+            }
+            _188 = _117;
         }
-        compositeTexture.write(float4(_172, _89.w), uint2(gl_GlobalInvocationID.xy));
+        float3 _213;
+        if (_103 != 0u)
+        {
+            float3 _194 = _105.xyz - UniformBuffer_1.PlayerPosition;
+            _213 = mix(_188, mix(float3(1.0, 1.0, 0.0), float3(1.0, 0.0, 0.0), float3((precise::atan2(_194.y, length(float2(_194.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(_105.xz, UniformBuffer_1.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0)));
+        }
+        else
+        {
+            _213 = _188;
+        }
+        compositeTexture.write(float4(_213, 1.0), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

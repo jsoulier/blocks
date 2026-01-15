@@ -23,7 +23,7 @@ add_executable(blocks WIN32
     src/camera.c
     src/main.c
     src/map.c
-    src/noise.c
+    src/rand.c
     src/save.c
     src/shader.c
     src/voxel.c

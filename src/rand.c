@@ -1,10 +1,10 @@
 #include <SDL3/SDL.h>
 #include <stb_perlin.h>
 
-#include "noise.h"
+#include "rand.h"
 #include "world.h"
 
-void noise_set_blocks(void* userdata, int cx, int cz, noise_set_blocks_cb_t cb)
+void rand_set_blocks(void* userdata, int cx, int cz, rand_set_blocks_cb_t cb)
 {
     for (int a = 0; a < CHUNK_WIDTH; a++)
     for (int b = 0; b < CHUNK_WIDTH; b++)
