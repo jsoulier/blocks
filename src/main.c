@@ -30,7 +30,6 @@ typedef struct player_save_data
     float z;
     float pitch;
     float yaw;
-    float roll;
     block_t block;
 }
 player_save_data_t;
@@ -80,29 +79,21 @@ static void init_sky()
 
 static void update_sky(float dt)
 {
-    float x;
-    float y;
-    float z;
-    camera_get_position(&player_camera, &x, &y, &z);
-    x = SDL_floor(x / CHUNK_WIDTH) * CHUNK_WIDTH;
-    y = SHADOW_Y;
-    z = SDL_floor(z / CHUNK_WIDTH) * CHUNK_WIDTH;
-    camera_set_position(&sun_camera, x, y, z);
-    camera_set_rotation(&sun_camera, SHADOW_PITCH, SHADOW_YAW, 0.0f);
+    sun_camera.x = SDL_floor(player_camera.x / CHUNK_WIDTH) * CHUNK_WIDTH;
+    sun_camera.y = SHADOW_Y;
+    sun_camera.z = SDL_floor(player_camera.z / CHUNK_WIDTH) * CHUNK_WIDTH;
+    sun_camera.pitch = SHADOW_PITCH;
+    sun_camera.yaw = SHADOW_YAW;
     camera_update(&sun_camera);
 }
 
 static void do_player_raycast()
 {
-    float x;
-    float y;
-    float z;
     float dx;
     float dy;
     float dz;
-    camera_get_position(&player_camera, &x, &y, &z);
     camera_get_vector(&player_camera, &dx, &dy, &dz);
-    player_raycast = world_raycast(x, y, z, dx, dy, dz, RANGE);
+    player_raycast = world_raycast(player_camera.x, player_camera.y, player_camera.z, dx, dy, dz, RANGE);
 }
 
 static void init_player()
@@ -173,16 +164,22 @@ static void load_player()
     if (save_get_player(PLAYER_ID, &data, sizeof(data)))
     {
         player_block = data.block;
-        camera_set_position(&player_camera, data.x, data.y, data.z);
-        camera_set_rotation(&player_camera, data.pitch, data.yaw, data.roll);
+        player_camera.x = data.x;
+        player_camera.y = data.y;
+        player_camera.z = data.z;
+        player_camera.pitch = data.pitch;
+        player_camera.yaw = data.yaw;
     }
 }
 
 static void save_player()
 {
     player_save_data_t data;
-    camera_get_position(&player_camera, &data.x, &data.y, &data.z);
-    camera_get_rotation(&player_camera, &data.pitch, &data.yaw, &data.roll);
+    data.x = player_camera.x;
+    data.y = player_camera.y;
+    data.z = player_camera.z;
+    data.pitch = player_camera.pitch;
+    data.yaw = player_camera.yaw;
     data.block = player_block;
     save_set_player(PLAYER_ID, &data, sizeof(data));
 }
@@ -909,7 +906,7 @@ static bool resize(int width, int height)
         SDL_Log("Failed to create fxaa texture: %s", SDL_GetError());
         return false;
     }
-    camera_set_viewport(&player_camera, width, height);
+    camera_resize(&player_camera, width, height);
     return true;
 }
 
@@ -1046,13 +1043,12 @@ static void postprocess(SDL_GPUCommandBuffer* command_buffer)
         SDL_GPUTextureSamplerBinding read_samplers = {shadow_texture, nearest_sampler};
         int groups_x = (player_camera.width + 8 - 1) / 8;
         int groups_y = (player_camera.height + 8 - 1) / 8;
-        float position[3] = {player_camera.x, player_camera.y, player_camera.z};
         SDL_PushGPUDebugGroup(command_buffer, "composite");
         SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
         SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 5);
         SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
         SDL_PushGPUComputeUniformData(command_buffer, 0, &sun_camera.matrix, 64);
-        SDL_PushGPUComputeUniformData(command_buffer, 1, position, sizeof(position));
+        SDL_PushGPUComputeUniformData(command_buffer, 1, player_camera.position, sizeof(player_camera.position));
         SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
         SDL_EndGPUComputePass(compute_pass);
         SDL_PopGPUDebugGroup(command_buffer);
@@ -1101,7 +1097,6 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        float position[3] = {player_camera.x, player_camera.y, player_camera.z};
         world_pass_t data;
         data.mesh = WORLD_MESH_TRANSPARENT;
         data.camera = &player_camera;
@@ -1112,7 +1107,7 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         SDL_GPUTextureSamplerBinding shadow_binding = {shadow_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, transparent_pipeline);
         SDL_PushGPUFragmentUniformData(command_buffer, 1, &sun_camera.matrix, 64);
-        SDL_PushGPUFragmentUniformData(command_buffer, 2, position, sizeof(position));
+        SDL_PushGPUFragmentUniformData(command_buffer, 2, player_camera.position, sizeof(player_camera.position));
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
         SDL_BindGPUFragmentSamplers(render_pass, 1, &shadow_binding, 1);
         world_render(&data);
@@ -1158,14 +1153,13 @@ static void postprocess2(SDL_GPUCommandBuffer* command_buffer)
             return;
         }
         SDL_GPUTextureSamplerBinding read_textures = {atlas_texture, nearest_sampler};
-        Sint32 viewport[] = {player_camera.width, player_camera.height};
         Sint32 index = block_get_index(player_block, DIRECTION_NORTH);
         int groups_x = (player_camera.width + 8 - 1) / 8;
         int groups_y = (player_camera.height + 8 - 1) / 8;
         SDL_PushGPUDebugGroup(command_buffer, "ui");
         SDL_BindGPUComputePipeline(compute_pass, ui_pipeline);
         SDL_BindGPUComputeSamplers(compute_pass, 0, &read_textures, 1);
-        SDL_PushGPUComputeUniformData(command_buffer, 0, viewport, sizeof(viewport));
+        SDL_PushGPUComputeUniformData(command_buffer, 0, player_camera.size, sizeof(player_camera.size));
         SDL_PushGPUComputeUniformData(command_buffer, 1, &index, sizeof(index));
         SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
         SDL_EndGPUComputePass(compute_pass);

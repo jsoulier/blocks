@@ -833,7 +833,7 @@ void world_render(const world_pass_t* data)
         }
         int w = CHUNK_WIDTH;
         int h = CHUNK_HEIGHT;
-        if (!camera_get_visibility(camera, chunk->x, 0, chunk->z, w, h, w))
+        if (!camera_get_vis(camera, chunk->x, 0, chunk->z, w, h, w))
         {
             continue;
         }
