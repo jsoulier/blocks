@@ -1,5 +1,4 @@
-#include "light.hlsl"
-#include "voxel.hlsl"
+#include "shader.hlsl"
 
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
@@ -30,7 +29,6 @@ static const float kEpsilon = 0.001f;
 
 Output main(Input input)
 {
-    // TODO: if IsSprite and abs(dot(CameraVector, Normal)) < 0.01f, discard. will fix weird flickering way facing side of sprite
     Output output;
     output.Color = atlasTexture.Sample(atlasSampler, input.Texcoord);
     output.Position = input.WorldPosition;
@@ -43,6 +41,6 @@ Output main(Input input)
     }
     output.Voxel |= input.Voxel & (VOXEL_OCCLUSION_MASK << VOXEL_OCCLUSION_OFFSET);
     output.Voxel |= input.Voxel & (VOXEL_DIRECTION_MASK << VOXEL_DIRECTION_OFFSET);
-    output.Light.rgb = LightGet(lightBuffer, LightCount, input.WorldPosition, input.Normal);
+    output.Light.rgb = GetLight(lightBuffer, LightCount, input.WorldPosition, input.Normal);
     return output;
 }

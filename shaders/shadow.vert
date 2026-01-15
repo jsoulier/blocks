@@ -1,4 +1,4 @@
-#include "voxel.hlsl"
+#include "shader.hlsl"
 
 cbuffer UniformBuffer : register(b0, space1)
 {
@@ -29,8 +29,8 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    float3 position = VoxelGetPosition(input.Voxel) + ChunkPosition;
+    float3 position = GetVoxelPosition(input.Voxel) + ChunkPosition;
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
-    output.ClipDistance = VoxelGetShadow(input.Voxel) ? 1.0f : -1.0f;
+    output.ClipDistance = GetVoxelShadow(input.Voxel) ? 1.0f : -1.0f;
     return output;
 }

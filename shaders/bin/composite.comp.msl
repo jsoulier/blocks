@@ -55,41 +55,49 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], text
 {
     do
     {
-        uint2 _73 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _85;
-        if (!(gl_GlobalInvocationID.x >= _73.x))
+        uint2 _72 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _84;
+        if (!(gl_GlobalInvocationID.x >= _72.x))
         {
-            _85 = gl_GlobalInvocationID.y >= _73.y;
+            _84 = gl_GlobalInvocationID.y >= _72.y;
         }
         else
         {
-            _85 = true;
+            _84 = true;
         }
-        if (_85)
+        if (_84)
         {
             break;
         }
-        float4 _90 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        float3 _91 = _90.xyz;
-        uint4 _94 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        uint _95 = _94.x;
-        float3 _177;
-        if ((_95 & 1u) != 0u)
+        float4 _89 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        float3 _90 = _89.xyz;
+        uint4 _93 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        uint _94 = _93.x;
+        float3 _172;
+        if ((_94 & 1u) != 0u)
         {
-            float _170;
+            float _165;
             do
             {
-                float4 _124 = UniformBuffer.ShadowTransform * float4(positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz, 1.0);
-                float3 _128 = _124.xyz / float3(_124.w);
-                float2 _131 = (_128.xy * 0.5) + float2(0.5);
-                float _133 = 1.0 - _131.y;
-                float2 _134 = _131;
-                _134.y = _133;
-                float _135 = _131.x;
-                bool _141;
-                if (!(_135 < 0.0))
+                float4 _123 = UniformBuffer.ShadowTransform * float4(positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz, 1.0);
+                float2 _126 = (_123.xy * 0.5) + float2(0.5);
+                float _128 = 1.0 - _126.y;
+                float2 _129 = _126;
+                _129.y = _128;
+                float _130 = _126.x;
+                bool _136;
+                if (!(_130 < 0.0))
                 {
-                    _141 = _135 > 1.0;
+                    _136 = _130 > 1.0;
+                }
+                else
+                {
+                    _136 = true;
+                }
+                bool _141;
+                if (!_136)
+                {
+                    _141 = _128 < 0.0;
                 }
                 else
                 {
@@ -98,50 +106,41 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], text
                 bool _146;
                 if (!_141)
                 {
-                    _146 = _133 < 0.0;
+                    _146 = _128 > 1.0;
                 }
                 else
                 {
                     _146 = true;
                 }
-                bool _151;
-                if (!_146)
+                if (_146)
                 {
-                    _151 = _133 > 1.0;
-                }
-                else
-                {
-                    _151 = true;
-                }
-                if (_151)
-                {
-                    _170 = 0.0;
+                    _165 = 0.0;
                     break;
                 }
-                if (dot(_65[(_95 >> 1u) & 7u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz)) > 0.0)
+                if (dot(_65[(_94 >> 1u) & 7u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz)) > 0.0)
                 {
-                    _170 = 0.4000000059604644775390625;
+                    _165 = 0.4000000059604644775390625;
                     break;
                 }
-                if ((_128.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _134, level(0.0)).x)
+                if ((_123.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _129, level(0.0)).x)
                 {
-                    _170 = 0.0;
+                    _165 = 0.0;
                     break;
                 }
                 else
                 {
-                    _170 = 0.4000000059604644775390625;
+                    _165 = 0.4000000059604644775390625;
                     break;
                 }
                 break; // unreachable workaround
             } while(false);
-            _177 = _91 * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_170));
+            _172 = _90 * (((lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_165));
         }
         else
         {
-            _177 = _91;
+            _172 = _90;
         }
-        compositeTexture.write(float4(_177, _90.w), uint2(gl_GlobalInvocationID.xy));
+        compositeTexture.write(float4(_172, _89.w), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

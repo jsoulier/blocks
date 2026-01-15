@@ -24,9 +24,9 @@ static voxel_t pack(block_t block, int x, int y, int z, int u, int v, direction_
     CHECK(index <= VOXEL_INDEX_MASK);
     CHECK(direction <= VOXEL_DIRECTION_MASK);
     voxel_t voxel = 0;
-    voxel |= block_is_occluded(block) << VOXEL_OCCLUSION_OFFSET;
+    voxel |= block_has_occlusion(block) << VOXEL_OCCLUSION_OFFSET;
     voxel |= direction << VOXEL_DIRECTION_OFFSET;
-    voxel |= block_is_shadowed(block) << VOXEL_SHADOW_OFFSET;
+    voxel |= block_has_shadow(block) << VOXEL_SHADOW_OFFSET;
     voxel |= x << VOXEL_X_OFFSET;
     voxel |= y << VOXEL_Y_OFFSET;
     voxel |= z << VOXEL_Z_OFFSET;

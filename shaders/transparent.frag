@@ -1,6 +1,4 @@
-#include "light.hlsl"
-#include "shadow.hlsl"
-#include "voxel.hlsl"
+#include "shader.hlsl"
 
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
@@ -35,8 +33,8 @@ float4 main(Input input) : SV_Target0
     float3 albedo = color.rgb;
     float alpha = color.a;
     float4 position = input.WorldPosition;
-    float3 diffuse = LightGet(lightBuffer, LightCount, position, input.Normal);
-    float shadow = ShadowGet(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal);
+    float3 diffuse = GetLight(lightBuffer, LightCount, position, input.Normal);
+    float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal);
     float3 finalColor = albedo * (diffuse + kAmbient - shadow);
     return float4(finalColor, alpha);
 }

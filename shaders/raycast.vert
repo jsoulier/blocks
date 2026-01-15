@@ -1,4 +1,4 @@
-#include "cube.hlsl"
+#include "shader.hlsl"
 
 cbuffer UniformBuffer : register(b0, space1)
 {
@@ -20,7 +20,7 @@ static const float kScale = 1.01f;
 Output main(uint vertexID : SV_VertexID)
 {
     Output output;
-    float3 position = kCubeVertices[kCubeIndices[vertexID]];
+    float3 position = GetCubeVertex(vertexID);
     position *= kScale;
     position += BlockPosition + 0.5f;
     output.Position = mul(Transform, float4(position, 1.0f));

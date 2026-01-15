@@ -1,5 +1,4 @@
-#include "random.hlsl"
-#include "voxel.hlsl"
+#include "shader.hlsl"
 
 Texture2D<uint> voxelTexture : register(t0, space0);
 Texture2D<float4> positionTexture : register(t1, space0);
@@ -15,7 +14,7 @@ bool IsOccluded(uint2 id, uint direction, float3 position)
     uint voxel = voxelTexture[id].x;
     // TODO: Removing improves performance a lot
     // From 0.28 ms to 0.23 ms average on RTX 4050
-    if (!VoxelGetOcclusion(voxel))
+    if (!GetVoxelOcclusion(voxel))
     {
         return false;
     }
@@ -42,12 +41,12 @@ void main(uint3 threadID : SV_DispatchThreadID)
     }
     ssaoTexture[threadID.xy] = 0.0f;
     uint voxel = voxelTexture[threadID.xy];
-    if (!VoxelGetOcclusion(voxel))
+    if (!GetVoxelOcclusion(voxel))
     {
         return;
     }
     float2 uv = float2(threadID.xy) / float2(width, height);
-    uint direction = VoxelGetDirection(voxel);
+    uint direction = GetVoxelDirection(voxel);
     float4 position = positionTexture[threadID.xy];
     float depth = max(abs(position.w), 1.0f);
     float2 scale = kScale / float2(width, height) / depth;
@@ -56,7 +55,7 @@ void main(uint3 threadID : SV_DispatchThreadID)
     for (int y = -kKernel; y <= kKernel; y++)
     {
         float2 origin = uv + float2(x, y) * scale;
-        float2 offset = Random2(origin) * scale;
+        float2 offset = GetRandom2(origin) * scale;
         uint2 id = (origin + offset) * float2(width, height);
         if (x == 0 || y == 0 || id.x < 0 || id.y < 0 || id.x >= width || id.y >= height)
         {

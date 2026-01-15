@@ -1,5 +1,3 @@
-#include "random.hlsl"
-
 Texture2D<float> inputTexture : register(t0, space0);
 [[vk::image_format("r8")]]
 RWTexture2D<float> outputTexture : register(u0, space1);

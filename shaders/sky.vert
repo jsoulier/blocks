@@ -1,4 +1,4 @@
-#include "cube.hlsl"
+#include "shader.hlsl"
 
 cbuffer UniformBuffer : register(b0, space1)
 {
@@ -23,7 +23,7 @@ Output main(uint vertexID : SV_VertexID)
     view[1][3] = 0.0f;
     view[2][3] = 0.0f;
     Output output;
-    output.LocalPosition = kCubeVertices[kCubeIndices[vertexID]];
+    output.LocalPosition = GetCubeVertex(vertexID);
     output.Position = mul(Proj, mul(view, float4(output.LocalPosition, 1.0f)));
     return output;
 }

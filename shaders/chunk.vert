@@ -1,4 +1,4 @@
-#include "voxel.hlsl"
+#include "shader.hlsl"
 
 cbuffer UniformBuffer : register(b0, space1)
 {
@@ -32,12 +32,12 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    output.WorldPosition.xyz = VoxelGetPosition(input.Voxel) + ChunkPosition;
-    output.Normal = VoxelGetNormal(input.Voxel);
+    output.WorldPosition.xyz = GetVoxelPosition(input.Voxel) + ChunkPosition;
+    output.Normal = GetVoxelNormal(input.Voxel);
     output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
     output.WorldPosition.w = output.Position.z;
     output.Position = mul(Proj, output.Position);
-    output.Texcoord = VoxelGetTexcoord(input.Voxel);
+    output.Texcoord = GetVoxelTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
     return output;
 }

@@ -1,4 +1,4 @@
-#include "sky.hlsl"
+#include "shader.hlsl"
 
 struct Input
 {
@@ -13,14 +13,10 @@ struct Output
     uint Voxel : SV_Target3;
 };
 
-static const float3 kTop = float3(1.0f, 0.0f, 0.0f);     // bright red
-static const float3 kBottom = float3(1.0f, 1.0f, 0.0f);  // bright yellow
-
-
 Output main(Input input)
 {
     Output output;
-    output.Color = float4(SkyGetColor(input.LocalPosition, kBottom, kTop), 1.0f);
+    output.Color = float4(GetSkyColor(input.LocalPosition), 1.0f);
     output.Voxel = 0;
     return output;
 }
