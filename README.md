@@ -7,5 +7,3 @@
 - Blocks and plants
 - Persistent worlds
 - Clustered dynamic lighting
-- Postprocessing
-- Single transparent layer

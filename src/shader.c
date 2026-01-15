@@ -37,7 +37,7 @@ void* shader_load(SDL_GPUDevice* device, const char* name)
     SDL_snprintf(shader_json_path, sizeof(shader_json_path), "%s%s.json", SDL_GetBasePath(), name);
     size_t shader_size;
     size_t shader_json_size;
-    const Uint8* shader_data = SDL_LoadFile(shader_path, &shader_size);
+    Uint8* shader_data = SDL_LoadFile(shader_path, &shader_size);
     if (!shader_data)
     {
         SDL_Log("Failed to load shader: %s", shader_path);
@@ -170,7 +170,7 @@ void* shader_load(SDL_GPUDevice* device, const char* name)
     }
     if (!shader)
     {
-        SDL_Log("Failed to create compute pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to create shader: %s", SDL_GetError());
         return NULL;
     }
     SDL_free(shader_data);
