@@ -39,7 +39,7 @@ float4 main(Input input) : SV_Target0
     float alpha = color.a;
     float4 position = input.WorldPosition;
     float3 diffuse = GetLight(lightBuffer, LightCount, position, input.Normal);
-    float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal);
+    float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal, input.Voxel);
     float3 finalColor = albedo * (diffuse + kAmbient - shadow);
     float3 skyColor = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));

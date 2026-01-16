@@ -4,7 +4,7 @@
 #include "rand.h"
 #include "world.h"
 
-void rand_set_blocks(void* userdata, int cx, int cz, rand_set_blocks_cb_t cb)
+void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
 {
     for (int a = 0; a < CHUNK_WIDTH; a++)
     for (int b = 0; b < CHUNK_WIDTH; b++)
@@ -55,12 +55,12 @@ void rand_set_blocks(void* userdata, int cx, int cz, rand_set_blocks_cb_t cb)
         int y = 0;
         for (; y < height; y++)
         {
-            cb(userdata, s, y, t, bottom);
+            function(userdata, s, y, t, bottom);
         }
-        cb(userdata, s, y, t, top);
+        function(userdata, s, y, t, top);
         for (; y < 30; y++)
         {
-            cb(userdata, s, y, t, BLOCK_WATER);
+            function(userdata, s, y, t, BLOCK_WATER);
         }
         if (low && grass)
         {
@@ -70,7 +70,7 @@ void rand_set_blocks(void* userdata, int cx, int cz, rand_set_blocks_cb_t cb)
                 const int log = 3 + plant * 2.0f;
                 for (int dy = 0; dy < log; dy++)
                 {
-                    cb(userdata, s, y + dy + 1, t, BLOCK_LOG);
+                    function(userdata, s, y + dy + 1, t, BLOCK_LOG);
                 }
                 for (int dx = -1; dx <= 1; dx++)
                 for (int dz = -1; dz <= 1; dz++)
@@ -78,19 +78,19 @@ void rand_set_blocks(void* userdata, int cx, int cz, rand_set_blocks_cb_t cb)
                 {
                     if (dx || dz || dy)
                     {
-                        cb(userdata, s + dx, y + log + dy, t + dz, BLOCK_LEAVES);
+                        function(userdata, s + dx, y + log + dy, t + dz, BLOCK_LEAVES);
                     }
                 }
             }
             else if (plant > 0.55f)
             {
-                cb(userdata, s, y + 1, t, BLOCK_BUSH);
+                function(userdata, s, y + 1, t, BLOCK_BUSH);
             }
             else if (plant > 0.52f)
             {
                 const int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
                 const block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_DANDELION, BLOCK_LAVENDER, BLOCK_ROSE};
-                cb(userdata, s, y + 1, t, flowers[value]);
+                function(userdata, s, y + 1, t, flowers[value]);
             }
         }
         if (height > 130)
@@ -113,7 +113,7 @@ void rand_set_blocks(void* userdata, int cx, int cz, rand_set_blocks_cb_t cb)
         }
         for (int y = -scale; y <= scale; y++)
         {
-            cb(userdata, s, 155 - y, t, BLOCK_CLOUD);
+            function(userdata, s, 155 - y, t, BLOCK_CLOUD);
         }
     }
 }

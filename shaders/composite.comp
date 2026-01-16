@@ -40,19 +40,18 @@ void main(uint3 threadID : SV_DispatchThreadID)
     float alpha = color.a;
     uint voxel = voxelTexture[threadID.xy].x;
     float3 position = positionTexture[threadID.xy].xyz;
-    float3 finalColor;
+    float3 normal = GetVoxelNormal(voxel);
     float3 diffuse = lightTexture[threadID.xy].rgb;
+    float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position, normal, voxel);
+    float ssao = ssaoTexture[threadID.xy] * kSSAO;
+    float3 finalColor;
     if (GetVoxelOcclusion(voxel))
     {
-        float3 normal = GetVoxelNormal(voxel);
-        float ssao = ssaoTexture[threadID.xy] * kSSAO;
-        float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position, normal);
         finalColor = albedo * (diffuse + kAmbient - ssao - shadow);
     }
     else if (voxel != 0)
     {
-        // clouds?
-        finalColor = albedo * (diffuse + kAmbient);
+        finalColor = albedo * (diffuse + kAmbient - shadow);
     }
     else
     {

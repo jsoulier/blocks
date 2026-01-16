@@ -3,7 +3,6 @@
 #include <SDL3/SDL.h>
 
 #include "block.h"
-#include "buffer.h"
 
 #define CHUNK_WIDTH 30
 #define CHUNK_HEIGHT 240
@@ -31,6 +30,6 @@ void world_init(SDL_GPUDevice* device);
 void world_free();
 void world_update(const camera_t* camera);
 void world_render(const camera_t* camera, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, world_flag_t flags);
-block_t world_get_block(const int index[3]);
-void world_set_block(const int index[3], block_t block);
+block_t world_get_block(const int position[3]);
+void world_set_block(const int position[3], block_t block);
 world_raycast_t world_raycast(const camera_t* camera, float length);

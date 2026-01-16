@@ -176,7 +176,7 @@ void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block)
     SDL_UnlockMutex(mutex);
 }
 
-void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t cb)
+void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t function)
 {
     if (!handle)
     {
@@ -191,7 +191,7 @@ void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t cb)
         int by = sqlite3_column_int(get_blocks, 1);
         int bz = sqlite3_column_int(get_blocks, 2);
         block_t block = sqlite3_column_int(get_blocks, 3);
-        cb(userdata, bx, by, bz, block);
+        function(userdata, bx, by, bz, block);
     }
     sqlite3_reset(get_blocks);
     SDL_UnlockMutex(mutex);
