@@ -7,17 +7,17 @@ kernel void main0(texture2d<float> inputTexture [[texture(0)]], texture2d<float,
 {
     do
     {
-        uint2 _117 = uint2(inputTexture.get_width(), inputTexture.get_height());
-        bool _145;
-        if (!(gl_GlobalInvocationID.x >= _117.x))
+        uint2 _32 = uint2(inputTexture.get_width(), inputTexture.get_height());
+        bool _44;
+        if (!(gl_GlobalInvocationID.x >= _32.x))
         {
-            _145 = gl_GlobalInvocationID.y >= _117.y;
+            _44 = gl_GlobalInvocationID.y >= _32.y;
         }
         else
         {
-            _145 = true;
+            _44 = true;
         }
-        if (_145)
+        if (_44)
         {
             break;
         }

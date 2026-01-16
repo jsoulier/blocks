@@ -47,7 +47,7 @@ function(add_shader FILE)
     function(compile OUTPUT)
         add_custom_command(
             OUTPUT ${OUTPUT}
-            COMMAND ${SHADERCROSS} ${HLSL} -s hlsl -o ${OUTPUT} -I src -g
+            COMMAND ${SHADERCROSS} ${HLSL} -s hlsl -o ${OUTPUT} -I src
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             DEPENDS ${HLSL} ${DEPENDS}
             COMMENT ${OUTPUT}

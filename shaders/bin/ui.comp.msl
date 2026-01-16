@@ -17,138 +17,138 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], cons
 {
     do
     {
-        uint2 _245 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _273;
-        if (!(gl_GlobalInvocationID.x >= _245.x))
+        uint2 _59 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _71;
+        if (!(gl_GlobalInvocationID.x >= _59.x))
         {
-            _273 = gl_GlobalInvocationID.y >= _245.y;
+            _71 = gl_GlobalInvocationID.y >= _59.y;
         }
         else
         {
-            _273 = true;
+            _71 = true;
         }
-        if (_273)
+        if (_71)
         {
             break;
         }
-        float2 _284 = float2(UniformBuffer.Viewport);
-        float2 _286 = _284 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
-        float _294 = precise::max(_286.x, _286.y);
-        float _298 = 50.0 * _294;
-        float _302 = 10.0 * _294;
-        float2 _310 = float2(_302) + float2(_298);
-        float _314 = float(gl_GlobalInvocationID.x);
-        float _328 = float(uint(UniformBuffer.Viewport.y) - gl_GlobalInvocationID.y);
-        bool _344;
-        if (_314 > _302)
+        float2 _76 = float2(UniformBuffer.Viewport);
+        float2 _77 = _76 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
+        float _80 = precise::max(_77.x, _77.y);
+        float _81 = 50.0 * _80;
+        float _82 = 10.0 * _80;
+        float2 _85 = float2(_82) + float2(_81);
+        float _86 = float(gl_GlobalInvocationID.x);
+        float _93 = float(uint(UniformBuffer.Viewport.y) - gl_GlobalInvocationID.y);
+        bool _99;
+        if (_86 > _82)
         {
-            _344 = _314 < _310.x;
+            _99 = _86 < _85.x;
         }
         else
         {
-            _344 = false;
+            _99 = false;
         }
-        bool _352;
-        if (_344)
+        bool _103;
+        if (_99)
         {
-            _352 = _328 > _302;
-        }
-        else
-        {
-            _352 = false;
-        }
-        bool _362;
-        if (_352)
-        {
-            _362 = _328 < _310.y;
+            _103 = _93 > _82;
         }
         else
         {
-            _362 = false;
+            _103 = false;
         }
-        if (_362)
+        bool _108;
+        if (_103)
         {
-            float3 _392 = float3((_314 - _302) / _298, 1.0 - ((_328 - _302) / _298), float(UniformBuffer_1.Index));
-            float4 _396 = atlasTexture.sample(atlasSampler, _392.xy, uint(rint(_392.z)), level(0.0));
-            if (_396.w > 0.001000000047497451305389404296875)
+            _108 = _93 < _85.y;
+        }
+        else
+        {
+            _108 = false;
+        }
+        if (_108)
+        {
+            float3 _121 = float3((_86 - _82) / _81, 1.0 - ((_93 - _82) / _81), float(UniformBuffer_1.Index));
+            float4 _123 = atlasTexture.sample(atlasSampler, _121.xy, uint(rint(_121.z)), level(0.0));
+            if (_123.w > 0.001000000047497451305389404296875)
             {
-                colorTexture.write(_396, uint2(gl_GlobalInvocationID.xy));
+                colorTexture.write(_123, uint2(gl_GlobalInvocationID.xy));
                 break;
             }
         }
-        float _415 = 8.0 * _294;
-        float _419 = 2.0 * _294;
-        float2 _423 = _284 * 0.5;
-        float2 _427 = float2(_415, _419);
-        float2 _429 = _423 - _427;
-        float2 _433 = _423 + _427;
-        float2 _437 = float2(_419, _415);
-        float2 _439 = _423 - _437;
-        float2 _443 = _423 + _437;
-        bool _459;
-        if (_314 > _429.x)
+        float _130 = 8.0 * _80;
+        float _131 = 2.0 * _80;
+        float2 _132 = _76 * 0.5;
+        float2 _133 = float2(_130, _131);
+        float2 _134 = _132 - _133;
+        float2 _135 = _132 + _133;
+        float2 _136 = float2(_131, _130);
+        float2 _137 = _132 - _136;
+        float2 _138 = _132 + _136;
+        bool _145;
+        if (_86 > _134.x)
         {
-            _459 = _328 > _429.y;
+            _145 = _93 > _134.y;
         }
         else
         {
-            _459 = false;
+            _145 = false;
         }
-        bool _469;
-        if (_459)
+        bool _150;
+        if (_145)
         {
-            _469 = _314 < _433.x;
-        }
-        else
-        {
-            _469 = false;
-        }
-        bool _479;
-        if (_469)
-        {
-            _479 = _328 < _433.y;
+            _150 = _86 < _135.x;
         }
         else
         {
-            _479 = false;
+            _150 = false;
         }
-        bool _521;
-        if (!_479)
+        bool _155;
+        if (_150)
         {
-            bool _499;
-            if (_314 > _439.x)
+            _155 = _93 < _135.y;
+        }
+        else
+        {
+            _155 = false;
+        }
+        bool _176;
+        if (!_155)
+        {
+            bool _165;
+            if (_86 > _137.x)
             {
-                _499 = _328 > _439.y;
+                _165 = _93 > _137.y;
             }
             else
             {
-                _499 = false;
+                _165 = false;
             }
-            bool _509;
-            if (_499)
+            bool _170;
+            if (_165)
             {
-                _509 = _314 < _443.x;
+                _170 = _86 < _138.x;
             }
             else
             {
-                _509 = false;
+                _170 = false;
             }
-            bool _519;
-            if (_509)
+            bool _175;
+            if (_170)
             {
-                _519 = _328 < _443.y;
+                _175 = _93 < _138.y;
             }
             else
             {
-                _519 = false;
+                _175 = false;
             }
-            _521 = _519;
+            _176 = _175;
         }
         else
         {
-            _521 = true;
+            _176 = true;
         }
-        if (_521)
+        if (_176)
         {
             colorTexture.write(float4(1.0), uint2(gl_GlobalInvocationID.xy));
             break;

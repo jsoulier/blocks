@@ -926,14 +926,8 @@ static void render_sky(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        world_pass_t data;
-        data.camera = &sun_camera;
-        data.command_buffer = command_buffer;
-        data.render_pass = render_pass;
-        data.lights = false;
-        data.mesh = WORLD_MESH_OPAQUE;
         SDL_BindGPUGraphicsPipeline(render_pass, shadow_pipeline);
-        world_render(&data);
+        world_render(&sun_camera, command_buffer, render_pass, WORLD_FLAG_OPAQUE);
     }
     SDL_EndGPURenderPass(render_pass);
 }
@@ -979,16 +973,10 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
         SDL_PopGPUDebugGroup(command_buffer);
     }
     {
-        world_pass_t data;
-        data.mesh = WORLD_MESH_OPAQUE;
-        data.camera = &player_camera;
-        data.command_buffer = command_buffer;
-        data.render_pass = render_pass;
-        data.lights = true;
         SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
-        world_render(&data);
+        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAG_OPAQUE | WORLD_FLAG_LIGHT);
     }
     SDL_EndGPURenderPass(render_pass);
 }
@@ -1068,14 +1056,8 @@ static void render_predepth(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        world_pass_t data;
-        data.mesh = WORLD_MESH_TRANSPARENT;
-        data.camera = &player_camera;
-        data.command_buffer = command_buffer;
-        data.render_pass = render_pass;
-        data.lights = false;
         SDL_BindGPUGraphicsPipeline(render_pass, predepth_pipeline);
-        world_render(&data);
+        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAG_TRANSPARENT);
     }
     SDL_EndGPURenderPass(render_pass);
 }
@@ -1097,12 +1079,6 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         return;
     }
     {
-        world_pass_t data;
-        data.mesh = WORLD_MESH_TRANSPARENT;
-        data.camera = &player_camera;
-        data.command_buffer = command_buffer;
-        data.render_pass = render_pass;
-        data.lights = true;
         SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_anisotropy_sampler};
         SDL_GPUTextureSamplerBinding shadow_binding = {shadow_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, transparent_pipeline);
@@ -1110,7 +1086,7 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         SDL_PushGPUFragmentUniformData(command_buffer, 2, player_camera.position, sizeof(player_camera.position));
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
         SDL_BindGPUFragmentSamplers(render_pass, 1, &shadow_binding, 1);
-        world_render(&data);
+        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAG_TRANSPARENT | WORLD_FLAG_LIGHT);
     }
     if (player_raycast.block != BLOCK_EMPTY)
     {

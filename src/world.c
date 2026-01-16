@@ -20,6 +20,14 @@ typedef enum job_state
 }
 job_state_t;
 
+typedef enum world_mesh
+{
+    WORLD_MESH_OPAQUE,
+    WORLD_MESH_TRANSPARENT,
+    WORLD_MESH_COUNT,
+}
+world_mesh_t;
+
 typedef struct chunk
 {
     SDL_AtomicInt block_job;
@@ -804,11 +812,19 @@ void world_update(const camera_t* camera)
     }
 }
 
-void world_render(const world_pass_t* data)
+void world_render(const camera_t* camera, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, world_flag_t flags)
 {
-    const camera_t* camera = data->camera;
-    SDL_GPUCommandBuffer* command_buffer = data->command_buffer;
-    SDL_GPURenderPass* render_pass = data->render_pass;
+    CHECK(!(flags & WORLD_FLAG_OPAQUE) || !(flags & WORLD_FLAG_TRANSPARENT));
+    world_mesh_t mesh;
+    if (flags & WORLD_FLAG_OPAQUE)
+    {
+        mesh = WORLD_MESH_OPAQUE;
+    }
+    else
+    {
+        mesh = WORLD_MESH_TRANSPARENT;
+    }
+    bool use_lights = flags & WORLD_FLAG_LIGHT;
     SDL_PushGPUDebugGroup(command_buffer, "world");
     SDL_PushGPUVertexUniformData(command_buffer, 0, camera->proj, 64);
     SDL_PushGPUVertexUniformData(command_buffer, 1, camera->view, 64);
@@ -826,7 +842,7 @@ void world_render(const world_pass_t* data)
         {
             continue;
         }
-        gpu_buffer_t* gpu_voxels = &chunk->gpu_voxels[data->mesh];
+        gpu_buffer_t* gpu_voxels = &chunk->gpu_voxels[mesh];
         if (!gpu_voxels->size)
         {
             continue;
@@ -840,7 +856,7 @@ void world_render(const world_pass_t* data)
         float position[] = {chunk->x, 0, chunk->z};
         SDL_GPUBufferBinding voxel_binding = {gpu_voxels->buffer};
         SDL_GPUBufferBinding index_binding = {gpu_indices.buffer};
-        if (data->lights)
+        if (use_lights)
         {
             Sint32 light_count = 0;
             if (SDL_GetAtomicInt(&chunk->light_job) != JOB_STATE_COMPLETED || !chunk->gpu_lights.size)
@@ -863,7 +879,7 @@ void world_render(const world_pass_t* data)
     SDL_PopGPUDebugGroup(command_buffer);
 }
 
-block_t world_get_block(int index[3])
+block_t world_get_block(const int index[3])
 {
     if (index[1] < 0 || index[1] >= CHUNK_HEIGHT)
     {
@@ -898,7 +914,7 @@ static void set_voxels(int x, int z)
     gen_voxels(chunks, gpu_voxels);
 }
 
-void world_set_block(int index[3], block_t block)
+void world_set_block(const int index[3], block_t block)
 {
     if (index[1] < 0 || index[1] >= CHUNK_HEIGHT)
     {
