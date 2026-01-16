@@ -31,7 +31,7 @@ struct main0_in
 vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]])
 {
     main0_out out = {};
-    out.gl_Position = UniformBuffer.Proj * (UniformBuffer_1.View * float4(float3(float((in.in_var_TEXCOORD0 >> 5u) & 31u), float((in.in_var_TEXCOORD0 >> 10u) & 255u), float((in.in_var_TEXCOORD0 >> 18u) & 31u)) + UniformBuffer_2.ChunkPosition, 1.0));
+    out.gl_Position = UniformBuffer.Proj * (UniformBuffer_1.View * float4(float3(float((in.in_var_TEXCOORD0 >> 6u) & 31u), float((in.in_var_TEXCOORD0 >> 11u) & 255u), float((in.in_var_TEXCOORD0 >> 19u) & 31u)) + UniformBuffer_2.ChunkPosition, 1.0));
     return out;
 }
 

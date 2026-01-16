@@ -153,14 +153,18 @@ float3 GetVoxelTexcoord(uint voxel)
 
 float3 GetVoxelNormal(uint voxel)
 {
-    static const float3 kNormals[6] =
+    static const float3 kNormals[10] =
     {
-        float3( 0.0f, 0.0f, 1.0f),
-        float3( 0.0f, 0.0f,-1.0f),
-        float3( 1.0f, 0.0f, 0.0f),
-        float3(-1.0f, 0.0f, 0.0f),
-        float3( 0.0f, 1.0f, 0.0f),
-        float3( 0.0f,-1.0f, 0.0f)
+        float3( 0.00f, 0.00f, 1.00f ),
+        float3( 0.00f, 0.00f,-1.00f ),
+        float3( 1.00f, 0.00f, 0.00f ),
+        float3(-1.00f, 0.00f, 0.00f ),
+        float3( 0.00f, 1.00f, 0.00f ),
+        float3( 0.00f,-1.00f, 0.00f ),
+        float3(-0.77f, 0.00f, 0.77f ),
+        float3( 0.77f, 0.00f,-0.77f ),
+        float3(-0.77f, 0.00f,-0.77f ),
+        float3( 0.77f, 0.00f, 0.77f ),
     };
     return kNormals[GetVoxelDirection(voxel)];
 }

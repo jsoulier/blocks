@@ -9,7 +9,7 @@
 #include "world.h"
 
 static const float ATLAS_WIDTH = 512.0f;
-static const int ATLAS_MIP_LEVELS = 4;
+static const int ATLAS_MIP_LEVELS = 1;
 static const float BLOCK_WIDTH = 16.0f;
 static const char* SAVE_PATH = "blocks.sqlite3";
 static const int SHADOW_RESOLUTION = 4096.0f;
@@ -63,6 +63,7 @@ static SDL_GPUTexture* fxaa_texture;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* linear_sampler;
 static SDL_GPUSampler* nearest_sampler;
+// TODO: document that anisotropy adds a black outline around sprites (so we aren't using it)
 static SDL_GPUSampler* nearest_anisotropy_sampler;
 static camera_t sun_camera;
 static camera_t player_camera;
@@ -276,7 +277,10 @@ static bool create_atlas()
         info.destination.layer_or_depth_plane = i;
         SDL_BlitGPUTexture(command_buffer, &info);
     }
-    SDL_GenerateMipmapsForGPUTexture(command_buffer, atlas_texture);
+    if (ATLAS_MIP_LEVELS > 1)
+    {
+        SDL_GenerateMipmapsForGPUTexture(command_buffer, atlas_texture);
+    }
     SDL_SubmitGPUCommandBuffer(command_buffer);
     SDL_ReleaseGPUTexture(device, texture);
     SDL_ReleaseGPUTransferBuffer(device, buffer);
@@ -359,7 +363,7 @@ static bool create_opaque_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = shader_load(device, "opaque.vert"),
+        .vertex_shader = shader_load(device, "chunk.vert"),
         .fragment_shader = shader_load(device, "opaque.frag"),
         .target_info =
         {
@@ -981,7 +985,7 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
         data.command_buffer = command_buffer;
         data.render_pass = render_pass;
         data.lights = true;
-        SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_anisotropy_sampler};
+        SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
         world_render(&data);

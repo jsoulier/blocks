@@ -8,10 +8,11 @@ typedef enum direction
     DIRECTION_WEST,
     DIRECTION_UP,
     DIRECTION_DOWN,
+    DIRECTION_COUNT,
 }
 direction_t;
 
-static const int DIRECTIONS[][3] =
+static const int DIRECTIONS[DIRECTION_COUNT][3] =
 {
     [DIRECTION_NORTH] = { 0, 0, 1 },
     [DIRECTION_SOUTH] = { 0, 0,-1 },
