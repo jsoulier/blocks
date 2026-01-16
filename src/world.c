@@ -248,7 +248,7 @@ static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[WORLD_MESH_COUNT])
     {
         return;
     }
-    if (!gpu_buffer_begin_upload(device))
+    if (!gpu_buffer_begin_upload(&chunk->gpu_voxels[0]))
     {
         return;
     }
@@ -256,7 +256,7 @@ static void upload_voxels(chunk_t* chunk, cpu_buffer_t voxels[WORLD_MESH_COUNT])
     {
         gpu_buffer_upload(&chunk->gpu_voxels[i], &voxels[i]);
     }
-    gpu_buffer_end_upload(device);
+    gpu_buffer_end_upload(&chunk->gpu_voxels[0]);
 }
 
 static void upload_lights(chunk_t* chunk, cpu_buffer_t* lights)
@@ -266,12 +266,12 @@ static void upload_lights(chunk_t* chunk, cpu_buffer_t* lights)
     {
         return;
     }
-    if (!gpu_buffer_begin_upload(device))
+    if (!gpu_buffer_begin_upload(&chunk->gpu_lights))
     {
         return;
     }
     gpu_buffer_upload(&chunk->gpu_lights, lights);
-    gpu_buffer_end_upload(device);
+    gpu_buffer_end_upload(&chunk->gpu_lights);
 }
 
 static bool is_face_visible(block_t block, block_t neighbor)
@@ -390,7 +390,7 @@ static void gen_indices_impl(Uint32 size)
     {
         return;
     }
-    if (!gpu_buffer_begin_upload(device))
+    if (!gpu_buffer_begin_upload(&gpu_indices))
     {
         return;
     }
@@ -402,7 +402,7 @@ static void gen_indices_impl(Uint32 size)
         cpu_buffer_append(&cpu_indices, &index);
     }
     gpu_buffer_upload(&gpu_indices, &cpu_indices);
-    gpu_buffer_end_upload(device);
+    gpu_buffer_end_upload(&gpu_indices);
 }
 
 static void gen_indices(Uint32 size)
@@ -580,14 +580,14 @@ static int sort_compare_func(void* userdata, const void* lhs, const void* rhs)
 
 static void create_empty_lights()
 {
-    if (!gpu_buffer_begin_upload(device))
+    if (!gpu_buffer_begin_upload(&gpu_empty_lights))
     {
         return;
     }
     light_t light = {0};
     cpu_buffer_append(&cpu_empty_lights, &light);
     gpu_buffer_upload(&gpu_empty_lights, &cpu_empty_lights);
-    gpu_buffer_end_upload(device);
+    gpu_buffer_end_upload(&gpu_empty_lights);
 }
 
 void world_init(SDL_GPUDevice* handle)
@@ -956,19 +956,19 @@ void world_set_block(int index[3], block_t block)
     save_set_block(chunk->x, chunk->z, index[0], index[1], index[2], block);
 }
 
-world_raycast_t world_raycast(float x, float y, float z, float dx, float dy, float dz, float length)
+world_raycast_t world_raycast(const camera_t* camera, float length)
 {
     world_raycast_t query = {0};
-    query.current[0] = SDL_floorf(x);
-    query.current[1] = SDL_floorf(y);
-    query.current[2] = SDL_floorf(z);
-    float start[3] = {x, y, z};
-    float direction[3] = {dx, dy, dz};
+    float start[3] = {0};
+    float direction[3] = {0};
     float distances[3] = {0};
     int steps[3] = {0};
     float deltas[3] = {0};
+    camera_get_vector(camera, &direction[0], &direction[1], &direction[2]);
     for (int i = 0; i < 3; i++)
     {
+        start[i] = camera->position[i];
+        query.current[i] = SDL_floorf(camera->position[i]);
         query.previous[i] = query.current[i];
         if (SDL_fabsf(direction[i]) > SDL_FLT_EPSILON)
         {

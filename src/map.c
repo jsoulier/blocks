@@ -5,11 +5,41 @@
 
 static const int EMPTY = 0;
 static const int TOMBSTONE = 255;
-static const float MAX_LOAD = 0.7f;
+static const float MAX_LOAD_FACTOR = 0.75f;
+
+static int hash_int(int x)
+{
+    x += (x << 10);
+    x ^= (x >> 6);
+    x += (x << 3);
+    x ^= (x >> 11);
+    x += (x << 15);
+    return x;
+}
+
+static int hash_xyz(int x, int y, int z)
+{
+    return hash_int(x) ^ hash_int(y) ^ hash_int(z);
+}
 
 static bool is_equal(const map_row_t row, int x, int y, int z)
 {
     return row.x == x && row.y == y && row.z == z;
+}
+
+static void grow(map_t* map)
+{
+    map_t old_map = *map;
+    map_init(map, old_map.capacity * 2);
+    for (Uint32 i = 0; i < old_map.capacity; ++i)
+    {
+        if (map_is_row_valid(&old_map, i))
+        {
+            map_row_t row = old_map.rows[i];
+            map_set(map, row.x, row.y, row.z, row.value);
+        }
+    }
+    map_free(&old_map);
 }
 
 void map_init(map_t* map, int capacity)
@@ -28,41 +58,11 @@ void map_free(map_t* map)
     map->capacity = 0;
 }
 
-static int hash_int(int x)
-{
-    x += (x << 10);
-    x ^= (x >> 6);
-    x += (x << 3);
-    x ^= (x >> 11);
-    x += (x << 15);
-    return x;
-}
-
-static int hash_xyz(int x, int y, int z)
-{
-    return hash_int(x) ^ hash_int(y) ^ hash_int(z);
-}
-
-static void grow(map_t* map)
-{
-    map_t old_map = *map;
-    map_init(map, old_map.capacity * 2);
-    for (Uint32 i = 0; i < old_map.capacity; ++i)
-    {
-        if (map_is_row_valid(&old_map, i))
-        {
-            map_row_t row = old_map.rows[i];
-            map_set(map, row.x, row.y, row.z, row.value);
-        }
-    }
-    map_free(&old_map);
-}
-
 void map_set(map_t* map, int x, int y, int z, int value)
 {
-    CHECK(value <= UINT8_MAX);
+    CHECK(value <= SDL_MAX_UINT8);
     CHECK(value != EMPTY && value != TOMBSTONE);
-    if ((float) (map->size + 1) / map->capacity > MAX_LOAD)
+    if (((float) (map->size + 1) / map->capacity) > MAX_LOAD_FACTOR)
     {
         grow(map);
     }
@@ -143,7 +143,7 @@ void map_remove(map_t* map, int x, int y, int z)
 
 void map_clear(map_t* map)
 {
-    memset(map->rows, 0,  map->capacity * sizeof(map_row_t));
+    SDL_memset(map->rows, 0,  map->capacity * sizeof(map_row_t));
     map->size = 0;
 }
 

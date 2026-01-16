@@ -43,4 +43,4 @@ void world_update(const camera_t* camera);
 void world_render(const world_pass_t* data);
 block_t world_get_block(int index[3]);
 void world_set_block(int index[3], block_t block);
-world_raycast_t world_raycast(float x, float y, float z, float dx, float dy, float dz, float length);
+world_raycast_t world_raycast(const camera_t* camera, float length);

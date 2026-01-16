@@ -176,7 +176,7 @@ void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block)
     SDL_UnlockMutex(mutex);
 }
 
-void save_get_blocks(void* userdata, int cx, int cz, save_get_blocks_cb_t cb)
+void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t cb)
 {
     if (!handle)
     {

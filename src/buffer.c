@@ -145,11 +145,11 @@ void gpu_buffer_clear(gpu_buffer_t* gpu)
     gpu->size = 0;
 }
 
-bool gpu_buffer_begin_upload(SDL_GPUDevice* device)
+bool gpu_buffer_begin_upload(gpu_buffer_t* gpu)
 {
     CHECK(!command_buffer);
     CHECK(!copy_pass);
-    command_buffer = SDL_AcquireGPUCommandBuffer(device);
+    command_buffer = SDL_AcquireGPUCommandBuffer(gpu->device);
     if (!command_buffer)
     {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
@@ -165,7 +165,7 @@ bool gpu_buffer_begin_upload(SDL_GPUDevice* device)
     return true;
 }
 
-void gpu_buffer_end_upload(SDL_GPUDevice* device)
+void gpu_buffer_end_upload(gpu_buffer_t* gpu)
 {
     CHECK(copy_pass);
     CHECK(command_buffer);

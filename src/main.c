@@ -89,11 +89,7 @@ static void update_sky(float dt)
 
 static void do_player_raycast()
 {
-    float dx;
-    float dy;
-    float dz;
-    camera_get_vector(&player_camera, &dx, &dy, &dz);
-    player_raycast = world_raycast(player_camera.x, player_camera.y, player_camera.z, dx, dy, dz, RANGE);
+    player_raycast = world_raycast(&player_camera, RANGE);
 }
 
 static void init_player()

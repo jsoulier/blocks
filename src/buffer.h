@@ -32,5 +32,5 @@ void gpu_buffer_init(gpu_buffer_t* gpu, SDL_GPUDevice* device, SDL_GPUBufferUsag
 void gpu_buffer_free(gpu_buffer_t* gpu);
 void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu);
 void gpu_buffer_clear(gpu_buffer_t* gpu);
-bool gpu_buffer_begin_upload(SDL_GPUDevice* device);
-void gpu_buffer_end_upload(SDL_GPUDevice* device);
+bool gpu_buffer_begin_upload(gpu_buffer_t* gpu);
+void gpu_buffer_end_upload(gpu_buffer_t* gpu);
