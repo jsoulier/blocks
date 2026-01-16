@@ -67,7 +67,7 @@ static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* nearest_anisotropy_sampler;
 static camera_t sun_camera;
 static camera_t player_camera;
-static world_raycast_t player_raycast;
+static world_query_t player_raycast;
 static block_t player_block;
 static Uint64 ticks1;
 
@@ -927,7 +927,7 @@ static void render_sky(SDL_GPUCommandBuffer* command_buffer)
     }
     {
         SDL_BindGPUGraphicsPipeline(render_pass, shadow_pipeline);
-        world_render(&sun_camera, command_buffer, render_pass, WORLD_FLAG_OPAQUE);
+        world_render(&sun_camera, command_buffer, render_pass, WORLD_FLAGS_OPAQUE);
     }
     SDL_EndGPURenderPass(render_pass);
 }
@@ -976,7 +976,7 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
         SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_sampler};
         SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
-        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAG_OPAQUE | WORLD_FLAG_LIGHT);
+        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
     }
     SDL_EndGPURenderPass(render_pass);
 }
@@ -1057,7 +1057,7 @@ static void render_predepth(SDL_GPUCommandBuffer* command_buffer)
     }
     {
         SDL_BindGPUGraphicsPipeline(render_pass, predepth_pipeline);
-        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAG_TRANSPARENT);
+        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAGS_TRANSPARENT);
     }
     SDL_EndGPURenderPass(render_pass);
 }
@@ -1086,7 +1086,7 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
         SDL_PushGPUFragmentUniformData(command_buffer, 2, player_camera.position, sizeof(player_camera.position));
         SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
         SDL_BindGPUFragmentSamplers(render_pass, 1, &shadow_binding, 1);
-        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAG_TRANSPARENT | WORLD_FLAG_LIGHT);
+        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
     }
     if (player_raycast.block != BLOCK_EMPTY)
     {

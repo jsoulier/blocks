@@ -10,26 +10,26 @@
 
 typedef struct camera camera_t;
 
-typedef enum world_flag
+typedef enum world_flags
 {
-    WORLD_FLAG_OPAQUE      = 0x01,
-    WORLD_FLAG_TRANSPARENT = 0x02,
-    WORLD_FLAG_LIGHT       = 0x04,
+    WORLD_FLAGS_OPAQUE      = 0x01,
+    WORLD_FLAGS_TRANSPARENT = 0x02,
+    WORLD_FLAGS_LIGHT       = 0x04,
 }
-world_flag_t;
+world_flags_t;
 
-typedef struct world_raycast
+typedef struct world_query
 {
     block_t block;
     int current[3];
     int previous[3];
 }
-world_raycast_t;
+world_query_t;
 
 void world_init(SDL_GPUDevice* device);
 void world_free();
 void world_update(const camera_t* camera);
-void world_render(const camera_t* camera, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, world_flag_t flags);
+void world_render(const camera_t* camera, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass, world_flags_t flags);
 block_t world_get_block(const int position[3]);
 void world_set_block(const int position[3], block_t block);
-world_raycast_t world_raycast(const camera_t* camera, float length);
+world_query_t world_raycast(const camera_t* camera, float length);

@@ -12,7 +12,7 @@ cbuffer UniformBuffer : register(b1, space1)
 
 cbuffer UniformBuffer : register(b2, space1)
 {
-    float3 ChunkPosition;
+    int2 ChunkPosition;
 };
 
 struct Input
@@ -32,7 +32,8 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    output.WorldPosition.xyz = GetVoxelPosition(input.Voxel) + ChunkPosition;
+    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    output.WorldPosition.xyz = GetVoxelPosition(input.Voxel) + chunkPosition;
     output.Normal = GetVoxelNormal(input.Voxel);
     output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
     output.WorldPosition.w = output.Position.z;

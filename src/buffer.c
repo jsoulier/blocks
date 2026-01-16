@@ -3,8 +3,8 @@
 #include "buffer.h"
 #include "check.h"
 
-static _Thread_local SDL_GPUCommandBuffer* command_buffer;
-static _Thread_local SDL_GPUCopyPass* copy_pass;
+static _Thread_local SDL_GPUCommandBuffer* cbuf;
+static _Thread_local SDL_GPUCopyPass* pass;
 
 void cpu_buffer_init(cpu_buffer_t* cpu, SDL_GPUDevice* device, Uint32 stride)
 {
@@ -100,8 +100,8 @@ void gpu_buffer_free(gpu_buffer_t* gpu)
 
 void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu)
 {
-    CHECK(command_buffer);
-    CHECK(copy_pass);
+    CHECK(cbuf);
+    CHECK(pass);
     gpu->size = 0;
     if (cpu->data)
     {
@@ -136,7 +136,7 @@ void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu)
     location.transfer_buffer = cpu->buffer;
     region.buffer = gpu->buffer;
     region.size = size * cpu->stride;
-    SDL_UploadToGPUBuffer(copy_pass, &location, &region, true);
+    SDL_UploadToGPUBuffer(pass, &location, &region, true);
     gpu->size = size;
 }
 
@@ -147,19 +147,20 @@ void gpu_buffer_clear(gpu_buffer_t* gpu)
 
 bool gpu_buffer_begin_upload(gpu_buffer_t* gpu)
 {
-    CHECK(!command_buffer);
-    CHECK(!copy_pass);
-    command_buffer = SDL_AcquireGPUCommandBuffer(gpu->device);
-    if (!command_buffer)
+    CHECK(!cbuf);
+    CHECK(!pass);
+    cbuf = SDL_AcquireGPUCommandBuffer(gpu->device);
+    if (!cbuf)
     {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
         return false;
     }
-    copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-    if (!copy_pass)
+    pass = SDL_BeginGPUCopyPass(cbuf);
+    if (!pass)
     {
         SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
-        SDL_CancelGPUCommandBuffer(command_buffer);
+        SDL_CancelGPUCommandBuffer(cbuf);
+        cbuf = NULL;
         return false;
     }
     return true;
@@ -167,10 +168,10 @@ bool gpu_buffer_begin_upload(gpu_buffer_t* gpu)
 
 void gpu_buffer_end_upload(gpu_buffer_t* gpu)
 {
-    CHECK(copy_pass);
-    CHECK(command_buffer);
-    SDL_EndGPUCopyPass(copy_pass);
-    SDL_SubmitGPUCommandBuffer(command_buffer);
-    copy_pass = NULL;
-    command_buffer = NULL;
+    CHECK(pass);
+    CHECK(cbuf);
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(cbuf);
+    pass = NULL;
+    cbuf = NULL;
 }
