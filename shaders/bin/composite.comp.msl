@@ -74,57 +74,57 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], cons
         {
             break;
         }
-        float3 _117 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
-        uint4 _119 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        uint _120 = _119.x;
-        float4 _122 = positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        float3 _131 = lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
+        float3 _116 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
+        uint4 _118 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        uint _119 = _118.x;
+        float4 _121 = positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        float3 _130 = lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
         float _194;
         do
         {
-            float4 _142 = UniformBuffer.ShadowTransform * float4(_122.xyz, 1.0);
-            float3 _146 = _142.xyz / float3(_142.w);
-            float2 _149 = (_146.xy * 0.5) + float2(0.5);
-            float _151 = 1.0 - _149.y;
-            float2 _152 = _149;
-            _152.y = _151;
-            float _153 = _149.x;
-            bool _159;
-            if (!(_153 < 0.0))
+            float4 _141 = UniformBuffer.ShadowTransform * float4(_121.xyz, 1.0);
+            float3 _145 = _141.xyz / float3(_141.w);
+            float2 _148 = (_145.xy * 0.5) + float2(0.5);
+            float _150 = 1.0 - _148.y;
+            float2 _151 = _148;
+            _151.y = _150;
+            float _152 = _148.x;
+            bool _158;
+            if (!(_152 < 0.0))
             {
-                _159 = _153 > 1.0;
+                _158 = _152 > 1.0;
             }
             else
             {
-                _159 = true;
+                _158 = true;
             }
-            bool _164;
-            if (!_159)
+            bool _163;
+            if (!_158)
             {
-                _164 = _151 < 0.0;
+                _163 = _150 < 0.0;
             }
             else
             {
-                _164 = true;
+                _163 = true;
             }
-            bool _169;
-            if (!_164)
+            bool _168;
+            if (!_163)
             {
-                _169 = _151 > 1.0;
+                _168 = _150 > 1.0;
             }
             else
             {
-                _169 = true;
+                _168 = true;
             }
-            if (_169)
+            if (_168)
             {
                 _194 = 0.4000000059604644775390625;
                 break;
             }
             float _183;
-            if ((_120 & 1u) != 0u)
+            if (((_119 >> 0u) & 1u) != 0u)
             {
-                float _179 = dot(_85[((_120 >> 1u) & 15u) - 1u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz));
+                float _179 = dot(_85[((_119 >> 1u) & 15u) - 1u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz));
                 if (_179 > 0.0)
                 {
                     _194 = 0.0;
@@ -136,7 +136,7 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], cons
             {
                 _183 = -0.7070000171661376953125;
             }
-            if (_146.z < (shadowTexture.sample(shadowSampler, _152, level(0.0)).x + 0.001000000047497451305389404296875))
+            if (_145.z < (shadowTexture.sample(shadowSampler, _151, level(0.0)).x + 0.001000000047497451305389404296875))
             {
                 _194 = _183 * (-0.4000000059604644775390625);
                 break;
@@ -148,44 +148,44 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], cons
             }
             break; // unreachable workaround
         } while(false);
-        float3 _225;
-        if ((_120 & 1u) != 0u)
+        float3 _226;
+        if (((_119 >> 0u) & 1u) != 0u)
         {
-            _225 = _117 * (((_131 + float3(0.5)) + float3(_194)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 2.0));
+            _226 = _116 * (((_130 + float3(0.5)) + float3(_194)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 2.0));
         }
         else
         {
-            bool _210;
-            if (!(length(_117) > 0.999000012874603271484375))
+            bool _211;
+            if (!(length(_116) > 0.999000012874603271484375))
             {
-                _210 = _120 == 0u;
+                _211 = _119 == 0u;
             }
             else
             {
-                _210 = true;
+                _211 = true;
             }
-            float3 _218;
-            if (_210)
+            float3 _219;
+            if (_211)
             {
-                _218 = _117;
+                _219 = _116;
             }
             else
             {
-                _218 = _117 * ((_131 + float3(0.5)) + float3(_194));
+                _219 = _116 * ((_130 + float3(0.5)) + float3(_194));
             }
-            _225 = _218;
+            _226 = _219;
         }
-        float3 _251;
-        if (!(_120 == 0u))
+        float3 _252;
+        if (!(_119 == 0u))
         {
-            float3 _232 = _122.xyz - UniformBuffer_1.PlayerPosition;
-            _251 = mix(_225, mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_232.y, length(float2(_232.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(_122.xz, UniformBuffer_1.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0)));
+            float3 _233 = _121.xyz - UniformBuffer_1.PlayerPosition;
+            _252 = mix(_226, mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_233.y, length(float2(_233.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(_121.xz, UniformBuffer_1.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0)));
         }
         else
         {
-            _251 = _225;
+            _252 = _226;
         }
-        compositeTexture.write(float4(_251, 1.0), uint2(gl_GlobalInvocationID.xy));
+        compositeTexture.write(float4(_252, 1.0), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

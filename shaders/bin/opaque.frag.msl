@@ -45,52 +45,52 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& 
     {
         discard_fragment();
     }
-    uint _81 = uint(UniformBuffer.LightCount);
-    float3 _83;
-    _83 = float3(0.0);
+    uint _82 = uint(UniformBuffer.LightCount);
     float3 _84;
-    for (uint _86 = 0u; _86 < _81; _83 = _84, _86++)
+    _84 = float3(0.0);
+    float3 _85;
+    for (uint _87 = 0u; _87 < _82; _84 = _85, _87++)
     {
-        float _99 = float((lightBuffer._m0[_86].Color & 4278190080u) >> 24u);
-        float3 _106 = (float3(float(lightBuffer._m0[_86].X), float(lightBuffer._m0[_86].Y), float(lightBuffer._m0[_86].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
-        float _107 = length(_106);
-        bool _113;
-        if (!(_107 >= _99))
+        float _100 = float((lightBuffer._m0[_87].Color & 4278190080u) >> 24u);
+        float3 _107 = (float3(float(lightBuffer._m0[_87].X), float(lightBuffer._m0[_87].Y), float(lightBuffer._m0[_87].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _108 = length(_107);
+        bool _114;
+        if (!(_108 >= _100))
         {
-            _113 = _99 <= 0.0;
+            _114 = _100 <= 0.0;
         }
         else
         {
-            _113 = true;
+            _114 = true;
         }
-        if (_113)
+        if (_114)
         {
-            _84 = _83;
+            _85 = _84;
             continue;
         }
-        float _127;
-        if (_107 > 0.100000001490116119384765625)
+        float _128;
+        if (_108 > 0.100000001490116119384765625)
         {
-            float _123 = fast::clamp(dot(in.in_var_TEXCOORD1, _106 / float3(_107)), 0.0, 1.0);
-            if (_123 <= 0.0)
+            float _124 = fast::clamp(dot(in.in_var_TEXCOORD1, _107 / float3(_108)), 0.0, 1.0);
+            if (_124 <= 0.0)
             {
-                _84 = _83;
+                _85 = _84;
                 continue;
             }
-            _127 = _123;
+            _128 = _124;
         }
         else
         {
-            _127 = 1.0;
+            _128 = 1.0;
         }
-        float _130 = fast::clamp(1.0 - (_107 / _99), 0.0, 1.0);
-        _84 = _83 + ((float3(float(lightBuffer._m0[_86].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_86].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _127) * (_130 * _130));
+        float _131 = fast::clamp(1.0 - (_108 / _100), 0.0, 1.0);
+        _85 = _84 + ((float3(float((lightBuffer._m0[_87].Color & 255u) >> 0u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_87].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_87].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _128) * (_131 * _131));
     }
-    float3 _147 = _83 * 2.0;
+    float3 _149 = _84 * 2.0;
     out.out_var_SV_Target0 = _71;
     out.out_var_SV_Target1 = in.in_var_TEXCOORD0;
-    out.out_var_SV_Target2 = float4(_147.x, _147.y, _147.z, float4(0.0).w);
-    out.out_var_SV_Target3 = (in.in_var_TEXCOORD3 & 1u) | (in.in_var_TEXCOORD3 & 30u);
+    out.out_var_SV_Target2 = float4(_149.x, _149.y, _149.z, float4(0.0).w);
+    out.out_var_SV_Target3 = (0u | (in.in_var_TEXCOORD3 & 1u)) | (in.in_var_TEXCOORD3 & 30u);
     return out;
 }
 

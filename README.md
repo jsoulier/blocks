@@ -45,7 +45,7 @@ cd bin
 #### Shaders
 
 Shaders are prebuilt.
-To build locally, install [glslc](https://github.com/google/shaderc) and [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
+To build locally, install [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
 
 ### Controls
 
