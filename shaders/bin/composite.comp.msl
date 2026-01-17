@@ -151,7 +151,7 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], cons
         float3 _872;
         if ((_589 & 1u) != 0u)
         {
-            _872 = _581 * (((_621 + float3(0.800000011920928955078125)) + float3(_793)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0));
+            _872 = _581 * (((_621 + float3(0.800000011920928955078125)) + float3(_793)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 2.0));
         }
         else
         {

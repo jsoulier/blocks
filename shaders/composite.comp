@@ -20,7 +20,7 @@ cbuffer UniformBuffer : register(b1, space2)
     float3 PlayerPosition;
 };
 
-static const float kSSAO = 3.0f;
+static const float kSSAO = 2.0f;
 
 [numthreads(8, 8, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)

@@ -884,7 +884,7 @@ static void render_composite(SDL_GPUCommandBuffer* cbuf)
     read_textures[3] = voxel_texture;
     read_textures[4] = position_texture;
     read_samplers.texture = shadow_texture;
-    read_samplers.sampler = nearest_sampler;
+    read_samplers.sampler = linear_sampler;
     int groups_x = (player_camera.width + 8 - 1) / 8;
     int groups_y = (player_camera.height + 8 - 1) / 8;
     SDL_PushGPUDebugGroup(cbuf, "composite");
@@ -923,7 +923,7 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
     sampler_bindings[0].texture = atlas_texture;
     sampler_bindings[0].sampler = nearest_sampler;
     sampler_bindings[1].texture = shadow_texture;
-    sampler_bindings[1].sampler = nearest_sampler;
+    sampler_bindings[1].sampler = linear_sampler;
     sampler_bindings[2].texture = position_texture;
     sampler_bindings[2].sampler = nearest_sampler;
     SDL_PushGPUDebugGroup(cbuf, "transparent");
