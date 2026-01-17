@@ -32,22 +32,21 @@ struct Input
     float2 Fragment : TEXCOORD4;
 };
 
-// TODO: sky
-static const float3 kAmbient = float3(0.5f, 0.5f, 0.5f);
-
 float4 main(Input input) : SV_Target0
 {
     float4 color = atlasTexture.Sample(atlasSampler, input.Texcoord);
     float3 albedo = color.rgb;
     float alpha = color.a;
     float4 position = input.WorldPosition;
-    float3 diffuse = GetLight(lightBuffer, LightCount, position, input.Normal);
-    float shadow = GetShadow(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal, input.Voxel);
-    float3 finalColor = albedo * (diffuse + kAmbient - shadow);
+    float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, input.Normal);
+    float3 ambient = GetAmbientLight();
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal, input.Voxel);
+    float3 finalColor = albedo * (diffuse + ambient + sun);
     float3 skyColor = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     finalColor = lerp(finalColor, skyColor, fog);
     float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
-    alpha = saturate(alpha + (input.WorldPosition.y - groundPosition.y) / 20.0f);
+    // TODO: Causing bug where alpha is 0 or 1 near sea level 
+    alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
     return float4(finalColor, alpha);
 }

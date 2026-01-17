@@ -279,7 +279,7 @@ static bool create_opaque_pipeline()
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "chunk.vert");
+    info.vertex_shader = shader_load(device, "opaque.vert");
     info.fragment_shader = shader_load(device, "opaque.frag");
     info.target_info.num_color_targets = 4;
     info.target_info.color_target_descriptions = color_targets;
@@ -348,7 +348,7 @@ static bool create_transparent_pipeline()
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "chunk.vert");
+    info.vertex_shader = shader_load(device, "transparent.vert");
     info.fragment_shader = shader_load(device, "transparent.frag");
     info.target_info.num_color_targets = 1;
     info.target_info.color_target_descriptions = color_targets;

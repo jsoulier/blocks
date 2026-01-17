@@ -30,8 +30,8 @@ Output main(Input input)
 {
     Output output;
     int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
-    float3 position = GetVoxelPosition(input.Voxel) + chunkPosition;
+    float3 position = GetPosition(input.Voxel) + chunkPosition;
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
-    output.ClipDistance = GetVoxelShadow(input.Voxel) ? 1.0f : -1.0f;
+    output.ClipDistance = GetShadow(input.Voxel) ? 1.0f : -1.0f;
     return output;
 }

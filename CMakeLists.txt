@@ -47,7 +47,7 @@ function(add_shader FILE)
     function(compile OUTPUT)
         add_custom_command(
             OUTPUT ${OUTPUT}
-            COMMAND ${SHADERCROSS} ${HLSL} -s hlsl -o ${OUTPUT} -I src
+            COMMAND ${SHADERCROSS} ${HLSL} -s hlsl -o ${OUTPUT} -I src -g
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             DEPENDS ${HLSL} ${DEPENDS}
             COMMENT ${OUTPUT}
@@ -86,11 +86,11 @@ function(add_shader FILE)
     package(${JSON})
 endfunction()
 add_shader(blur.comp shaders/shader.hlsl src/voxel.inc)
-add_shader(chunk.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(composite.comp shaders/shader.hlsl src/voxel.inc)
 add_shader(depth.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(depth.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(opaque.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(opaque.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(shadow.frag shaders/shader.hlsl src/voxel.inc)
@@ -99,4 +99,5 @@ add_shader(sky.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(sky.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(ssao.comp shaders/shader.hlsl src/voxel.inc)
 add_shader(transparent.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(transparent.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(ui.comp shaders/shader.hlsl src/voxel.inc)

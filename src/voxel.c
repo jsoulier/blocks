@@ -8,32 +8,33 @@
 
 static voxel_t pack(block_t block, int x, int y, int z, int u, int v, direction_t direction, int normal)
 {
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_X_OFFSET + VOXEL_X_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_Y_OFFSET + VOXEL_Y_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_Z_OFFSET + VOXEL_Z_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_U_OFFSET + VOXEL_U_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_V_OFFSET + VOXEL_V_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_INDEX_OFFSET + VOXEL_INDEX_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32);
+    normal++;
+    SDL_COMPILE_TIME_ASSERT("", X_OFFSET + X_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", Y_OFFSET + Y_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", Z_OFFSET + Z_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", U_OFFSET + U_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", V_OFFSET + V_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", INDEX_OFFSET + INDEX_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", DIRECTION_OFFSET + DIRECTION_BITS <= 32);
     CHECK(direction <= DIRECTION_COUNT);
     int index = block_get_index(block, direction);
-    CHECK(x <= VOXEL_X_MASK);
-    CHECK(y <= VOXEL_Y_MASK);
-    CHECK(z <= VOXEL_Z_MASK);
-    CHECK(u <= VOXEL_U_MASK);
-    CHECK(v <= VOXEL_V_MASK);
-    CHECK(index <= VOXEL_INDEX_MASK);
-    CHECK(normal <= VOXEL_DIRECTION_MASK);
+    CHECK(x <= X_MASK);
+    CHECK(y <= Y_MASK);
+    CHECK(z <= Z_MASK);
+    CHECK(u <= U_MASK);
+    CHECK(v <= V_MASK);
+    CHECK(index <= INDEX_MASK);
+    CHECK(normal <= DIRECTION_MASK);
     voxel_t voxel = 0;
-    voxel |= block_has_occlusion(block) << VOXEL_OCCLUSION_OFFSET;
-    voxel |= normal << VOXEL_DIRECTION_OFFSET;
-    voxel |= block_has_shadow(block) << VOXEL_SHADOW_OFFSET;
-    voxel |= x << VOXEL_X_OFFSET;
-    voxel |= y << VOXEL_Y_OFFSET;
-    voxel |= z << VOXEL_Z_OFFSET;
-    voxel |= u << VOXEL_U_OFFSET;
-    voxel |= v << VOXEL_V_OFFSET;
-    voxel |= index << VOXEL_INDEX_OFFSET;
+    voxel |= block_has_occlusion(block) << OCCLUSION_OFFSET;
+    voxel |= normal << DIRECTION_OFFSET;
+    voxel |= block_has_shadow(block) << SHADOW_OFFSET;
+    voxel |= x << X_OFFSET;
+    voxel |= y << Y_OFFSET;
+    voxel |= z << Z_OFFSET;
+    voxel |= u << U_OFFSET;
+    voxel |= v << V_OFFSET;
+    voxel |= index << INDEX_OFFSET;
     return voxel;
 }
 

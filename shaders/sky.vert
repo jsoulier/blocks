@@ -23,7 +23,7 @@ Output main(uint vertexID : SV_VertexID)
     view[1][3] = 0.0f;
     view[2][3] = 0.0f;
     Output output;
-    output.LocalPosition = GetCubeVertex(vertexID);
+    output.LocalPosition = GetCubePosition(vertexID);
     output.Position = mul(Proj, mul(view, float4(output.LocalPosition, 1.0f)));
     return output;
 }

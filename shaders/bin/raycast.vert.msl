@@ -54,8 +54,8 @@ struct type_UniformBuffer_1
     int3 BlockPosition;
 };
 
-constant spvUnsafeArray<float3, 8> _54 = spvUnsafeArray<float3, 8>({ float3(-0.5), float3(0.5, -0.5, -0.5), float3(0.5, 0.5, -0.5), float3(-0.5, 0.5, -0.5), float3(-0.5, -0.5, 0.5), float3(0.5, -0.5, 0.5), float3(0.5), float3(-0.5, 0.5, 0.5) });
-constant spvUnsafeArray<uint, 36> _55 = spvUnsafeArray<uint, 36>({ 0u, 1u, 2u, 0u, 2u, 3u, 5u, 4u, 7u, 5u, 7u, 6u, 4u, 0u, 3u, 4u, 3u, 7u, 1u, 5u, 6u, 1u, 6u, 2u, 3u, 2u, 6u, 3u, 6u, 7u, 4u, 5u, 1u, 4u, 1u, 0u });
+constant spvUnsafeArray<float3, 10> _192 = spvUnsafeArray<float3, 10>({ float3(-0.5), float3(0.5, -0.5, -0.5), float3(0.5, 0.5, -0.5), float3(-0.5, 0.5, -0.5), float3(-0.5, -0.5, 0.5), float3(0.5, -0.5, 0.5), float3(0.5), float3(-0.5, 0.5, 0.5), float3(0.0), float3(0.0) });
+constant spvUnsafeArray<uint, 36> _193 = spvUnsafeArray<uint, 36>({ 0u, 1u, 2u, 0u, 2u, 3u, 5u, 4u, 7u, 5u, 7u, 6u, 4u, 0u, 3u, 4u, 3u, 7u, 1u, 5u, 6u, 1u, 6u, 2u, 3u, 2u, 6u, 3u, 6u, 7u, 4u, 5u, 1u, 4u, 1u, 0u });
 
 struct main0_out
 {
@@ -65,7 +65,7 @@ struct main0_out
 vertex main0_out main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    out.gl_Position = UniformBuffer.Transform * float4((_54[_55[gl_VertexIndex]] * 1.0099999904632568359375) + (float3(UniformBuffer_1.BlockPosition) + float3(0.5)), 1.0);
+    out.gl_Position = UniformBuffer.Transform * float4((_192[_193[gl_VertexIndex]] * 1.00499999523162841796875) + (float3(UniformBuffer_1.BlockPosition) + float3(0.5)), 1.0);
     return out;
 }
 

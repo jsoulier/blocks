@@ -14,7 +14,7 @@ bool IsOccluded(uint2 id, uint direction, float3 position)
     uint voxel = voxelTexture[id].x;
     // TODO: Removing improves performance a lot
     // From 0.28 ms to 0.23 ms average on RTX 4050
-    if (!GetVoxelOcclusion(voxel))
+    if (!GetOcclusion(voxel))
     {
         return false;
     }
@@ -41,12 +41,12 @@ void main(uint3 threadID : SV_DispatchThreadID)
     }
     ssaoTexture[threadID.xy] = 0.0f;
     uint voxel = voxelTexture[threadID.xy];
-    if (!GetVoxelOcclusion(voxel))
+    if (!GetOcclusion(voxel))
     {
         return;
     }
     float2 uv = float2(threadID.xy) / float2(width, height);
-    uint direction = GetVoxelDirection(voxel);
+    uint direction = GetDirection(voxel);
     float4 position = positionTexture[threadID.xy];
     float depth = max(abs(position.w), 1.0f);
     float2 scale = kScale / float2(width, height) / depth;

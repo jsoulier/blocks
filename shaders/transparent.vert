@@ -34,12 +34,12 @@ Output main(Input input)
 {
     Output output;
     int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
-    output.WorldPosition.xyz = GetVoxelPosition(input.Voxel) + chunkPosition;
-    output.Normal = GetVoxelNormal(input.Voxel);
+    output.WorldPosition.xyz = GetPosition(input.Voxel) + chunkPosition;
+    output.Normal = GetNormal(input.Voxel);
     output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
     output.WorldPosition.w = output.Position.z;
     output.Position = mul(Proj, output.Position);
-    output.Texcoord = GetVoxelTexcoord(input.Voxel);
+    output.Texcoord = GetTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
     output.Fragment = output.Position.xy / output.Position.w;
     output.Fragment = output.Fragment * 0.5f + 0.5f;
