@@ -188,14 +188,14 @@ static bool create_atlas()
     }
     SDL_memcpy(data, atlas_surface->pixels, atlas_surface->w * atlas_surface->h * 4);
     SDL_UnmapGPUTransferBuffer(device, buffer);
-    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
-    if (!command_buffer)
+    SDL_GPUCommandBuffer* cbuf = SDL_AcquireGPUCommandBuffer(device);
+    if (!cbuf)
     {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
         return false;
     }
-    SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(command_buffer);
-    if (!copy_pass)
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cbuf);
+    if (!pass)
     {
         SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
         return false;
@@ -207,8 +207,8 @@ static bool create_atlas()
     region.w = atlas_surface->w;
     region.h = atlas_surface->h;
     region.d = 1;
-    SDL_UploadToGPUTexture(copy_pass, &info, &region, 0);
-    SDL_EndGPUCopyPass(copy_pass);
+    SDL_UploadToGPUTexture(pass, &info, &region, 0);
+    SDL_EndGPUCopyPass(pass);
     for (int i = 0; i < ATLAS_WIDTH / BLOCK_WIDTH; i++)
     {
         SDL_GPUBlitInfo info = {0};
@@ -223,19 +223,19 @@ static bool create_atlas()
         info.destination.w = BLOCK_WIDTH;
         info.destination.h = BLOCK_WIDTH;
         info.destination.layer_or_depth_plane = i;
-        SDL_BlitGPUTexture(command_buffer, &info);
+        SDL_BlitGPUTexture(cbuf, &info);
     }
     if (ATLAS_MIP_LEVELS > 1)
     {
-        SDL_GenerateMipmapsForGPUTexture(command_buffer, atlas_texture);
+        SDL_GenerateMipmapsForGPUTexture(cbuf, atlas_texture);
     }
-    SDL_SubmitGPUCommandBuffer(command_buffer);
+    SDL_SubmitGPUCommandBuffer(cbuf);
     SDL_ReleaseGPUTexture(device, texture);
     SDL_ReleaseGPUTransferBuffer(device, buffer);
     return true;
 }
 
-static void set_icon(block_t block)
+static void set_window_icon(block_t block)
 {
     if (!atlas_surface)
     {
@@ -265,32 +265,6 @@ static void set_icon(block_t block)
     }
     SDL_SetWindowIcon(window, icon);
     SDL_DestroySurface(icon);
-}
-
-static bool create_samplers()
-{
-    SDL_GPUSamplerCreateInfo info = {0};
-    info.min_filter = SDL_GPU_FILTER_LINEAR;
-    info.mag_filter = SDL_GPU_FILTER_LINEAR;
-    info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
-    info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-    info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-    info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-    linear_sampler = SDL_CreateGPUSampler(device, &info);
-    if (!linear_sampler)
-    {
-        SDL_Log("Failed to create linear sampler: %s", SDL_GetError());
-        return false;
-    }
-    info.min_filter = SDL_GPU_FILTER_NEAREST;
-    info.mag_filter = SDL_GPU_FILTER_NEAREST;
-    nearest_sampler = SDL_CreateGPUSampler(device, &info);
-    if (!nearest_sampler)
-    {
-        SDL_Log("Failed to create nearest sampler: %s", SDL_GetError());
-        return false;
-    }
-    return true;
 }
 
 static bool create_opaque_pipeline()
@@ -476,6 +450,51 @@ static bool create_raycast_pipeline()
     return raycast_pipeline != NULL;
 }
 
+static bool create_samplers()
+{
+    SDL_GPUSamplerCreateInfo info = {0};
+    info.min_filter = SDL_GPU_FILTER_LINEAR;
+    info.mag_filter = SDL_GPU_FILTER_LINEAR;
+    info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+    info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+    info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+    info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+    linear_sampler = SDL_CreateGPUSampler(device, &info);
+    if (!linear_sampler)
+    {
+        SDL_Log("Failed to create linear sampler: %s", SDL_GetError());
+        return false;
+    }
+    info.min_filter = SDL_GPU_FILTER_NEAREST;
+    info.mag_filter = SDL_GPU_FILTER_NEAREST;
+    nearest_sampler = SDL_CreateGPUSampler(device, &info);
+    if (!nearest_sampler)
+    {
+        SDL_Log("Failed to create nearest sampler: %s", SDL_GetError());
+        return false;
+    }
+    return true;
+}
+
+static bool create_textures()
+{
+    SDL_GPUTextureCreateInfo info = {0};
+    info.type = SDL_GPU_TEXTURETYPE_2D;
+    info.format = depth_format;
+    info.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    info.width = SHADOW_RESOLUTION;
+    info.height = SHADOW_RESOLUTION;
+    info.layer_count_or_depth = 1;
+    info.num_levels = 1;
+    shadow_texture = SDL_CreateGPUTexture(device, &info);
+    if (!shadow_texture)
+    {
+        SDL_Log("Failed to create shadow texture: %s", SDL_GetError());
+        return false;
+    }
+    return true;
+}
+
 SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
 {
 #ifndef NDEBUG
@@ -519,6 +538,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     if (!create_samplers())
     {
         SDL_Log("Failed to create samplers: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    if (!create_textures())
+    {
+        SDL_Log("Failed to create textures: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     if (!create_opaque_pipeline())
@@ -575,32 +599,17 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to load blur pipeline");
         return SDL_APP_FAILURE;
     }
-    {
-        SDL_GPUTextureCreateInfo info = {0};
-        info.type = SDL_GPU_TEXTURETYPE_2D;
-        info.format = depth_format;
-        info.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-        info.width = SHADOW_RESOLUTION;
-        info.height = SHADOW_RESOLUTION;
-        info.layer_count_or_depth = 1;
-        info.num_levels = 1;
-        shadow_texture = SDL_CreateGPUTexture(device, &info);
-        if (!shadow_texture)
-        {
-            SDL_Log("Failed to create shadow texture: %s", SDL_GetError());
-            return false;
-        }
-    }
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
-    set_icon(BLOCK_GRASS);
+    set_window_icon(BLOCK_GRASS);
     save_init(SAVE_PATH);
     world_init(device);
     save_or_load_player(false);
     world_update(&player_camera);
     move_player(0.0f);
-    ticks1 = SDL_GetTicks();
+    ticks2 = SDL_GetTicks();
+    ticks1 = 0;
     return SDL_APP_CONTINUE;
 }
 
@@ -731,7 +740,7 @@ static bool resize(int width, int height)
     return true;
 }
 
-static void render_sky(SDL_GPUCommandBuffer* command_buffer)
+static void render_shadow(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
@@ -740,20 +749,42 @@ static void render_sky(SDL_GPUCommandBuffer* command_buffer)
     depth_info.texture = shadow_texture;
     depth_info.clear_depth = 1.0f;
     depth_info.cycle = true;
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, NULL, 0, &depth_info);
-    if (!render_pass)
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cbuf, NULL, 0, &depth_info);
+    if (!pass)
     {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    {
-        SDL_BindGPUGraphicsPipeline(render_pass, shadow_pipeline);
-        world_render(&shadow_camera, command_buffer, render_pass, WORLD_FLAGS_OPAQUE);
-    }
-    SDL_EndGPURenderPass(render_pass);
+    SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
+    SDL_PushGPUDebugGroup(cbuf, "shadow");
+    world_render(&shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
+    SDL_PopGPUDebugGroup(cbuf);
+    SDL_EndGPURenderPass(pass);
 }
 
-static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
+static void render_sky(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+{
+    SDL_PushGPUDebugGroup(cbuf, "sky");
+    SDL_BindGPUGraphicsPipeline(pass, sky_pipeline);
+    SDL_PushGPUVertexUniformData(cbuf, 0, player_camera.proj, 64);
+    SDL_PushGPUVertexUniformData(cbuf, 1, player_camera.view, 64);
+    SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
+    SDL_PopGPUDebugGroup(cbuf);
+}
+
+static void render_opaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+{
+    SDL_GPUTextureSamplerBinding atlas_binding = {0};
+    atlas_binding.texture = atlas_texture;
+    atlas_binding.sampler = nearest_sampler;
+    SDL_PushGPUDebugGroup(cbuf, "opaque");
+    SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
+    SDL_BindGPUFragmentSamplers(pass, 0, &atlas_binding, 1);
+    world_render(&player_camera, cbuf, pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
+    SDL_PopGPUDebugGroup(cbuf);
+}
+
+static void render_gbuffer(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUColorTargetInfo color_info[4] = {0};
     color_info[0].load_op = SDL_GPU_LOADOP_CLEAR;
@@ -779,111 +810,144 @@ static void render_geometry(SDL_GPUCommandBuffer* command_buffer)
     depth_info.texture = depth_texture;
     depth_info.clear_depth = 1.0f;
     depth_info.cycle = true;
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, color_info, 4, &depth_info);
-    if (!render_pass)
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cbuf, color_info, 4, &depth_info);
+    if (!pass)
     {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    {
-        SDL_PushGPUDebugGroup(command_buffer, "sky");
-        SDL_BindGPUGraphicsPipeline(render_pass, sky_pipeline);
-        SDL_PushGPUVertexUniformData(command_buffer, 0, player_camera.proj, 64);
-        SDL_PushGPUVertexUniformData(command_buffer, 1, player_camera.view, 64);
-        SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
-        SDL_PopGPUDebugGroup(command_buffer);
-    }
-    {
-        SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_sampler};
-        SDL_BindGPUGraphicsPipeline(render_pass, opaque_pipeline);
-        SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
-        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
-    }
-    SDL_EndGPURenderPass(render_pass);
+    render_sky(cbuf, pass);
+    render_opaque(cbuf, pass);
+    SDL_EndGPURenderPass(pass);
 }
 
-static void postprocess(SDL_GPUCommandBuffer* command_buffer)
+static void render_ssao(SDL_GPUCommandBuffer* cbuf)
 {
+    SDL_GPUStorageTextureReadWriteBinding write_textures = {0};
+    write_textures.texture = ssao_texture;
+    SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(cbuf, &write_textures, 1, NULL, 0);
+    if (!compute_pass)
     {
-        SDL_GPUStorageTextureReadWriteBinding write_textures = {ssao_texture};
-        SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(command_buffer, &write_textures, 1, NULL, 0);
-        if (!compute_pass)
-        {
-            SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
-            return;
-        }
-        SDL_GPUTexture* read_textures[2] = {voxel_texture, position_texture};
-        int groups_x = (player_camera.width + 8 - 1) / 8;
-        int groups_y = (player_camera.height + 8 - 1) / 8;
-        SDL_PushGPUDebugGroup(command_buffer, "ssao");
-        SDL_BindGPUComputePipeline(compute_pass, ssao_pipeline);
-        SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 2);
-        SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
-        SDL_EndGPUComputePass(compute_pass);
-        SDL_PopGPUDebugGroup(command_buffer);
+        SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+        return;
     }
-    {
-        SDL_GPUStorageTextureReadWriteBinding write_textures = {blur_texture};
-        SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(command_buffer, &write_textures, 1, NULL, 0);
-        if (!compute_pass)
-        {
-            SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
-            return;
-        }
-        SDL_GPUTexture* read_textures[1] = {ssao_texture};
-        int groups_x = (player_camera.width + 8 - 1) / 8;
-        int groups_y = (player_camera.height + 8 - 1) / 8;
-        SDL_PushGPUDebugGroup(command_buffer, "blur");
-        SDL_BindGPUComputePipeline(compute_pass, blur_pipeline);
-        SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 1);
-        SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
-        SDL_EndGPUComputePass(compute_pass);
-        SDL_PopGPUDebugGroup(command_buffer);
-    }
-    {
-        SDL_GPUStorageTextureReadWriteBinding write_textures = {composite_texture};
-        SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(command_buffer, &write_textures, 1, NULL, 0);
-        if (!compute_pass)
-        {
-            SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
-            return;
-        }
-        SDL_GPUTexture* read_textures[5] = {color_texture, light_texture, blur_texture, voxel_texture, position_texture};
-        SDL_GPUTextureSamplerBinding read_samplers = {shadow_texture, nearest_sampler};
-        int groups_x = (player_camera.width + 8 - 1) / 8;
-        int groups_y = (player_camera.height + 8 - 1) / 8;
-        SDL_PushGPUDebugGroup(command_buffer, "composite");
-        SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
-        SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 5);
-        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
-        SDL_PushGPUComputeUniformData(command_buffer, 0, &shadow_camera.matrix, 64);
-        SDL_PushGPUComputeUniformData(command_buffer, 1, player_camera.position, sizeof(player_camera.position));
-        SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
-        SDL_EndGPUComputePass(compute_pass);
-        SDL_PopGPUDebugGroup(command_buffer);
-    }
+    SDL_GPUTexture* read_textures[2] = {0};
+    read_textures[0] = voxel_texture;
+    read_textures[1] = position_texture;
+    int groups_x = (player_camera.width + 8 - 1) / 8;
+    int groups_y = (player_camera.height + 8 - 1) / 8;
+    SDL_PushGPUDebugGroup(cbuf, "ssao");
+    SDL_BindGPUComputePipeline(compute_pass, ssao_pipeline);
+    SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 2);
+    SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
+    SDL_EndGPUComputePass(compute_pass);
+    SDL_PopGPUDebugGroup(cbuf);
 }
 
-static void render_predepth(SDL_GPUCommandBuffer* command_buffer)
+static void render_blur(SDL_GPUCommandBuffer* cbuf)
+{
+    SDL_GPUStorageTextureReadWriteBinding write_textures = {0};
+    write_textures.texture = blur_texture;
+    SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(cbuf, &write_textures, 1, NULL, 0);
+    if (!compute_pass)
+    {
+        SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTexture* read_textures[1];
+    read_textures[0] = ssao_texture;
+    int groups_x = (player_camera.width + 8 - 1) / 8;
+    int groups_y = (player_camera.height + 8 - 1) / 8;
+    SDL_PushGPUDebugGroup(cbuf, "blur");
+    SDL_BindGPUComputePipeline(compute_pass, blur_pipeline);
+    SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 1);
+    SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
+    SDL_EndGPUComputePass(compute_pass);
+    SDL_PopGPUDebugGroup(cbuf);
+}
+
+static void render_composite(SDL_GPUCommandBuffer* cbuf)
+{
+    SDL_GPUStorageTextureReadWriteBinding write_textures = {0};
+    write_textures.texture = composite_texture;
+    SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(cbuf, &write_textures, 1, NULL, 0);
+    if (!compute_pass)
+    {
+        SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTexture* read_textures[5] = {0};
+    SDL_GPUTextureSamplerBinding read_samplers = {0};
+    read_textures[0] = color_texture;
+    read_textures[1] = light_texture;
+    read_textures[2] = blur_texture;
+    read_textures[3] = voxel_texture;
+    read_textures[4] = position_texture;
+    read_samplers.texture = shadow_texture;
+    read_samplers.sampler = nearest_sampler;
+    int groups_x = (player_camera.width + 8 - 1) / 8;
+    int groups_y = (player_camera.height + 8 - 1) / 8;
+    SDL_PushGPUDebugGroup(cbuf, "composite");
+    SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
+    SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 5);
+    SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
+    SDL_PushGPUComputeUniformData(cbuf, 0, &shadow_camera.matrix, 64);
+    SDL_PushGPUComputeUniformData(cbuf, 1, player_camera.position, 12);
+    SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
+    SDL_EndGPUComputePass(compute_pass);
+    SDL_PopGPUDebugGroup(cbuf);
+}
+
+static void render_depth(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_LOAD;
     depth_info.store_op = SDL_GPU_STOREOP_STORE;
     depth_info.texture = depth_texture;
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, NULL, 0, &depth_info);
-    if (!render_pass)
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cbuf, NULL, 0, &depth_info);
+    if (!pass)
     {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    {
-        SDL_BindGPUGraphicsPipeline(render_pass, depth_pipeline);
-        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAGS_TRANSPARENT);
-    }
-    SDL_EndGPURenderPass(render_pass);
+    SDL_PushGPUDebugGroup(cbuf, "depth");
+    SDL_BindGPUGraphicsPipeline(pass, depth_pipeline);
+    world_render(&player_camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT);
+    SDL_PopGPUDebugGroup(cbuf);
+    SDL_EndGPURenderPass(pass);
 }
 
-static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
+static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+{
+    SDL_GPUTextureSamplerBinding sampler_bindings[2] = {0};
+    sampler_bindings[0].texture = atlas_texture;
+    sampler_bindings[0].sampler = nearest_sampler;
+    sampler_bindings[1].texture = shadow_texture;
+    sampler_bindings[1].sampler = nearest_sampler;
+    SDL_PushGPUDebugGroup(cbuf, "transparent");
+    SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
+    SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
+    SDL_PushGPUFragmentUniformData(cbuf, 2, player_camera.position, 12);
+    SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
+    SDL_PopGPUDebugGroup(cbuf);
+    world_render(&player_camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
+}
+
+static void render_raycast(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+{
+    if (player_query.block == BLOCK_EMPTY)
+    {
+        return;
+    }
+    SDL_PushGPUDebugGroup(cbuf, "raycast");
+    SDL_BindGPUGraphicsPipeline(pass, raycast_pipeline);
+    SDL_PushGPUVertexUniformData(cbuf, 0, player_camera.matrix, 64);
+    SDL_PushGPUVertexUniformData(cbuf, 1, player_query.current, 12);
+    SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
+    SDL_PopGPUDebugGroup(cbuf);
+}
+
+static void render_forward(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUColorTargetInfo color_info = {0};
     color_info.load_op = SDL_GPU_LOADOP_LOAD;
@@ -893,93 +957,45 @@ static void render_transparent(SDL_GPUCommandBuffer* command_buffer)
     depth_info.load_op = SDL_GPU_LOADOP_LOAD;
     depth_info.store_op = SDL_GPU_STOREOP_STORE;
     depth_info.texture = depth_texture;
-    SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_info, 1, &depth_info);
-    if (!render_pass)
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cbuf, &color_info, 1, &depth_info);
+    if (!pass)
     {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    {
-        SDL_GPUTextureSamplerBinding atlas_binding = {atlas_texture, nearest_sampler};
-        SDL_GPUTextureSamplerBinding shadow_binding = {shadow_texture, nearest_sampler};
-        SDL_BindGPUGraphicsPipeline(render_pass, transparent_pipeline);
-        SDL_PushGPUFragmentUniformData(command_buffer, 1, &shadow_camera.matrix, 64);
-        SDL_PushGPUFragmentUniformData(command_buffer, 2, player_camera.position, sizeof(player_camera.position));
-        SDL_BindGPUFragmentSamplers(render_pass, 0, &atlas_binding, 1);
-        SDL_BindGPUFragmentSamplers(render_pass, 1, &shadow_binding, 1);
-        world_render(&player_camera, command_buffer, render_pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
-    }
-    if (player_query.block != BLOCK_EMPTY)
-    {
-        SDL_PushGPUDebugGroup(command_buffer, "raycast");
-        SDL_BindGPUGraphicsPipeline(render_pass, raycast_pipeline);
-        SDL_PushGPUVertexUniformData(command_buffer, 0, player_camera.matrix, 64);
-        SDL_PushGPUVertexUniformData(command_buffer, 1, player_query.current, 12);
-        SDL_DrawGPUPrimitives(render_pass, 36, 1, 0, 0);
-        SDL_PopGPUDebugGroup(command_buffer);
-    }
-    SDL_EndGPURenderPass(render_pass);
+    render_transparent(cbuf, pass);
+    render_raycast(cbuf, pass);
+    SDL_EndGPURenderPass(pass);
 }
 
-static void postprocess2(SDL_GPUCommandBuffer* command_buffer)
+static void render_ui(SDL_GPUCommandBuffer* cbuf)
 {
+    SDL_GPUStorageTextureReadWriteBinding write_textures[1] = {0};
+    write_textures[0].texture = composite_texture;
+    SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(cbuf, write_textures, 1, NULL, 0);
+    if (!compute_pass)
     {
-        SDL_GPUStorageTextureReadWriteBinding write_textures = {composite_texture};
-        SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(command_buffer, &write_textures, 1, NULL, 0);
-        if (!compute_pass)
-        {
-            SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
-            return;
-        }
-        SDL_GPUTextureSamplerBinding read_textures = {atlas_texture, nearest_sampler};
-        Sint32 index = block_get_index(player_block, DIRECTION_NORTH);
-        int groups_x = (player_camera.width + 8 - 1) / 8;
-        int groups_y = (player_camera.height + 8 - 1) / 8;
-        SDL_PushGPUDebugGroup(command_buffer, "ui");
-        SDL_BindGPUComputePipeline(compute_pass, ui_pipeline);
-        SDL_BindGPUComputeSamplers(compute_pass, 0, &read_textures, 1);
-        SDL_PushGPUComputeUniformData(command_buffer, 0, player_camera.size, sizeof(player_camera.size));
-        SDL_PushGPUComputeUniformData(command_buffer, 1, &index, sizeof(index));
-        SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
-        SDL_EndGPUComputePass(compute_pass);
-        SDL_PopGPUDebugGroup(command_buffer);
+        SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+        return;
     }
+    SDL_GPUTextureSamplerBinding read_textures[1] = {0};
+    read_textures[0].texture = atlas_texture;
+    read_textures[0].sampler = nearest_sampler;
+    Sint32 index = block_get_index(player_block, DIRECTION_NORTH);
+    int groups_x = (player_camera.width + 8 - 1) / 8;
+    int groups_y = (player_camera.height + 8 - 1) / 8;
+    SDL_PushGPUDebugGroup(cbuf, "ui");
+    SDL_BindGPUComputePipeline(compute_pass, ui_pipeline);
+    SDL_BindGPUComputeSamplers(compute_pass, 0, read_textures, 1);
+    SDL_PushGPUComputeUniformData(cbuf, 0, player_camera.size, 8);
+    SDL_PushGPUComputeUniformData(cbuf, 1, &index, 4);
+    SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
+    SDL_EndGPUComputePass(compute_pass);
+    SDL_PopGPUDebugGroup(cbuf);
 }
 
-static void render()
+static void render_swapchain(SDL_GPUCommandBuffer* cbuf, SDL_GPUTexture* swapchain_texture)
 {
-    SDL_GPUCommandBuffer* command_buffer = SDL_AcquireGPUCommandBuffer(device);
-    if (!command_buffer)
-    {
-        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
-        return;
-    }
-    SDL_GPUTexture* swapchain_texture;
-    Uint32 width;
-    Uint32 height;
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(command_buffer, window, &swapchain_texture, &width, &height))
-    {
-        SDL_Log("Failed to acquire swapchain texture: %s", SDL_GetError());
-        SDL_CancelGPUCommandBuffer(command_buffer);
-        return;
-    }
-    if (!swapchain_texture || !width || !height)
-    {
-        SDL_SubmitGPUCommandBuffer(command_buffer);
-        return;
-    }
-    if ((width != player_camera.width || height != player_camera.height) && !resize(width, height))
-    {
-        SDL_SubmitGPUCommandBuffer(command_buffer);
-        return;
-    }
-    camera_update(&player_camera);
-    render_sky(command_buffer);
-    render_geometry(command_buffer);
-    postprocess(command_buffer);
-    render_predepth(command_buffer);
-    render_transparent(command_buffer);
-    postprocess2(command_buffer);
     SDL_GPUBlitInfo info = {0};
     info.source.texture = composite_texture;
     info.source.w = player_camera.width;
@@ -989,8 +1005,47 @@ static void render()
     info.destination.h = player_camera.height;
     info.load_op = SDL_GPU_LOADOP_DONT_CARE;
     info.filter = SDL_GPU_FILTER_NEAREST;
-    SDL_BlitGPUTexture(command_buffer, &info);
-    SDL_SubmitGPUCommandBuffer(command_buffer);
+    SDL_BlitGPUTexture(cbuf, &info);
+}
+
+static void render()
+{
+    SDL_GPUCommandBuffer* cbuf = SDL_AcquireGPUCommandBuffer(device);
+    if (!cbuf)
+    {
+        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTexture* swapchain_texture;
+    Uint32 width;
+    Uint32 height;
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(cbuf, window, &swapchain_texture, &width, &height))
+    {
+        SDL_Log("Failed to acquire swapchain texture: %s", SDL_GetError());
+        SDL_CancelGPUCommandBuffer(cbuf);
+        return;
+    }
+    if (!swapchain_texture || !width || !height)
+    {
+        SDL_SubmitGPUCommandBuffer(cbuf);
+        return;
+    }
+    if ((width != player_camera.width || height != player_camera.height) && !resize(width, height))
+    {
+        SDL_SubmitGPUCommandBuffer(cbuf);
+        return;
+    }
+    camera_update(&player_camera);
+    render_shadow(cbuf);
+    render_gbuffer(cbuf);
+    render_ssao(cbuf);
+    render_blur(cbuf);
+    render_composite(cbuf);
+    render_depth(cbuf);
+    render_forward(cbuf);
+    render_ui(cbuf);
+    render_swapchain(cbuf, swapchain_texture);
+    SDL_SubmitGPUCommandBuffer(cbuf);
 }
 
 SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
