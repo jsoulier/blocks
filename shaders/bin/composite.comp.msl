@@ -54,122 +54,122 @@ struct type_UniformBuffer_1
     float3 PlayerPosition;
 };
 
-constant spvUnsafeArray<float3, 10> _77 = spvUnsafeArray<float3, 10>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0), float3(-0.769999980926513671875, 0.0, 0.769999980926513671875), float3(0.769999980926513671875, 0.0, -0.769999980926513671875), float3(-0.769999980926513671875, 0.0, -0.769999980926513671875), float3(0.769999980926513671875, 0.0, 0.769999980926513671875) });
+constant spvUnsafeArray<float3, 10> _84 = spvUnsafeArray<float3, 10>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0), float3(-0.769999980926513671875, 0.0, 0.769999980926513671875), float3(0.769999980926513671875, 0.0, -0.769999980926513671875), float3(-0.769999980926513671875, 0.0, -0.769999980926513671875), float3(0.769999980926513671875, 0.0, 0.769999980926513671875) });
 
 kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], texture2d<float> shadowTexture [[texture(0)]], texture2d<float> colorTexture [[texture(1)]], texture2d<float> lightTexture [[texture(2)]], texture2d<float> ssaoTexture [[texture(3)]], texture2d<uint> voxelTexture [[texture(4)]], texture2d<float> positionTexture [[texture(5)]], texture2d<float, access::write> compositeTexture [[texture(6)]], sampler shadowSampler [[sampler(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
 {
     do
     {
-        uint2 _89 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _101;
-        if (!(gl_GlobalInvocationID.x >= _89.x))
+        uint2 _96 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _108;
+        if (!(gl_GlobalInvocationID.x >= _96.x))
         {
-            _101 = gl_GlobalInvocationID.y >= _89.y;
+            _108 = gl_GlobalInvocationID.y >= _96.y;
         }
         else
         {
-            _101 = true;
+            _108 = true;
         }
-        if (_101)
+        if (_108)
         {
             break;
         }
-        float3 _107 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
-        uint4 _109 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        uint _110 = _109.x;
-        float4 _112 = positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
-        float3 _120 = lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
-        float _181;
+        float3 _114 = colorTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
+        uint4 _116 = voxelTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        uint _117 = _116.x;
+        float4 _119 = positionTexture.read(uint2(gl_GlobalInvocationID.xy), 0u);
+        float3 _127 = lightTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).xyz;
+        float _188;
         do
         {
-            float4 _131 = UniformBuffer.ShadowTransform * float4(_112.xyz, 1.0);
-            float3 _135 = _131.xyz / float3(_131.w);
-            float2 _138 = (_135.xy * 0.5) + float2(0.5);
-            float _140 = 1.0 - _138.y;
-            float2 _141 = _138;
-            _141.y = _140;
-            float _142 = _138.x;
-            bool _148;
-            if (!(_142 < 0.0))
+            float4 _138 = UniformBuffer.ShadowTransform * float4(_119.xyz, 1.0);
+            float3 _142 = _138.xyz / float3(_138.w);
+            float2 _145 = (_142.xy * 0.5) + float2(0.5);
+            float _147 = 1.0 - _145.y;
+            float2 _148 = _145;
+            _148.y = _147;
+            float _149 = _145.x;
+            bool _155;
+            if (!(_149 < 0.0))
             {
-                _148 = _142 > 1.0;
+                _155 = _149 > 1.0;
             }
             else
             {
-                _148 = true;
+                _155 = true;
             }
-            bool _153;
-            if (!_148)
+            bool _160;
+            if (!_155)
             {
-                _153 = _140 < 0.0;
-            }
-            else
-            {
-                _153 = true;
-            }
-            bool _158;
-            if (!_153)
-            {
-                _158 = _140 > 1.0;
+                _160 = _147 < 0.0;
             }
             else
             {
-                _158 = true;
+                _160 = true;
             }
-            if (_158)
+            bool _165;
+            if (!_160)
             {
-                _181 = 0.0;
+                _165 = _147 > 1.0;
+            }
+            else
+            {
+                _165 = true;
+            }
+            if (_165)
+            {
+                _188 = 0.0;
                 break;
             }
-            if ((_110 & 1u) != 0u)
+            if ((_117 & 1u) != 0u)
             {
-                if (dot(_77[(_110 >> 1u) & 15u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz)) > 0.0)
+                if (dot(_84[(_117 >> 1u) & 15u], fast::normalize(float4(UniformBuffer.ShadowTransform[0][2], UniformBuffer.ShadowTransform[1][2], UniformBuffer.ShadowTransform[2][2], UniformBuffer.ShadowTransform[3][2]).xyz)) > 0.0)
                 {
-                    _181 = 0.4000000059604644775390625;
+                    _188 = 0.4000000059604644775390625;
                     break;
                 }
             }
-            if ((_135.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _141, level(0.0)).x)
+            if ((_142.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _148, level(0.0)).x)
             {
-                _181 = 0.0;
+                _188 = 0.0;
                 break;
             }
             else
             {
-                _181 = 0.4000000059604644775390625;
+                _188 = 0.4000000059604644775390625;
                 break;
             }
             break; // unreachable workaround
         } while(false);
-        float3 _206;
-        if ((_110 & 1u) != 0u)
+        float3 _213;
+        if ((_117 & 1u) != 0u)
         {
-            _206 = _107 * (((_120 + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_181));
+            _213 = _114 * (((_127 + float3(0.5)) - float3(ssaoTexture.read(uint2(gl_GlobalInvocationID.xy), 0u).x * 3.0)) - float3(_188));
         }
         else
         {
-            float3 _199;
-            if (_110 != 0u)
+            float3 _206;
+            if (_117 != 0u)
             {
-                _199 = _107 * ((_120 + float3(0.5)) - float3(_181));
+                _206 = _114 * ((_127 + float3(0.5)) - float3(_188));
             }
             else
             {
-                _199 = _107;
+                _206 = _114;
             }
-            _206 = _199;
+            _213 = _206;
         }
-        float3 _231;
-        if (_110 != 0u)
+        float3 _238;
+        if (_117 != 0u)
         {
-            float3 _212 = _112.xyz - UniformBuffer_1.PlayerPosition;
-            _231 = mix(_206, mix(float3(1.0, 1.0, 0.0), float3(1.0, 0.0, 0.0), float3((precise::atan2(_212.y, length(float2(_212.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(_112.xz, UniformBuffer_1.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0)));
+            float3 _219 = _119.xyz - UniformBuffer_1.PlayerPosition;
+            _238 = mix(_213, mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_219.y, length(float2(_219.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(_119.xz, UniformBuffer_1.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0)));
         }
         else
         {
-            _231 = _206;
+            _238 = _213;
         }
-        compositeTexture.write(float4(_231, 1.0), uint2(gl_GlobalInvocationID.xy));
+        compositeTexture.write(float4(_238, 1.0), uint2(gl_GlobalInvocationID.xy));
         break;
     } while(false);
 }

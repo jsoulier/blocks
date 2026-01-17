@@ -929,8 +929,8 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
     SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player_camera.position, 12);
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
-    SDL_PopGPUDebugGroup(cbuf);
     world_render(&player_camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
+    SDL_PopGPUDebugGroup(cbuf);
 }
 
 static void render_raycast(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)

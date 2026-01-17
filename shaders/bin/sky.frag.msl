@@ -17,7 +17,7 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    out.out_var_SV_Target0 = float4(mix(float3(1.0, 1.0, 0.0), float3(1.0, 0.0, 0.0), float3((precise::atan2(in.in_var_TEXCOORD0.y, length(float2(in.in_var_TEXCOORD0.x, in.in_var_TEXCOORD0.z))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), 1.0);
+    out.out_var_SV_Target0 = float4(mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(in.in_var_TEXCOORD0.y, length(float2(in.in_var_TEXCOORD0.x, in.in_var_TEXCOORD0.z))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), 1.0);
     out.out_var_SV_Target3 = 0u;
     return out;
 }

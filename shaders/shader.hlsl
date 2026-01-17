@@ -81,8 +81,8 @@ float3 GetLight(StructuredBuffer<Light> lights, uint lightCount, float4 position
 
 float3 GetSkyColor(float3 position)
 {
-    static const float3 kTop = float3(1.0f, 0.0f, 0.0f);
-    static const float3 kBottom = float3(1.0f, 1.0f, 0.0f);
+    static const float3 kTop = float3(0.212f, 0.773f, 0.957f);
+    static const float3 kBottom = float3(0.220f, 0.349f, 0.702f);
     static const float kPi = 3.14159265f;
     float dy = position.y;
     float dx = length(float2(position.x, position.z));

@@ -89,7 +89,7 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
             else if (plant > 0.52f)
             {
                 const int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
-                const block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_DANDELION, BLOCK_LAVENDER, BLOCK_ROSE};
+                const block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
                 function(userdata, s, y + 1, t, flowers[value]);
             }
         }

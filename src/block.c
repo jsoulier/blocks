@@ -1,6 +1,8 @@
 #include "block.h"
 #include "direction.h"
 
+#define TORCH_INTENSITY 10
+
 struct
 {
     bool is_opaque;
@@ -113,7 +115,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .indices = {13, 13, 13, 13, 13, 13},
         .light = {0, 0, 0, 0},
     },
-    [BLOCK_DANDELION] =
+    [BLOCK_GARDENIA] =
     {
         .is_opaque = true,
         .is_sprite = true,
@@ -153,7 +155,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .indices = {16, 16, 16, 16, 16, 16},
         .light = {0, 0, 0, 0},
     },
-    [BLOCK_YELLOW_TORCH] =
+    [BLOCK_RED_TORCH] =
     {
         .is_opaque = true,
         .is_sprite = true,
@@ -161,7 +163,67 @@ static const BLOCKS[BLOCK_COUNT] =
         .has_occlusion = false,
         .has_shadow = false,
         .indices = {17, 17, 17, 17, 17, 17},
-        .light = {255, 255, 0, 10},
+        .light = {236, 39, 63, TORCH_INTENSITY},
+    },
+    [BLOCK_GREEN_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {18, 18, 18, 18, 18, 18},
+        .light = {90, 181, 82, TORCH_INTENSITY},
+    },
+    [BLOCK_BLUE_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {19, 19, 19, 19, 19, 19},
+        .light = {51, 136, 222, TORCH_INTENSITY},
+    },
+    [BLOCK_YELLOW_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {20, 20, 20, 20, 20, 20},
+        .light = {243, 168, 51, TORCH_INTENSITY},
+    },
+    [BLOCK_CYAN_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {21, 21, 21, 21, 21, 21},
+        .light = {54, 197, 244, TORCH_INTENSITY},
+    },
+    [BLOCK_MAGENTA_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {22, 22, 22, 22, 22, 22},
+        .light = {250, 110, 121, TORCH_INTENSITY},
+    },
+    [BLOCK_WHITE_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {23, 23, 23, 23, 23, 23},
+        .light = {255, 255, 255, TORCH_INTENSITY},
     },
 };
 
