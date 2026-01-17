@@ -64,9 +64,14 @@ float3 GetPosition(uint voxel)
     return float3((voxel >> X_OFFSET) & X_MASK, (voxel >> Y_OFFSET) & Y_MASK, (voxel >> Z_OFFSET) & Z_MASK);
 }
 
+uint GetIndex(uint voxel)
+{
+    return (voxel >> INDEX_OFFSET) & INDEX_MASK;
+}
+
 float3 GetTexcoord(uint voxel)
 {
-    return float3((voxel >> U_OFFSET) & U_MASK, (voxel >> V_OFFSET) & V_MASK, (voxel >> INDEX_OFFSET) & INDEX_MASK);
+    return float3((voxel >> U_OFFSET) & U_MASK, (voxel >> V_OFFSET) & V_MASK, GetIndex(voxel));
 }
 
 float3 GetNormal(uint voxel)
@@ -99,12 +104,12 @@ struct Light
 
 float3 GetAmbientLight()
 {
-    return float3(0.8f, 0.8f, 0.8f);
+    return float3(0.5f, 0.5f, 0.5f);
 }
 
 float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 position, float3 normal)
 {
-    static const float kBias = 0.2f;
+    static const float kBias = 0.1f;
     static const float kLight = 2.0f;
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < lightCount; i++)

@@ -38,10 +38,15 @@ void main(uint3 threadID : SV_DispatchThreadID)
     {
         float x = (pixel.x - blockStart.x) / blockWidth;
         float y = (pixel.y - blockStart.y) / blockWidth;
-        float4 color = atlasTexture.SampleLevel(atlasSampler, float3(x, 1.0f - y, Index), 0);
-        if (color.a > kEpsilon)
+        float4 src = atlasTexture.SampleLevel(atlasSampler, float3(x, 1.0f - y, Index), 0);
+        if (src.a > kEpsilon)
         {
-            colorTexture[threadID.xy] = color;
+            float4 dst = colorTexture[threadID.xy];
+            float srcA = saturate(src.a);
+            float dstA = dst.a;
+            float3 color = src.rgb * srcA + dst.rgb * (1.0f - srcA);
+            float alpha = srcA + dstA * (1.0f - srcA);
+            colorTexture[threadID.xy] = float4(color, alpha);
             return;
         }
     }

@@ -30,6 +30,8 @@ enum // block_t
     BLOCK_CYAN_TORCH,
     BLOCK_MAGENTA_TORCH,
     BLOCK_WHITE_TORCH,
+    BLOCK_PLANKS,
+    BLOCK_GLASS,
 
     BLOCK_COUNT,
 };

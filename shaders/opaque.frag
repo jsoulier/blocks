@@ -39,7 +39,6 @@ Output main(Input input)
     }
     output.Voxel |= input.Voxel & (OCCLUSION_MASK << OCCLUSION_OFFSET);
     output.Voxel |= input.Voxel & (DIRECTION_MASK << DIRECTION_OFFSET);
-    // output.Voxel |= input.Voxel & (SHADOW_MASK << SHADOW_OFFSET);
     output.Light.rgb = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, input.Normal);
     return output;
 }

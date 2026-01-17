@@ -1,14 +1,18 @@
 # Blocks
 
+![](doc/image1.png)
+
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
 ### Features
 
 - Procedural world generation
 - Asynchronous chunk loading
-- Blocks and plants
+- Blocks and sprites
 - Persistent worlds
+- Directional shadows
 - Clustered dynamic lighting
+- Basic transparency
 
 ### Building
 
@@ -40,7 +44,7 @@ cd bin
 
 #### Shaders
 
-Shaders are prebuilt for your convenience.
+Shaders are prebuilt.
 To build locally, install [glslc](https://github.com/google/shaderc) and [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
 
 ### Controls
@@ -56,14 +60,42 @@ To build locally, install [glslc](https://github.com/google/shaderc) and [SDL_sh
 
 ### Passes
 
-1. Render opaques to depth texture for shadows
+1. Render opaques to depth texture (for shadows)
+
+![](doc/image2.png)
+
 2. Render sky to G-buffer
+
+![](doc/image3.png)
+
 3. Render opaques to G-buffer
+
+![](doc/image4.png)
+
 4. Calculate SSAO
+
+![](doc/image5.png)
+
 5. Blur SSAO
+
+![](doc/image6.png)
+
 6. Composite G-buffer
-7. Render transparents to depth texture (predepth)
+
+![](doc/image7.png)
+
+7. Render transparents to depth teture (for predepth)
+
+![](doc/image8.png)
+
 8. Render transparents and composite
-9. Render block raycast
+
+![](doc/image9.png)
+
+9. Render raycast
+
+![](doc/image10.png)
+
 10. Render UI
-11. Render to swapchain texture
+
+![](doc/image11.png)

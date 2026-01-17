@@ -334,8 +334,8 @@ static bool is_visible(block_t block, block_t neighbor)
 static void gen_chunk_blocks(chunk_t* chunk)
 {
     CHECK(SDL_GetAtomicInt(&chunk->block_state) == JOB_STATE_RUNNING);
-    CHECK(SDL_GetAtomicInt(&chunk->voxel_state) == JOB_STATE_COMPLETED);
-    CHECK(SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_COMPLETED);
+    CHECK(SDL_GetAtomicInt(&chunk->voxel_state) == JOB_STATE_REQUESTED);
+    CHECK(SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_REQUESTED);
     SDL_memset(chunk->blocks, 0, sizeof(chunk->blocks));
     map_clear(&chunk->lights);
     rand_get_blocks(chunk, chunk->x, chunk->z, set_chunk_block_function);
@@ -757,8 +757,8 @@ static void shuffle(int offset_x, int offset_z)
             CHECK(size > 0);
             chunk_t* chunk = out[--size];
             SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_REQUESTED);
-            SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_COMPLETED);
-            SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_COMPLETED);
+            SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_REQUESTED);
+            SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_REQUESTED);
             chunks[x][z] = chunk;
         }
         chunk_t* chunk = chunks[x][z];

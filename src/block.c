@@ -1,7 +1,7 @@
 #include "block.h"
 #include "direction.h"
 
-#define TORCH_INTENSITY 10
+#define TORCH_INTENSITY 15
 
 struct
 {
@@ -224,6 +224,26 @@ static const BLOCKS[BLOCK_COUNT] =
         .has_shadow = false,
         .indices = {23, 23, 23, 23, 23, 23},
         .light = {255, 255, 255, TORCH_INTENSITY},
+    },
+    [BLOCK_PLANKS] =
+    {
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {24, 24, 24, 24, 24, 24},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_GLASS] =
+    {
+        .is_opaque = false,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {25, 25, 25, 25, 25, 25},
+        .light = {0, 0, 0, 0},
     },
 };
 

@@ -32,6 +32,8 @@ struct Input
     float2 Fragment : TEXCOORD4;
 };
 
+static const uint kWater = 16;
+
 float4 main(Input input) : SV_Target0
 {
     float4 color = atlasTexture.Sample(atlasSampler, input.Texcoord);
@@ -46,7 +48,10 @@ float4 main(Input input) : SV_Target0
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     finalColor = lerp(finalColor, skyColor, fog);
     float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
-    // TODO: Causing bug where alpha is 0 or 1 near sea level 
-    alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
+    if (GetIndex(input.Voxel) == kWater)
+    {
+        // TODO: Causing bug where alpha is 0 or 1 as camera approaches water
+        alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
+    }
     return float4(finalColor, alpha);
 }

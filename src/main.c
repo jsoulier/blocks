@@ -72,7 +72,7 @@ static void move_player(float dt)
     dz -= state[SDL_SCANCODE_S];
     if (state[SDL_SCANCODE_LCTRL])
     {
-        speed *= 5.0f;
+        speed *= 10.0f;
     }
     dx *= speed * dt;
     dy *= speed * dt;
@@ -116,6 +116,9 @@ static void save_or_load_player(bool save)
     {
         camera_init(&player_camera, CAMERA_TYPE_PERSPECTIVE);
         player_block = BLOCK_YELLOW_TORCH;
+        player_camera.x = -200.0f;
+        player_camera.y = 50.0f;
+        player_camera.z = 0.0f;
         if (!save_get_player(PLAYER_ID, &data, sizeof(data)))
         {
             return;

@@ -15,7 +15,7 @@ struct Output
     float4 Position : SV_POSITION;
 };
 
-static const float kScale = 1.005f;
+static const float kScale = 1.01f;
 
 Output main(uint vertexID : SV_VertexID)
 {

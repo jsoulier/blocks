@@ -65,7 +65,7 @@ struct main0_out
 vertex main0_out main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], uint gl_VertexIndex [[vertex_id]])
 {
     main0_out out = {};
-    out.gl_Position = UniformBuffer.Transform * float4((_192[_193[gl_VertexIndex]] * 1.00499999523162841796875) + (float3(UniformBuffer_1.BlockPosition) + float3(0.5)), 1.0);
+    out.gl_Position = UniformBuffer.Transform * float4((_192[_193[gl_VertexIndex]] * 1.0099999904632568359375) + (float3(UniformBuffer_1.BlockPosition) + float3(0.5)), 1.0);
     return out;
 }
 

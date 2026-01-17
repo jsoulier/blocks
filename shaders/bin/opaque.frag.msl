@@ -21,7 +21,7 @@ struct type_UniformBuffer
     int LightCount;
 };
 
-constant float3 _375 = {};
+constant float3 _378 = {};
 
 struct main0_out
 {
@@ -42,63 +42,63 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(1)]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _452 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
-    if (_452.w < 0.001000000047497451305389404296875)
+    float4 _455 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
+    if (_455.w < 0.001000000047497451305389404296875)
     {
         discard_fragment();
     }
-    uint _487 = uint(UniformBuffer.LightCount);
-    float3 _504;
+    uint _490 = uint(UniformBuffer.LightCount);
     float3 _507;
-    _504 = _375;
-    _507 = float3(0.0);
-    float3 _505;
+    float3 _510;
+    _507 = _378;
+    _510 = float3(0.0);
     float3 _508;
-    for (uint _509 = 0u; _509 < _487; _504 = _505, _507 = _508, _509++)
+    float3 _511;
+    for (uint _512 = 0u; _512 < _490; _507 = _508, _510 = _511, _512++)
     {
-        float _545 = float((lightBuffer._m0[_509].Color & 4278190080u) >> 24u);
-        float3 _563 = (float3(float(lightBuffer._m0[_509].X), float(lightBuffer._m0[_509].Y), float(lightBuffer._m0[_509].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
-        float _567 = length(_563);
-        bool _581;
-        if (!(_567 >= _545))
+        float _548 = float((lightBuffer._m0[_512].Color & 4278190080u) >> 24u);
+        float3 _566 = (float3(float(lightBuffer._m0[_512].X), float(lightBuffer._m0[_512].Y), float(lightBuffer._m0[_512].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _570 = length(_566);
+        bool _584;
+        if (!(_570 >= _548))
         {
-            _581 = _545 <= 0.0;
+            _584 = _548 <= 0.0;
         }
         else
         {
-            _581 = true;
+            _584 = true;
         }
-        if (_581)
+        if (_584)
         {
-            _505 = _504;
             _508 = _507;
+            _511 = _510;
             continue;
         }
-        float _617;
-        if (_567 > 0.20000000298023223876953125)
+        float _620;
+        if (_570 > 0.100000001490116119384765625)
         {
-            float _606 = fast::clamp(dot(in.in_var_TEXCOORD1, _563 / float3(_567)), 0.0, 1.0);
-            if (_606 <= 0.0)
+            float _609 = fast::clamp(dot(in.in_var_TEXCOORD1, _566 / float3(_570)), 0.0, 1.0);
+            if (_609 <= 0.0)
             {
-                _505 = _504;
                 _508 = _507;
+                _511 = _510;
                 continue;
             }
-            _617 = _606;
+            _620 = _609;
         }
         else
         {
-            _617 = 1.0;
+            _620 = 1.0;
         }
-        float _626 = fast::clamp(1.0 - (_567 / _545), 0.0, 1.0);
-        float3 _655 = float3(float(lightBuffer._m0[_509].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_509].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_509].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125);
-        _505 = _655;
-        _508 = _507 + ((_655 * _617) * (_626 * _626));
+        float _629 = fast::clamp(1.0 - (_570 / _548), 0.0, 1.0);
+        float3 _658 = float3(float(lightBuffer._m0[_512].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_512].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_512].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125);
+        _508 = _658;
+        _511 = _510 + ((_658 * _620) * (_629 * _629));
     }
-    float3 _674 = _507 * 2.0;
-    out.out_var_SV_Target0 = _452;
+    float3 _677 = _510 * 2.0;
+    out.out_var_SV_Target0 = _455;
     out.out_var_SV_Target1 = in.in_var_TEXCOORD0;
-    out.out_var_SV_Target2 = float4(_674.x, _674.y, _674.z, float4(0.0).w);
+    out.out_var_SV_Target2 = float4(_677.x, _677.y, _677.z, float4(0.0).w);
     out.out_var_SV_Target3 = (in.in_var_TEXCOORD3 & 1u) | (in.in_var_TEXCOORD3 & 30u);
     return out;
 }
