@@ -1,158 +1,177 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-#pragma clang diagnostic ignored "-Wmissing-braces"
-
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
 
-template<typename T, size_t Num>
-struct spvUnsafeArray
+struct Light
 {
-    T elements[Num ? Num : 1];
-    
-    thread T& operator [] (size_t pos) thread
-    {
-        return elements[pos];
-    }
-    constexpr const thread T& operator [] (size_t pos) const thread
-    {
-        return elements[pos];
-    }
-    
-    device T& operator [] (size_t pos) device
-    {
-        return elements[pos];
-    }
-    constexpr const device T& operator [] (size_t pos) const device
-    {
-        return elements[pos];
-    }
-    
-    constexpr const constant T& operator [] (size_t pos) const constant
-    {
-        return elements[pos];
-    }
-    
-    threadgroup T& operator [] (size_t pos) threadgroup
-    {
-        return elements[pos];
-    }
-    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
-    {
-        return elements[pos];
-    }
+    uint Color;
+    int X;
+    int Y;
+    int Z;
 };
 
-struct t_player_position
+struct type_StructuredBuffer_Light
 {
-    float3 u_player_position;
+    Light _m0[1];
 };
 
-struct t_shadow_vector
+struct type_UniformBuffer
 {
-    float3 u_shadow_vector;
+    int LightCount;
 };
 
-constant spvUnsafeArray<float3, 6> _243 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+struct type_UniformBuffer_1
+{
+    float4x4 ShadowTransform;
+};
+
+struct type_UniformBuffer_2
+{
+    float3 PlayerPosition;
+};
 
 struct main0_out
 {
-    float4 o_color [[color(0)]];
+    float4 out_var_SV_Target0 [[color(0)]];
 };
 
 struct main0_in
 {
-    float3 i_position [[user(locn0)]];
-    float3 i_uv [[user(locn1)]];
-    float3 i_normal [[user(locn2), flat]];
-    float4 i_shadow_position [[user(locn3)]];
-    uint i_shadowed [[user(locn4)]];
-    uint i_occluded [[user(locn5)]];
-    float i_fog [[user(locn6)]];
-    float2 i_fragment [[user(locn7)]];
+    float4 in_var_TEXCOORD0 [[user(locn0)]];
+    float3 in_var_TEXCOORD1 [[user(locn1), flat]];
+    float3 in_var_TEXCOORD2 [[user(locn2)]];
+    uint in_var_TEXCOORD3 [[user(locn3)]];
+    float2 in_var_TEXCOORD4 [[user(locn4)]];
 };
 
-static inline __attribute__((always_inline))
-float3 get_sky(float y)
+fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(3)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float> shadowTexture [[texture(1)]], texture2d<float> positionTexture [[texture(2)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]], sampler positionSampler [[sampler(2)]])
 {
-    return mix(float3(0.699999988079071044921875, 0.89999997615814208984375, 1.0), float3(0.300000011920928955078125, 0.60000002384185791015625, 0.89999997615814208984375), float3(fast::clamp(y, 0.0, 0.800000011920928955078125)));
-}
-
-static inline __attribute__((always_inline))
-float4 get_color(texture2d_array<float> atlas, sampler atlasSmplr, texture2d<float> shadowmap, sampler shadowmapSmplr, float3 position, float3 uv, float3 normal, float3 player_position, float3 shadow_position, float3 shadow_vector, bool shadowed, bool occluded, float fog, float ssao, float alpha)
-{
-    float3 shadow_uv;
-    shadow_uv.x = (shadow_position.x * 0.5) + 0.5;
-    shadow_uv.y = 1.0 - ((shadow_position.y * 0.5) + 0.5);
-    shadow_uv.z = shadow_position.z;
-    float ao = ssao * 0.4000000059604644775390625;
-    float ambient = 0.20000000298023223876953125;
-    float directional = 0.0;
-    float angle = dot(normal, -shadow_vector);
-    float depth = shadow_uv.z - 0.001000000047497451305389404296875;
-    bool _83 = !shadowed;
-    bool _117;
-    if (!_83)
+    main0_out out = {};
+    float4 _106 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
+    float _108 = _106.w;
+    uint _111 = uint(UniformBuffer.LightCount);
+    float3 _113;
+    _113 = float3(0.0);
+    float3 _114;
+    for (uint _116 = 0u; _116 < _111; _113 = _114, _116++)
     {
-        bool _88 = angle > 0.0;
-        bool _116;
-        if (_88)
+        float _129 = float((lightBuffer._m0[_116].Color & 4278190080u) >> 24u);
+        float3 _136 = (float3(float(lightBuffer._m0[_116].X), float(lightBuffer._m0[_116].Y), float(lightBuffer._m0[_116].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _137 = length(_136);
+        bool _143;
+        if (!(_137 >= _129))
         {
-            bool _95 = all(shadow_uv <= float3(0.0));
-            bool _103;
-            if (!_95)
-            {
-                _103 = all(shadow_uv >= float3(1.0));
-            }
-            else
-            {
-                _103 = _95;
-            }
-            bool _115;
-            if (!_103)
-            {
-                _115 = depth < shadowmap.sample(shadowmapSmplr, shadow_uv.xy).x;
-            }
-            else
-            {
-                _115 = _103;
-            }
-            _116 = _115;
+            _143 = _129 <= 0.0;
         }
         else
         {
-            _116 = _88;
+            _143 = true;
         }
-        _117 = _116;
+        if (_143)
+        {
+            _114 = _113;
+            continue;
+        }
+        float _157;
+        if (_137 > 0.100000001490116119384765625)
+        {
+            float _153 = fast::clamp(dot(in.in_var_TEXCOORD1, _136 / float3(_137)), 0.0, 1.0);
+            if (_153 <= 0.0)
+            {
+                _114 = _113;
+                continue;
+            }
+            _157 = _153;
+        }
+        else
+        {
+            _157 = 1.0;
+        }
+        float _160 = fast::clamp(1.0 - (_137 / _129), 0.0, 1.0);
+        _114 = _113 + ((float3(float(lightBuffer._m0[_116].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_116].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_116].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _157) * (_160 * _160));
+    }
+    float _240;
+    do
+    {
+        float4 _188 = UniformBuffer_1.ShadowTransform * float4(in.in_var_TEXCOORD0.xyz, 1.0);
+        float3 _192 = _188.xyz / float3(_188.w);
+        float2 _195 = (_192.xy * 0.5) + float2(0.5);
+        float _197 = 1.0 - _195.y;
+        float2 _198 = _195;
+        _198.y = _197;
+        float _199 = _195.x;
+        bool _205;
+        if (!(_199 < 0.0))
+        {
+            _205 = _199 > 1.0;
+        }
+        else
+        {
+            _205 = true;
+        }
+        bool _210;
+        if (!_205)
+        {
+            _210 = _197 < 0.0;
+        }
+        else
+        {
+            _210 = true;
+        }
+        bool _215;
+        if (!_210)
+        {
+            _215 = _197 > 1.0;
+        }
+        else
+        {
+            _215 = true;
+        }
+        if (_215)
+        {
+            _240 = 0.4000000059604644775390625;
+            break;
+        }
+        float _229;
+        if ((in.in_var_TEXCOORD3 & 1u) != 0u)
+        {
+            float _225 = dot(in.in_var_TEXCOORD1, fast::normalize(float4(UniformBuffer_1.ShadowTransform[0][2], UniformBuffer_1.ShadowTransform[1][2], UniformBuffer_1.ShadowTransform[2][2], UniformBuffer_1.ShadowTransform[3][2]).xyz));
+            if (_225 > 0.0)
+            {
+                _240 = 0.0;
+                break;
+            }
+            _229 = _225;
+        }
+        else
+        {
+            _229 = -0.7070000171661376953125;
+        }
+        if (_192.z < (shadowTexture.sample(shadowSampler, _198, level(0.0)).x + 0.001000000047497451305389404296875))
+        {
+            _240 = _229 * (-0.4000000059604644775390625);
+            break;
+        }
+        else
+        {
+            _240 = 0.0;
+            break;
+        }
+        break; // unreachable workaround
+    } while(false);
+    float3 _248 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
+    float4 _270 = positionTexture.sample(positionSampler, in.in_var_TEXCOORD4);
+    float _282;
+    if (((in.in_var_TEXCOORD3 >> 26u) & 63u) == 16u)
+    {
+        _282 = _108 + ((in.in_var_TEXCOORD0.y - _270.y) * 0.100000001490116119384765625);
     }
     else
     {
-        _117 = _83;
+        _282 = _108;
     }
-    if (_117)
-    {
-        directional = fast::max(angle, 0.0) * 1.2000000476837158203125;
-    }
-    if (!occluded)
-    {
-        ao = 0.699999988079071044921875;
-    }
-    float4 color = atlas.sample(atlasSmplr, uv.xy, uint(rint(uv.z)));
-    color.w = fast::clamp(color.w + alpha, 0.0, 1.0);
-    float light = (ao + ambient) + directional;
-    float dy = position.y - player_position.y;
-    float dx = distance(position.xz, player_position.xz);
-    float pitch = precise::atan2(dy, dx);
-    float4 sky = float4(get_sky(pitch), 1.0);
-    float4 composite = float4(color.xyz * light, color.w);
-    return mix(composite, sky, float4(fog));
-}
-
-fragment main0_out main0(main0_in in [[stage_in]], constant t_shadow_vector& _209 [[buffer(0)]], constant t_player_position& _192 [[buffer(1)]], texture2d_array<float> s_atlas [[texture(0)]], texture2d<float> s_shadowmap [[texture(1)]], texture2d<float> s_position [[texture(2)]], sampler s_atlasSmplr [[sampler(0)]], sampler s_shadowmapSmplr [[sampler(1)]], sampler s_positionSmplr [[sampler(2)]])
-{
-    main0_out out = {};
-    out.o_color = get_color(s_atlas, s_atlasSmplr, s_shadowmap, s_shadowmapSmplr, in.i_position, in.i_uv, in.i_normal, _192.u_player_position, in.i_shadow_position.xyz / float3(in.i_shadow_position.w), _209.u_shadow_vector, in.i_shadowed != 0u, in.i_occluded != 0u, in.i_fog, 1.0, (in.i_position.y - s_position.sample(s_positionSmplr, in.i_fragment).y) / 20.0);
+    out.out_var_SV_Target0 = float4(mix(_106.xyz * (((_113 * 2.0) + float3(0.5)) + float3(_240)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_248.y, length(float2(_248.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _282);
     return out;
 }
 

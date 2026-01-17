@@ -1,0 +1,68 @@
+Texture2DArray<float4> atlasTexture : register(t0, space0);
+SamplerState atlasSampler : register(s0, space0);
+[[vk::image_format("rgba8")]]
+RWTexture2D<float4> colorTexture : register(u0, space1);
+
+cbuffer UniformBuffer : register(b0, space2)
+{
+    int2 Viewport;
+};
+
+cbuffer UniformBuffer : register(b1, space2)
+{
+    uint Index;
+};
+
+static const float kEpsilon = 0.001f;
+static const float kWidth = 1280.0f;
+static const float kHeight = 720.0f;
+
+[numthreads(8, 8, 1)]
+void main(uint3 threadID : SV_DispatchThreadID)
+{
+    uint width;
+    uint height;
+    colorTexture.GetDimensions(width, height);
+    if (threadID.x >= width || threadID.y >= height)
+    {
+        return;
+    }
+    float2 ratio = float2(Viewport) / float2(kWidth, kHeight);
+    float scale = max(ratio.x, ratio.y);
+    float blockWidth = 50.0f * scale;
+    float2 blockStart = float2(10.0f * scale, 10.0f * scale);
+    float2 blockEnd = blockStart + blockWidth;
+    float2 pixel = float2(threadID.x, Viewport.y - threadID.y);
+    if (pixel.x > blockStart.x && pixel.x < blockEnd.x &&
+        pixel.y > blockStart.y && pixel.y < blockEnd.y)
+    {
+        float x = (pixel.x - blockStart.x) / blockWidth;
+        float y = (pixel.y - blockStart.y) / blockWidth;
+        float4 src = atlasTexture.SampleLevel(atlasSampler, float3(x, 1.0f - y, Index), 0);
+        if (src.a > kEpsilon)
+        {
+            float4 dst = colorTexture[threadID.xy];
+            float srcA = saturate(src.a);
+            float dstA = dst.a;
+            float3 color = src.rgb * srcA + dst.rgb * (1.0f - srcA);
+            float alpha = srcA + dstA * (1.0f - srcA);
+            colorTexture[threadID.xy] = float4(color, alpha);
+            return;
+        }
+    }
+    float crossWidth = 8.0f * scale;
+    float crossThickness = 2.0f * scale;
+    float2 crossCenter = float2(Viewport) * 0.5f;
+    float2 crossStart1 = crossCenter - float2(crossWidth, crossThickness);
+    float2 crossEnd1   = crossCenter + float2(crossWidth, crossThickness);
+    float2 crossStart2 = crossCenter - float2(crossThickness, crossWidth);
+    float2 crossEnd2   = crossCenter + float2(crossThickness, crossWidth);
+    if ((pixel.x > crossStart1.x && pixel.y > crossStart1.y &&
+         pixel.x < crossEnd1.x   && pixel.y < crossEnd1.y) ||
+        (pixel.x > crossStart2.x && pixel.y > crossStart2.y &&
+         pixel.x < crossEnd2.x   && pixel.y < crossEnd2.y))
+    {
+        colorTexture[threadID.xy] = float4(1.0f, 1.0f, 1.0f, 1.0f);
+        return;
+    }
+}

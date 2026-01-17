@@ -1,18 +1,28 @@
-#version 450
+#include "shader.hlsl"
 
-layout(location = 0) in vec3 i_position;
-layout(location = 0) out vec3 o_position;
-layout(set = 1, binding = 0) uniform t_matrix
+cbuffer UniformBuffer : register(b0, space1)
 {
-    mat4 u_matrix;
-};
-layout(set = 1, binding = 1) uniform t_position
-{
-    ivec3 u_position;
+    float4x4 Transform : packoffset(c0);
 };
 
-void main()
+cbuffer UniformBuffer : register(b1, space1)
 {
-    o_position = i_position * 1.05 / 2.0 + vec3(0.5, 0.5, 0.5);
-    gl_Position = u_matrix * vec4(u_position + o_position, 1.0);
+    int3 BlockPosition;
+};
+
+struct Output
+{
+    float4 Position : SV_POSITION;
+};
+
+static const float kScale = 1.01f;
+
+Output main(uint vertexID : SV_VertexID)
+{
+    Output output;
+    float3 position = GetCubePosition(vertexID);
+    position *= kScale;
+    position += BlockPosition + 0.5f;
+    output.Position = mul(Transform, float4(position, 1.0f));
+    return output;
 }

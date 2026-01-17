@@ -5,18 +5,13 @@ using namespace metal;
 
 struct main0_out
 {
-    float4 o_color [[color(0)]];
+    float4 out_var_SV_Target0 [[color(0)]];
 };
 
-struct main0_in
-{
-    float3 i_position [[user(locn0)]];
-};
-
-fragment main0_out main0(main0_in in [[stage_in]])
+fragment main0_out main0()
 {
     main0_out out = {};
-    out.o_color = float4(fast::normalize(in.i_position), 0.300000011920928955078125);
+    out.out_var_SV_Target0 = float4(1.0, 1.0, 1.0, 0.100000001490116119384765625);
     return out;
 }
 

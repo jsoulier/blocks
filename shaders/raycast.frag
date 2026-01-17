@@ -1,9 +1,6 @@
-#version 450
+static const float kAlpha = 0.1f;
 
-layout(location = 0) in vec3 i_position;
-layout(location = 0) out vec4 o_color;
-
-void main()
+float4 main() : SV_Target0
 {
-    o_color = vec4(normalize(i_position), 0.3);
+    return float4(1.0f, 1.0f, 1.0f, kAlpha);
 }

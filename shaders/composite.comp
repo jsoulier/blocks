@@ -1,0 +1,64 @@
+#include "shader.hlsl"
+
+Texture2D<float> shadowTexture : register(t0, space0);
+SamplerState shadowSampler : register(s0, space0);
+Texture2D<float4> colorTexture : register(t1, space0);
+Texture2D<float4> lightTexture : register(t2, space0);
+Texture2D<float> ssaoTexture : register(t3, space0);
+Texture2D<uint> voxelTexture : register(t4, space0);
+Texture2D<float3> positionTexture : register(t5, space0);
+[[vk::image_format("rgba8")]]
+RWTexture2D<float4> compositeTexture : register(u0, space1);
+
+cbuffer UniformBuffer : register(b0, space2)
+{
+    float4x4 ShadowTransform;
+};
+
+cbuffer UniformBuffer : register(b1, space2)
+{
+    float3 PlayerPosition;
+};
+
+static const float kSSAO = 2.0f;
+
+[numthreads(8, 8, 1)]
+void main(uint3 threadID : SV_DispatchThreadID)
+{
+    uint width;
+    uint height;
+    colorTexture.GetDimensions(width, height);
+    if (threadID.x >= width || threadID.y >= height)
+    {
+        return;
+    }
+    float3 albedo = colorTexture[threadID.xy].rgb;
+    uint voxel = voxelTexture[threadID.xy].x;
+    float3 position = positionTexture[threadID.xy].xyz;
+    float3 normal = GetNormal(voxel);
+    float3 diffuse = lightTexture[threadID.xy].rgb;
+    float3 ambient = GetAmbientLight();
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position, normal, voxel);
+    float ssao = ssaoTexture[threadID.xy] * kSSAO;
+    float3 color;
+    color = albedo;
+    if (GetOcclusion(voxel))
+    {
+        color = albedo * (diffuse + ambient + sun - ssao);
+    }
+    else if (IsCloud(albedo) || IsSky(voxel))
+    {
+        color = albedo;
+    }
+    else
+    {
+        color = albedo * (diffuse + ambient + sun);
+    }
+    if (!IsSky(voxel))
+    {
+        float3 skyColor = GetSkyColor(position - PlayerPosition);
+        float fog = GetFog(distance(position.xz, PlayerPosition.xz));
+        color = lerp(color, skyColor, fog);
+    }
+    compositeTexture[threadID.xy] = float4(color, 1.0f);
+}

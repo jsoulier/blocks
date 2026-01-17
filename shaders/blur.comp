@@ -1,0 +1,31 @@
+Texture2D<float> inputTexture : register(t0, space0);
+[[vk::image_format("r8")]]
+RWTexture2D<float> outputTexture : register(u0, space1);
+
+static const int kKernel = 2;
+
+[numthreads(8, 8, 1)]
+void main(uint3 threadID : SV_DispatchThreadID)
+{
+    uint width;
+    uint height;
+    outputTexture.GetDimensions(width, height);
+    if (threadID.x >= width || threadID.y >= height)
+    {
+        return;
+    }
+    int kernel = kKernel;
+    float value = 0.0f;
+    for (int y = -kernel; y <= kernel; y++)
+    {
+        int yy = clamp(threadID.y + y, 0, height - 1);
+        for (int x = -kernel; x <= kernel; x++)
+        {
+            int xx = clamp(threadID.x + x, 0, width - 1);
+            value += inputTexture[uint2(xx, yy)];
+        }
+    }
+    kernel = kKernel * 2 + 1;
+    kernel *= kernel;
+    outputTexture[threadID.xy] = value / kernel;
+}

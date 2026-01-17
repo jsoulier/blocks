@@ -10,42 +10,47 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
 make_directory(${BINARY_DIR})
 
+configure_file(LICENSE.txt ${BINARY_DIR} COPYONLY)
+configure_file(README.md ${BINARY_DIR} COPYONLY)
+configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)
+
 add_subdirectory(lib/SDL)
 add_executable(blocks WIN32
     lib/sqlite3/sqlite3.c
     lib/stb/stb.c
     src/block.c
+    src/buffer.c
     src/camera.c
-    src/chunk.c
-    src/database.c
-    src/helpers.c
     src/main.c
-    src/noise.c
-    src/pipeline.c
-    src/raycast.c
+    src/map.c
+    src/rand.c
+    src/save.c
+    src/shader.c
     src/voxel.c
     src/world.c
 )
-target_link_libraries(blocks PUBLIC SDL3::SDL3)
+set_target_properties(blocks PROPERTIES C_STANDARD 11)
+target_include_directories(blocks PUBLIC lib/jsmn)
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
-set_target_properties(blocks PROPERTIES C_STANDARD 11)
+target_link_libraries(blocks PRIVATE SDL3::SDL3)
 
-find_program(GLSLC glslc)
-find_program(SHADERCROSS shadercross)
-function(shader FILE)
-    set(GLSL ${CMAKE_SOURCE_DIR}/shaders/${FILE})
+function(add_shader FILE)
+    set(DEPENDS ${ARGN})
+    set(HLSL ${CMAKE_SOURCE_DIR}/shaders/${FILE})
     set(SPV ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.spv)
-    set(DXIL ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.dxil)
     set(MSL ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.msl)
     set(JSON ${CMAKE_SOURCE_DIR}/shaders/bin/${FILE}.json)
-    function(compile PROGRAM SOURCE OUTPUT)
+    if(MSVC)
+        set(SHADERCROSS lib/SDL_shadercross/msvc/shadercross.exe)
+    endif()
+    function(compile OUTPUT)
         add_custom_command(
             OUTPUT ${OUTPUT}
-            COMMAND ${PROGRAM} ${SOURCE} -o ${OUTPUT} -I src
+            COMMAND ${SHADERCROSS} ${HLSL} -s hlsl -o ${OUTPUT} -I src
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            DEPENDS ${SOURCE} shaders/helpers.glsl src/config.h
-            COMMENT "${SOURCE} -> ${OUTPUT}"
+            DEPENDS ${HLSL} ${DEPENDS}
+            COMMENT ${OUTPUT}
         )
         get_filename_component(NAME ${OUTPUT} NAME)
         string(REPLACE . _ NAME ${NAME})
@@ -53,12 +58,10 @@ function(shader FILE)
         add_custom_target(${NAME} DEPENDS ${OUTPUT})
         add_dependencies(blocks ${NAME})
     endfunction()
-    if(EXISTS ${GLSLC} AND EXISTS ${SHADERCROSS})
-        compile(${GLSLC} ${GLSL} ${SPV})
-        compile(${SHADERCROSS} ${SPV} ${MSL})
-        compile(${SHADERCROSS} ${SPV} ${JSON})
-    else()
-        message("Skipping build since dependencies are missing")
+    if (MSVC)
+        compile(${SPV})
+        compile(${MSL})
+        compile(${JSON})
     endif()
     function(package OUTPUT)
         get_filename_component(NAME ${OUTPUT} NAME)
@@ -68,35 +71,33 @@ function(shader FILE)
             COMMAND ${CMAKE_COMMAND} -E copy ${OUTPUT} ${BINARY}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             DEPENDS ${OUTPUT}
-            COMMENT "${OUTPUT} -> ${BINARY}"
+            COMMENT ${BINARY}
         )
         string(REPLACE . _ NAME ${NAME})
         set(NAME package_${NAME})
         add_custom_target(${NAME} DEPENDS ${BINARY})
         add_dependencies(blocks ${NAME})
     endfunction()
-    if(NOT APPLE)
-        package(${SPV})
-    else()
+    if(APPLE)
         package(${MSL})
+    else()
+        package(${SPV})
     endif()
+    package(${JSON})
 endfunction()
-shader(composite.frag)
-shader(fullscreen.vert)
-shader(opaque.frag)
-shader(opaque.vert)
-shader(random.frag)
-shader(raycast.frag)
-shader(raycast.vert)
-shader(shadow.frag)
-shader(shadow.vert)
-shader(sky.frag)
-shader(sky.vert)
-shader(ssao.frag)
-shader(transparent.frag)
-shader(transparent.vert)
-shader(ui.frag)
-
-configure_file(LICENSE.txt ${BINARY_DIR} COPYONLY)
-configure_file(README.md ${BINARY_DIR} COPYONLY)
-configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)
+add_shader(blur.comp shaders/shader.hlsl src/voxel.inc)
+add_shader(composite.comp shaders/shader.hlsl src/voxel.inc)
+add_shader(depth.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(depth.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(opaque.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(opaque.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(raycast.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(raycast.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(shadow.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(shadow.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(sky.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(sky.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(ssao.comp shaders/shader.hlsl src/voxel.inc)
+add_shader(transparent.frag shaders/shader.hlsl src/voxel.inc)
+add_shader(transparent.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(ui.comp shaders/shader.hlsl src/voxel.inc)

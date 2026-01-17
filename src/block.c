@@ -1,218 +1,288 @@
-#include <stdbool.h>
 #include "block.h"
-#include "helpers.h"
+#include "direction.h"
 
-bool block_opaque(
-    const block_t block)
+#define TORCH_INTENSITY 15
+
+struct
 {
-    assert(block < BLOCK_COUNT);
-    switch (block)
-    {
-    case BLOCK_WATER:
-        return false;
-    }
-    return true;
+    bool is_opaque;
+    bool is_sprite;
+    bool is_solid;
+    bool has_occlusion;
+    bool has_shadow;
+    int indices[6];
+    light_t light;
 }
-
-bool block_shadow(
-    const block_t block)
+static const BLOCKS[BLOCK_COUNT] =
 {
-    assert(block < BLOCK_COUNT);
-    if (block_sprite(block))
+    [BLOCK_GRASS] =
     {
-        return false;
-    }
-    switch (block)
-    {
-    case BLOCK_CLOUD:
-        return false;
-    }
-    return true;
-}
-
-bool block_shadowed(
-    const block_t block)
-{
-    assert(block < BLOCK_COUNT);
-    switch (block)
-    {
-    case BLOCK_CLOUD:
-        return false;
-    }
-    return true;
-}
-
-bool block_occluded(
-    const block_t block)
-{
-    assert(block < BLOCK_COUNT);
-    switch (block)
-    {
-    case BLOCK_CLOUD:
-        return false;
-    }
-    return true;
-}
-
-bool block_solid(
-    const block_t block)
-{
-    assert(block < BLOCK_COUNT);
-    if (block_sprite(block))
-    {
-        return false;
-    }
-    switch (block)
-    {
-    case BLOCK_EMPTY:
-    case BLOCK_WATER:
-        return false;
-    }
-    return true;
-}
-
-bool block_sprite(
-    const block_t block)
-{
-    assert(block < BLOCK_COUNT);
-    switch (block)
-    {
-    case BLOCK_BUSH:
-    case BLOCK_BLUEBELL:
-    case BLOCK_DANDELION:
-    case BLOCK_LAVENDER:
-    case BLOCK_ROSE:
-        return true;
-    }
-    return false;
-}
-
-const int blocks[][DIRECTION_3] =
-{
-    [BLOCK_BLUEBELL] =
-    {
-        [DIRECTION_E] = 13,
-        [DIRECTION_W] = 13,
-        [DIRECTION_N] = 13,
-        [DIRECTION_S] = 13,
-        [DIRECTION_U] = 13,
-        [DIRECTION_D] = 13,
-    },
-    [BLOCK_LAVENDER] =
-    {
-        [DIRECTION_E] = 14,
-        [DIRECTION_W] = 14,
-        [DIRECTION_N] = 14,
-        [DIRECTION_S] = 14,
-        [DIRECTION_U] = 14,
-        [DIRECTION_D] = 14,
-    },
-    [BLOCK_CLOUD] =
-    {
-        [DIRECTION_E] = 9,
-        [DIRECTION_W] = 9,
-        [DIRECTION_N] = 9,
-        [DIRECTION_S] = 9,
-        [DIRECTION_U] = 9,
-        [DIRECTION_D] = 9,
-    },
-    [BLOCK_DANDELION] =
-    {
-        [DIRECTION_E] = 12,
-        [DIRECTION_W] = 12,
-        [DIRECTION_N] = 12,
-        [DIRECTION_S] = 12,
-        [DIRECTION_U] = 12,
-        [DIRECTION_D] = 12,
-    },
-    [BLOCK_BUSH] =
-    {
-        [DIRECTION_E] = 15,
-        [DIRECTION_W] = 15,
-        [DIRECTION_N] = 15,
-        [DIRECTION_S] = 15,
-        [DIRECTION_U] = 15,
-        [DIRECTION_D] = 15,
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {2, 2, 2, 2, 1, 3},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_DIRT] =
     {
-        [DIRECTION_E] = 3,
-        [DIRECTION_W] = 3,
-        [DIRECTION_N] = 3,
-        [DIRECTION_S] = 3,
-        [DIRECTION_U] = 3,
-        [DIRECTION_D] = 3,
-    },
-    [BLOCK_GRASS] =
-    {
-        [DIRECTION_E] = 2,
-        [DIRECTION_W] = 2,
-        [DIRECTION_N] = 2,
-        [DIRECTION_S] = 2,
-        [DIRECTION_U] = 1,
-        [DIRECTION_D] = 3,
-    },
-    [BLOCK_LEAVES] =
-    {
-        [DIRECTION_E] = 10,
-        [DIRECTION_W] = 10,
-        [DIRECTION_N] = 10,
-        [DIRECTION_S] = 10,
-        [DIRECTION_U] = 10,
-        [DIRECTION_D] = 10,
-    },
-    [BLOCK_LOG] =
-    {
-        [DIRECTION_E] = 8,
-        [DIRECTION_W] = 8,
-        [DIRECTION_N] = 8,
-        [DIRECTION_S] = 8,
-        [DIRECTION_U] = 7,
-        [DIRECTION_D] = 7,
-    },
-    [BLOCK_ROSE] =
-    {
-        [DIRECTION_E] = 11,
-        [DIRECTION_W] = 11,
-        [DIRECTION_N] = 11,
-        [DIRECTION_S] = 11,
-        [DIRECTION_U] = 11,
-        [DIRECTION_D] = 11,
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {3, 3, 3, 3, 3, 3},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_SAND] =
     {
-        [DIRECTION_E] = 5,
-        [DIRECTION_W] = 5,
-        [DIRECTION_N] = 5,
-        [DIRECTION_S] = 5,
-        [DIRECTION_U] = 5,
-        [DIRECTION_D] = 5,
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {5, 5, 5, 5, 5, 5},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_SNOW] =
     {
-        [DIRECTION_E] = 6,
-        [DIRECTION_W] = 6,
-        [DIRECTION_N] = 6,
-        [DIRECTION_S] = 6,
-        [DIRECTION_U] = 6,
-        [DIRECTION_D] = 6,
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {6, 6, 6, 6, 6, 6},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_STONE] =
     {
-        [DIRECTION_E] = 4,
-        [DIRECTION_W] = 4,
-        [DIRECTION_N] = 4,
-        [DIRECTION_S] = 4,
-        [DIRECTION_U] = 4,
-        [DIRECTION_D] = 4,
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {4, 4, 4, 4, 4, 4},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_LOG] =
+    {
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {8, 8, 8, 8, 7, 7},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_LEAVES] =
+    {
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {10, 10, 10, 10, 10, 10},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_CLOUD] =
+    {
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {9, 9, 9, 9, 9, 9},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_BUSH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {15, 15, 15, 15, 15, 15},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_BLUEBELL] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {13, 13, 13, 13, 13, 13},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_GARDENIA] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {12, 12, 12, 12, 12, 12},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_ROSE] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {11, 11, 11, 11, 11, 11},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_LAVENDER] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {14, 14, 14, 14, 14, 14},
+        .light = {0, 0, 0, 0},
     },
     [BLOCK_WATER] =
     {
-        [DIRECTION_E] = 16,
-        [DIRECTION_W] = 16,
-        [DIRECTION_N] = 16,
-        [DIRECTION_S] = 16,
-        [DIRECTION_U] = 16,
-        [DIRECTION_D] = 16,
+        .is_opaque = false,
+        .is_sprite = false,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {16, 16, 16, 16, 16, 16},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_RED_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {17, 17, 17, 17, 17, 17},
+        .light = {236, 39, 63, TORCH_INTENSITY},
+    },
+    [BLOCK_GREEN_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {18, 18, 18, 18, 18, 18},
+        .light = {90, 181, 82, TORCH_INTENSITY},
+    },
+    [BLOCK_BLUE_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {19, 19, 19, 19, 19, 19},
+        .light = {51, 136, 222, TORCH_INTENSITY},
+    },
+    [BLOCK_YELLOW_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {20, 20, 20, 20, 20, 20},
+        .light = {243, 168, 51, TORCH_INTENSITY},
+    },
+    [BLOCK_CYAN_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {21, 21, 21, 21, 21, 21},
+        .light = {54, 197, 244, TORCH_INTENSITY},
+    },
+    [BLOCK_MAGENTA_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {22, 22, 22, 22, 22, 22},
+        .light = {250, 110, 121, TORCH_INTENSITY},
+    },
+    [BLOCK_WHITE_TORCH] =
+    {
+        .is_opaque = true,
+        .is_sprite = true,
+        .is_solid = false,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {23, 23, 23, 23, 23, 23},
+        .light = {255, 255, 255, TORCH_INTENSITY},
+    },
+    [BLOCK_PLANKS] =
+    {
+        .is_opaque = true,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = true,
+        .has_shadow = true,
+        .indices = {24, 24, 24, 24, 24, 24},
+        .light = {0, 0, 0, 0},
+    },
+    [BLOCK_GLASS] =
+    {
+        .is_opaque = false,
+        .is_sprite = false,
+        .is_solid = true,
+        .has_occlusion = false,
+        .has_shadow = false,
+        .indices = {25, 25, 25, 25, 25, 25},
+        .light = {0, 0, 0, 0},
     },
 };
+
+bool block_is_opaque(block_t block)
+{
+    return BLOCKS[block].is_opaque;
+}
+
+bool block_is_sprite(block_t block)
+{
+    return BLOCKS[block].is_sprite;
+}
+
+bool block_is_solid(block_t block)
+{
+    return BLOCKS[block].is_solid;
+}
+
+bool block_has_occlusion(block_t block)
+{
+    return BLOCKS[block].has_occlusion;
+}
+
+bool block_has_shadow(block_t block)
+{
+    return BLOCKS[block].has_shadow;
+}
+
+int block_get_index(block_t block, direction_t direction)
+{
+    return BLOCKS[block].indices[direction];
+}
+
+bool block_is_light(block_t block)
+{
+    return BLOCKS[block].light.radius > 0;
+}
+
+light_t block_get_light(block_t block)
+{
+    return BLOCKS[block].light;
+}

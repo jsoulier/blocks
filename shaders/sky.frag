@@ -1,14 +1,22 @@
-#version 450
+#include "shader.hlsl"
 
-#include "helpers.glsl"
-
-layout(location = 0) in vec3 i_position;
-layout(location = 0) out vec4 o_color;
-
-void main()
+struct Input
 {
-    const float dy = i_position.y;
-    const float dx = length(i_position.xz);
-    const float pitch = atan(dy, dx);
-    o_color = vec4(get_sky(pitch), 1.0);
+    float3 LocalPosition : TEXCOORD0;
+};
+
+struct Output
+{
+    float4 Color : SV_Target0;
+    float4 Position : SV_Target1;
+    float4 Light : SV_Target2;
+    uint Voxel : SV_Target3;
+};
+
+Output main(Input input)
+{
+    Output output;
+    output.Color = float4(GetSkyColor(input.LocalPosition), 1.0f);
+    output.Voxel = 0;
+    return output;
 }

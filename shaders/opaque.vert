@@ -1,30 +1,44 @@
-#version 450
+#include "shader.hlsl"
 
-#include "helpers.glsl"
-
-layout(location = 0) in uint i_voxel;
-layout(location = 0) out flat uint o_voxel;
-layout(location = 1) out vec4 o_position;
-layout(location = 2) out vec3 o_uv;
-layout(set = 1, binding = 0) uniform t_position
+cbuffer UniformBuffer : register(b0, space1)
 {
-    ivec3 u_position;
-};
-layout(set = 1, binding = 1) uniform t_view
-{
-    mat4 u_view;
-};
-layout(set = 1, binding = 2) uniform t_proj
-{
-    mat4 u_proj;
+    float4x4 Proj;
 };
 
-void main()
+cbuffer UniformBuffer : register(b1, space1)
 {
-    o_voxel = i_voxel;
-    o_position.xyz = u_position + get_position(i_voxel);
-    o_uv = get_uv(i_voxel);
-    const vec4 position = u_view * vec4(o_position.xyz, 1.0);
-    o_position.w = position.z;
-    gl_Position = u_proj * position;
+    float4x4 View;
+};
+
+cbuffer UniformBuffer : register(b2, space1)
+{
+    int2 ChunkPosition;
+};
+
+struct Input
+{
+    uint Voxel : TEXCOORD0;
+};
+
+struct Output
+{
+    float4 Position : SV_Position;
+    float4 WorldPosition : TEXCOORD0;
+    nointerpolation float3 Normal : TEXCOORD1;
+    float3 Texcoord : TEXCOORD2;
+    nointerpolation uint Voxel : TEXCOORD3;
+};
+
+Output main(Input input)
+{
+    Output output;
+    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    output.WorldPosition.xyz = GetPosition(input.Voxel) + chunkPosition;
+    output.Normal = GetNormal(input.Voxel);
+    output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
+    output.WorldPosition.w = output.Position.z;
+    output.Position = mul(Proj, output.Position);
+    output.Texcoord = GetTexcoord(input.Voxel);
+    output.Voxel = input.Voxel;
+    return output;
 }

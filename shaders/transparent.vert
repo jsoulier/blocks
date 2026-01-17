@@ -1,48 +1,48 @@
-#version 450
+#include "shader.hlsl"
 
-#include "helpers.glsl"
-
-layout(location = 0) in uint i_voxel;
-layout(location = 0) out vec3 o_position;
-layout(location = 1) out vec3 o_uv;
-layout(location = 2) out flat vec3 o_normal;
-layout(location = 3) out vec4 o_shadow_position;
-layout(location = 4) out flat uint o_shadowed;
-layout(location = 5) out flat uint o_occluded;
-layout(location = 6) out float o_fog;
-layout(location = 7) out vec2 o_fragment;
-layout(set = 1, binding = 0) uniform t_position
+cbuffer UniformBuffer : register(b0, space1)
 {
-    ivec3 u_position;
-};
-layout(set = 1, binding = 1) uniform t_matrix
-{
-    mat4 u_matrix;
-};
-layout(set = 1, binding = 2) uniform t_player_position
-{
-    vec3 u_player_position;
-};
-layout(set = 1, binding = 3) uniform t_shadow_matrix
-{
-    mat4 u_shadow_matrix;
+    float4x4 Proj;
 };
 
-void main()
+cbuffer UniformBuffer : register(b1, space1)
 {
-    o_position = u_position + get_position(i_voxel);
-    o_uv = get_uv(i_voxel);
-    o_shadowed = uint(get_shadowed(i_voxel));
-    o_occluded = uint(get_occluded(i_voxel));
-    o_fog = get_fog(distance(o_position.xz, u_player_position.xz));
-    gl_Position = u_matrix * vec4(o_position, 1.0);
-    o_fragment = gl_Position.xy / gl_Position.w;
-    o_fragment = o_fragment * 0.5 + 0.5;
-    o_fragment.y = 1.0 - o_fragment.y;
-    if (!bool(o_shadowed))
-    {
-        return;
-    }
-    o_shadow_position = u_shadow_matrix * vec4(o_position, 1.0);
-    o_normal = get_normal(i_voxel);
+    float4x4 View;
+};
+
+cbuffer UniformBuffer : register(b2, space1)
+{
+    int2 ChunkPosition;
+};
+
+struct Input
+{
+    uint Voxel : TEXCOORD0;
+};
+
+struct Output
+{
+    float4 Position : SV_Position;
+    float4 WorldPosition : TEXCOORD0;
+    nointerpolation float3 Normal : TEXCOORD1;
+    float3 Texcoord : TEXCOORD2;
+    nointerpolation uint Voxel : TEXCOORD3;
+    float2 Fragment : TEXCOORD4;
+};
+
+Output main(Input input)
+{
+    Output output;
+    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    output.WorldPosition.xyz = GetPosition(input.Voxel) + chunkPosition;
+    output.Normal = GetNormal(input.Voxel);
+    output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
+    output.WorldPosition.w = output.Position.z;
+    output.Position = mul(Proj, output.Position);
+    output.Texcoord = GetTexcoord(input.Voxel);
+    output.Voxel = input.Voxel;
+    output.Fragment = output.Position.xy / output.Position.w;
+    output.Fragment = output.Fragment * 0.5f + 0.5f;
+    output.Fragment.y = 1.0f - output.Fragment.y;
+    return output;
 }

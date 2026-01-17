@@ -1,22 +1,29 @@
-#version 450
+#include "shader.hlsl"
 
-layout(location = 0) in vec3 i_position;
-layout(location = 0) out vec3 o_position;
-layout(set = 1, binding = 0) uniform t_view
+cbuffer UniformBuffer : register(b0, space1)
 {
-    mat4 u_view;
-};
-layout(set = 1, binding = 1) uniform t_proj
-{
-    mat4 u_proj; 
+    float4x4 Proj : packoffset(c0);
 };
 
-void main()
+cbuffer UniformBuffer : register(b1, space1)
 {
-    o_position = i_position;
-    mat4 rotation = u_view;
-    rotation[3][0] = 0.0;
-    rotation[3][1] = 0.0;
-    rotation[3][2] = 0.0;
-    gl_Position = u_proj * rotation * vec4(i_position, 1.0);
+    float4x4 View : packoffset(c0);
+};
+
+struct Output
+{
+    float4 Position : SV_Position;
+    float3 LocalPosition : TEXCOORD0;
+};
+
+Output main(uint vertexID : SV_VertexID)
+{
+    float4x4 view = View;
+    view[0][3] = 0.0f;
+    view[1][3] = 0.0f;
+    view[2][3] = 0.0f;
+    Output output;
+    output.LocalPosition = GetCubePosition(vertexID);
+    output.Position = mul(Proj, mul(view, float4(output.LocalPosition, 1.0f)));
+    return output;
 }

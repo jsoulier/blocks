@@ -1,0 +1,169 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template <typename ImageT>
+void spvImageFence(ImageT img) { img.fence(); }
+
+struct type_UniformBuffer
+{
+    int2 Viewport;
+};
+
+struct type_UniformBuffer_1
+{
+    uint Index;
+};
+
+kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float, access::read_write> colorTexture [[texture(1)]], sampler atlasSampler [[sampler(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    do
+    {
+        uint2 _59 = uint2(colorTexture.get_width(), colorTexture.get_height());
+        bool _71;
+        if (!(gl_GlobalInvocationID.x >= _59.x))
+        {
+            _71 = gl_GlobalInvocationID.y >= _59.y;
+        }
+        else
+        {
+            _71 = true;
+        }
+        if (_71)
+        {
+            break;
+        }
+        float2 _76 = float2(UniformBuffer.Viewport);
+        float2 _77 = _76 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
+        float _80 = precise::max(_77.x, _77.y);
+        float _81 = 50.0 * _80;
+        float _82 = 10.0 * _80;
+        float2 _85 = float2(_82) + float2(_81);
+        float _86 = float(gl_GlobalInvocationID.x);
+        float _93 = float(uint(UniformBuffer.Viewport.y) - gl_GlobalInvocationID.y);
+        bool _99;
+        if (_86 > _82)
+        {
+            _99 = _86 < _85.x;
+        }
+        else
+        {
+            _99 = false;
+        }
+        bool _103;
+        if (_99)
+        {
+            _103 = _93 > _82;
+        }
+        else
+        {
+            _103 = false;
+        }
+        bool _108;
+        if (_103)
+        {
+            _108 = _93 < _85.y;
+        }
+        else
+        {
+            _108 = false;
+        }
+        if (_108)
+        {
+            float3 _121 = float3((_86 - _82) / _81, 1.0 - ((_93 - _82) / _81), float(UniformBuffer_1.Index));
+            float4 _123 = atlasTexture.sample(atlasSampler, _121.xy, uint(rint(_121.z)), level(0.0));
+            float _124 = _123.w;
+            if (_124 > 0.001000000047497451305389404296875)
+            {
+                spvImageFence(colorTexture);
+                float4 _130 = colorTexture.read(uint2(gl_GlobalInvocationID.xy));
+                float _131 = fast::clamp(_124, 0.0, 1.0);
+                float _136 = 1.0 - _131;
+                colorTexture.write(float4((_123.xyz * _131) + (_130.xyz * _136), _131 + (_130.w * _136)), uint2(gl_GlobalInvocationID.xy));
+                break;
+            }
+        }
+        float _146 = 8.0 * _80;
+        float _147 = 2.0 * _80;
+        float2 _148 = _76 * 0.5;
+        float2 _149 = float2(_146, _147);
+        float2 _150 = _148 - _149;
+        float2 _151 = _148 + _149;
+        float2 _152 = float2(_147, _146);
+        float2 _153 = _148 - _152;
+        float2 _154 = _148 + _152;
+        bool _161;
+        if (_86 > _150.x)
+        {
+            _161 = _93 > _150.y;
+        }
+        else
+        {
+            _161 = false;
+        }
+        bool _166;
+        if (_161)
+        {
+            _166 = _86 < _151.x;
+        }
+        else
+        {
+            _166 = false;
+        }
+        bool _171;
+        if (_166)
+        {
+            _171 = _93 < _151.y;
+        }
+        else
+        {
+            _171 = false;
+        }
+        bool _192;
+        if (!_171)
+        {
+            bool _181;
+            if (_86 > _153.x)
+            {
+                _181 = _93 > _153.y;
+            }
+            else
+            {
+                _181 = false;
+            }
+            bool _186;
+            if (_181)
+            {
+                _186 = _86 < _154.x;
+            }
+            else
+            {
+                _186 = false;
+            }
+            bool _191;
+            if (_186)
+            {
+                _191 = _93 < _154.y;
+            }
+            else
+            {
+                _191 = false;
+            }
+            _192 = _191;
+        }
+        else
+        {
+            _192 = true;
+        }
+        if (_192)
+        {
+            colorTexture.write(float4(1.0), uint2(gl_GlobalInvocationID.xy));
+            break;
+        }
+        break;
+    } while(false);
+}
+

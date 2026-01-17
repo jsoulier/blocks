@@ -1,25 +1,37 @@
-#version 450
+#include "shader.hlsl"
 
-#include "helpers.glsl"
-
-layout(location = 0) in uint i_voxel;
-layout(set = 1, binding = 0) uniform t_position
+cbuffer UniformBuffer : register(b0, space1)
 {
-    ivec3 u_position;
-};
-layout(set = 1, binding = 1) uniform t_matrix
-{
-    mat4 u_matrix;
+    float4x4 Proj;
 };
 
-void main()
+cbuffer UniformBuffer : register(b1, space1)
 {
-    if (get_shadow(i_voxel))
-    {
-        gl_Position = u_matrix * vec4(u_position + get_position(i_voxel), 1.0);
-    }
-    else
-    {
-        gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
-    }
+    float4x4 View;
+};
+
+cbuffer UniformBuffer : register(b2, space1)
+{
+    int2 ChunkPosition;
+};
+
+struct Input
+{
+    uint Voxel : TEXCOORD0;
+};
+
+struct Output
+{
+    float4 Position : SV_Position;
+    float ClipDistance : SV_ClipDistance0;
+};
+
+Output main(Input input)
+{
+    Output output;
+    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    float3 position = GetPosition(input.Voxel) + chunkPosition;
+    output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
+    output.ClipDistance = GetShadow(input.Voxel) ? 1.0f : -1.0f;
+    return output;
 }

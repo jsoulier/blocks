@@ -1,20 +1,18 @@
 # Blocks
 
-![](image.png)
+![](doc/image1.png)
 
-Tiny Minecraft clone in C and GLSL using the new SDL3 GPU API
+Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
 ### Features
 
 - Procedural world generation
-- Parallel chunk loading
-- Blocks and plants
-- Transparency (limited)
-- Deferred rendering
-- Directional shadows
-- SSAO
-- Water depth shading
+- Asynchronous chunk loading
+- Blocks and sprites
 - Persistent worlds
+- Directional shadows
+- Clustered dynamic lighting
+- Basic transparency
 
 ### Building
 
@@ -46,31 +44,58 @@ cd bin
 
 #### Shaders
 
-Shaders have a few dependencies and are prebuilt for your convenience.
-To build locally, install [glslc](https://github.com/google/shaderc) and
-[SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
-variable. The build process will automatically use them
+Shaders are prebuilt.
+To build locally, install [glslc](https://github.com/google/shaderc) and [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
 
 ### Controls
 
 - `WASDEQ` to move
 - `Escape` to unfocus
-- `LClick` to break a block
-- `RClick` to place a block
-- `B` to toggle blocks
+- `Left Click` to break a block
+- `Middle Click` to select a block
+- `Right Click` to place a block
+- `Scroll` to change blocks
 - `F11` to toggle fullscreen
 - `LControl` to move quickly
-- `LShift` to move slowly
 
-### Rendering
+### Passes
 
-1. Draw the sky to the g-buffer
-2. Draw the world from the sun's perspective to a depth texture (shadows)
-3. Draw the world (opaque only) to the g-buffer
-4. Calculate SSAO using the g-buffer
-5. Combine the g-buffer, SSAO, and shadows together to create a composite texture
-6. Draw the world (transparent only) with blending to the composite texture
-7. Draw the raycast block to the composite texture
-8. Upscale the composite texture to the swapchain texture
-9. Draw the UI over the swapchain texture
-10. Submit
+1. Render opaques to depth texture (for shadows)
+
+![](doc/image2.png)
+
+2. Render sky to G-buffer
+
+![](doc/image3.png)
+
+3. Render opaques to G-buffer
+
+![](doc/image4.png)
+
+4. Calculate SSAO
+
+![](doc/image5.png)
+
+5. Blur SSAO
+
+![](doc/image6.png)
+
+6. Composite G-buffer
+
+![](doc/image7.png)
+
+7. Render transparents to depth teture (for predepth)
+
+![](doc/image8.png)
+
+8. Render transparents and composite
+
+![](doc/image9.png)
+
+9. Render raycast
+
+![](doc/image10.png)
+
+10. Render UI
+
+![](doc/image11.png)

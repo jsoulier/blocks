@@ -1,20 +1,44 @@
-#version 450
+#include "shader.hlsl"
 
-layout(location = 0) in flat uint i_voxel;
-layout(location = 1) in vec4 i_position;
-layout(location = 2) in vec3 i_uv;
-layout(location = 0) out vec4 o_position;
-layout(location = 1) out vec3 o_uv;
-layout(location = 2) out uint o_voxel;
-layout(set = 2, binding = 0) uniform sampler2DArray s_atlas;
+Texture2DArray<float4> atlasTexture : register(t0, space2);
+SamplerState atlasSampler : register(s0, space2);
+StructuredBuffer<Light> lightBuffer : register(t1, space2);
 
-void main()
+cbuffer UniformBuffer : register(b0, space3)
 {
-    if (texture(s_atlas, i_uv).a < 0.001)
+    int LightCount : packoffset(c0);
+};
+
+struct Input
+{
+    float4 WorldPosition : TEXCOORD0;
+    nointerpolation float3 Normal : TEXCOORD1;
+    float3 Texcoord : TEXCOORD2;
+    nointerpolation uint Voxel : TEXCOORD3;
+};
+
+struct Output
+{
+    float4 Color : SV_Target0;
+    float4 Position : SV_Target1;
+    float4 Light : SV_Target2;
+    uint Voxel : SV_Target3;
+};
+
+Output main(Input input)
+{
+    Output output;
+    output.Color = atlasTexture.Sample(atlasSampler, input.Texcoord);
+    output.Position = input.WorldPosition;
+    output.Light = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    output.Voxel = 0;
+    if (output.Color.a < kEpsilon)
     {
         discard;
+        return output;
     }
-    o_position = i_position;
-    o_uv = i_uv;
-    o_voxel = i_voxel;
+    output.Voxel |= input.Voxel & (OCCLUSION_MASK << OCCLUSION_OFFSET);
+    output.Voxel |= input.Voxel & (DIRECTION_MASK << DIRECTION_OFFSET);
+    output.Light.rgb = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, input.Normal);
+    return output;
 }

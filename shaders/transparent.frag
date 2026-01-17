@@ -1,42 +1,57 @@
-#version 450
+#include "shader.hlsl"
 
-#include "helpers.glsl"
+Texture2DArray<float4> atlasTexture : register(t0, space2);
+SamplerState atlasSampler : register(s0, space2);
+Texture2D<float> shadowTexture : register(t1, space2);
+SamplerState shadowSampler : register(s1, space2);
+Texture2D<float4> positionTexture : register(t2, space2);
+SamplerState positionSampler : register(s2, space2);
+StructuredBuffer<Light> lightBuffer : register(t3, space2);
 
-layout(location = 0) in vec3 i_position;
-layout(location = 1) in vec3 i_uv;
-layout(location = 2) in flat vec3 i_normal;
-layout(location = 3) in vec4 i_shadow_position;
-layout(location = 4) in flat uint i_shadowed;
-layout(location = 5) in flat uint i_occluded;
-layout(location = 6) in float i_fog;
-layout(location = 7) in vec2 i_fragment;
-layout(location = 0) out vec4 o_color;
-layout(set = 2, binding = 0) uniform sampler2DArray s_atlas;
-layout(set = 2, binding = 1) uniform sampler2D s_shadowmap;
-layout(set = 2, binding = 2) uniform sampler2D s_position;
-layout(set = 3, binding = 0) uniform t_shadow_vector
+cbuffer UniformBuffer : register(b0, space3)
 {
-    vec3 u_shadow_vector;
-};
-layout(set = 3, binding = 1) uniform t_player_position
-{
-    vec3 u_player_position;
+    int LightCount : packoffset(c0.x);
 };
 
-void main()
+cbuffer UniformBuffer : register(b1, space3)
 {
-    o_color = get_color(
-        s_atlas,
-        s_shadowmap,
-        i_position,
-        i_uv,
-        i_normal,
-        u_player_position,
-        i_shadow_position.xyz / i_shadow_position.w,
-        u_shadow_vector,
-        bool(i_shadowed),
-        bool(i_occluded),
-        i_fog,
-        1.0,
-        (i_position.y - texture(s_position, i_fragment).y) / 20.0);
+    float4x4 ShadowTransform : packoffset(c0);
+};
+
+cbuffer UniformBuffer : register(b2, space3)
+{
+    float3 PlayerPosition : packoffset(c0);
+};
+
+struct Input
+{
+    float4 WorldPosition : TEXCOORD0;
+    nointerpolation float3 Normal : TEXCOORD1;
+    float3 Texcoord : TEXCOORD2;
+    nointerpolation uint Voxel : TEXCOORD3;
+    float2 Fragment : TEXCOORD4;
+};
+
+static const uint kWater = 16;
+
+float4 main(Input input) : SV_Target0
+{
+    float4 color = atlasTexture.Sample(atlasSampler, input.Texcoord);
+    float3 albedo = color.rgb;
+    float alpha = color.a;
+    float4 position = input.WorldPosition;
+    float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, input.Normal);
+    float3 ambient = GetAmbientLight();
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal, input.Voxel);
+    float3 finalColor = albedo * (diffuse + ambient + sun);
+    float3 skyColor = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
+    float fog = GetFog(distance(position.xz, PlayerPosition.xz));
+    finalColor = lerp(finalColor, skyColor, fog);
+    float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
+    if (GetIndex(input.Voxel) == kWater)
+    {
+        // TODO: Causing bug where alpha is 0 or 1 as camera approaches water
+        alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
+    }
+    return float4(finalColor, alpha);
 }
