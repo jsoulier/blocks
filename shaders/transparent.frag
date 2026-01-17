@@ -4,7 +4,9 @@ Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
 Texture2D<float> shadowTexture : register(t1, space2);
 SamplerState shadowSampler : register(s1, space2);
-StructuredBuffer<Light> lightBuffer : register(t2, space2);
+Texture2D<float4> positionTexture : register(t2, space2);
+SamplerState positionSampler : register(s2, space2);
+StructuredBuffer<Light> lightBuffer : register(t3, space2);
 
 cbuffer UniformBuffer : register(b0, space3)
 {
@@ -27,6 +29,7 @@ struct Input
     nointerpolation float3 Normal : TEXCOORD1;
     float3 Texcoord : TEXCOORD2;
     nointerpolation uint Voxel : TEXCOORD3;
+    float2 Fragment : TEXCOORD4;
 };
 
 // TODO: sky
@@ -44,5 +47,7 @@ float4 main(Input input) : SV_Target0
     float3 skyColor = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     finalColor = lerp(finalColor, skyColor, fog);
+    float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
+    alpha = saturate(alpha + (input.WorldPosition.y - groundPosition.y) / 20.0f);
     return float4(finalColor, alpha);
 }

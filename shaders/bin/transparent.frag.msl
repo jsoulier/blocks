@@ -42,117 +42,118 @@ struct main0_in
     float3 in_var_TEXCOORD1 [[user(locn1), flat]];
     float3 in_var_TEXCOORD2 [[user(locn2)]];
     uint in_var_TEXCOORD3 [[user(locn3)]];
+    float2 in_var_TEXCOORD4 [[user(locn4)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(3)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float> shadowTexture [[texture(1)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]])
+fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(3)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float> shadowTexture [[texture(1)]], texture2d<float> positionTexture [[texture(2)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]], sampler positionSampler [[sampler(2)]])
 {
     main0_out out = {};
-    float4 _95 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
-    uint _100 = uint(UniformBuffer.LightCount);
-    float3 _102;
-    _102 = float3(0.0);
-    float3 _103;
-    for (uint _105 = 0u; _105 < _100; _102 = _103, _105++)
+    float4 _103 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
+    uint _108 = uint(UniformBuffer.LightCount);
+    float3 _110;
+    _110 = float3(0.0);
+    float3 _111;
+    for (uint _113 = 0u; _113 < _108; _110 = _111, _113++)
     {
-        float _118 = float((lightBuffer._m0[_105].Color & 4278190080u) >> 24u);
-        float3 _125 = (float3(float(lightBuffer._m0[_105].X), float(lightBuffer._m0[_105].Y), float(lightBuffer._m0[_105].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
-        float _126 = length(_125);
-        bool _132;
-        if (!(_126 >= _118))
+        float _126 = float((lightBuffer._m0[_113].Color & 4278190080u) >> 24u);
+        float3 _133 = (float3(float(lightBuffer._m0[_113].X), float(lightBuffer._m0[_113].Y), float(lightBuffer._m0[_113].Z)) + float3(0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _134 = length(_133);
+        bool _140;
+        if (!(_134 >= _126))
         {
-            _132 = _118 <= 0.0;
+            _140 = _126 <= 0.0;
         }
         else
         {
-            _132 = true;
+            _140 = true;
         }
-        if (_132)
+        if (_140)
         {
-            _103 = _102;
+            _111 = _110;
             continue;
         }
-        float _146;
-        if (_126 > 0.20000000298023223876953125)
+        float _154;
+        if (_134 > 0.20000000298023223876953125)
         {
-            float _142 = fast::clamp(dot(in.in_var_TEXCOORD1, _125 / float3(_126)), 0.0, 1.0);
-            if (_142 <= 0.0)
+            float _150 = fast::clamp(dot(in.in_var_TEXCOORD1, _133 / float3(_134)), 0.0, 1.0);
+            if (_150 <= 0.0)
             {
-                _103 = _102;
+                _111 = _110;
                 continue;
             }
-            _146 = _142;
+            _154 = _150;
         }
         else
         {
-            _146 = 1.0;
+            _154 = 1.0;
         }
-        float _149 = fast::clamp(1.0 - (_126 / _118), 0.0, 1.0);
-        _103 = _102 + ((float3(float(lightBuffer._m0[_105].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_105].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_105].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _146) * (_149 * _149));
+        float _157 = fast::clamp(1.0 - (_134 / _126), 0.0, 1.0);
+        _111 = _110 + ((float3(float(lightBuffer._m0[_113].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_113].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_113].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _154) * (_157 * _157));
     }
-    float _227;
+    float _235;
     do
     {
-        float4 _177 = UniformBuffer_1.ShadowTransform * float4(in.in_var_TEXCOORD0.xyz, 1.0);
-        float3 _181 = _177.xyz / float3(_177.w);
-        float2 _184 = (_181.xy * 0.5) + float2(0.5);
-        float _186 = 1.0 - _184.y;
-        float2 _187 = _184;
-        _187.y = _186;
-        float _188 = _184.x;
-        bool _194;
-        if (!(_188 < 0.0))
+        float4 _185 = UniformBuffer_1.ShadowTransform * float4(in.in_var_TEXCOORD0.xyz, 1.0);
+        float3 _189 = _185.xyz / float3(_185.w);
+        float2 _192 = (_189.xy * 0.5) + float2(0.5);
+        float _194 = 1.0 - _192.y;
+        float2 _195 = _192;
+        _195.y = _194;
+        float _196 = _192.x;
+        bool _202;
+        if (!(_196 < 0.0))
         {
-            _194 = _188 > 1.0;
+            _202 = _196 > 1.0;
         }
         else
         {
-            _194 = true;
+            _202 = true;
         }
-        bool _199;
-        if (!_194)
+        bool _207;
+        if (!_202)
         {
-            _199 = _186 < 0.0;
-        }
-        else
-        {
-            _199 = true;
-        }
-        bool _204;
-        if (!_199)
-        {
-            _204 = _186 > 1.0;
+            _207 = _194 < 0.0;
         }
         else
         {
-            _204 = true;
+            _207 = true;
         }
-        if (_204)
+        bool _212;
+        if (!_207)
         {
-            _227 = 0.0;
+            _212 = _194 > 1.0;
+        }
+        else
+        {
+            _212 = true;
+        }
+        if (_212)
+        {
+            _235 = 0.0;
             break;
         }
         if ((in.in_var_TEXCOORD3 & 1u) != 0u)
         {
             if (dot(in.in_var_TEXCOORD1, fast::normalize(float4(UniformBuffer_1.ShadowTransform[0][2], UniformBuffer_1.ShadowTransform[1][2], UniformBuffer_1.ShadowTransform[2][2], UniformBuffer_1.ShadowTransform[3][2]).xyz)) > 0.0)
             {
-                _227 = 0.4000000059604644775390625;
+                _235 = 0.4000000059604644775390625;
                 break;
             }
         }
-        if ((_181.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _187, level(0.0)).x)
+        if ((_189.z - 0.001000000047497451305389404296875) <= shadowTexture.sample(shadowSampler, _195, level(0.0)).x)
         {
-            _227 = 0.0;
+            _235 = 0.0;
             break;
         }
         else
         {
-            _227 = 0.4000000059604644775390625;
+            _235 = 0.4000000059604644775390625;
             break;
         }
         break; // unreachable workaround
     } while(false);
-    float3 _235 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
-    out.out_var_SV_Target0 = float4(mix(_95.xyz * (((_102 * 2.0) + float3(0.5)) - float3(_227)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_235.y, length(float2(_235.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _95.w);
+    float3 _243 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
+    out.out_var_SV_Target0 = float4(mix(_103.xyz * (((_110 * 2.0) + float3(0.5)) - float3(_235)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_243.y, length(float2(_243.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), fast::clamp(_103.w + ((in.in_var_TEXCOORD0.y - positionTexture.sample(positionSampler, in.in_var_TEXCOORD4).y) * 0.0500000007450580596923828125), 0.0, 1.0));
     return out;
 }
 

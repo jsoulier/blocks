@@ -17,11 +17,11 @@ static const float PLAYER_SPEED = 0.01f;
 static const float PLAYER_SENSITIVITY = 0.1f;
 static const float PLAYER_REACH = 10.0f;
 static const int SHADOW_RESOLUTION = 4096.0f;
+static const float SHADOW_Y = 30.0f;
 static const float SHADOW_ORTHO = 300.0f;
 static const float SHADOW_FAR = 300.0f;
 static const float SHADOW_PITCH = -45.0f;
 static const float SHADOW_YAW = 45.0f;
-static const float SHADOW_Y = 30.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -697,7 +697,7 @@ static bool resize(int width, int height)
         return false;
     }
     info.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
-    info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ;
+    info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     position_texture = SDL_CreateGPUTexture(device, &info);
     if (!position_texture)
     {
@@ -919,16 +919,18 @@ static void render_depth(SDL_GPUCommandBuffer* cbuf)
 
 static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
 {
-    SDL_GPUTextureSamplerBinding sampler_bindings[2] = {0};
+    SDL_GPUTextureSamplerBinding sampler_bindings[3] = {0};
     sampler_bindings[0].texture = atlas_texture;
     sampler_bindings[0].sampler = nearest_sampler;
     sampler_bindings[1].texture = shadow_texture;
     sampler_bindings[1].sampler = nearest_sampler;
+    sampler_bindings[2].texture = position_texture;
+    sampler_bindings[2].sampler = nearest_sampler;
     SDL_PushGPUDebugGroup(cbuf, "transparent");
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
     SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player_camera.position, 12);
-    SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
+    SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 3);
     world_render(&player_camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);
 }

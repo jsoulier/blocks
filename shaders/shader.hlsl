@@ -43,7 +43,6 @@ float3 GetLight(StructuredBuffer<Light> lights, uint lightCount, float4 position
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < lightCount; i++)
     {
-        // TODO: performance with branches
         Light light = lights[i];
         float radius = (light.Color & 0xFF000000) >> 24;
         float3 lightPosition = float3(light.X, light.Y, light.Z) + 0.5f;

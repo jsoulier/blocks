@@ -18,11 +18,11 @@ void main(uint3 threadID : SV_DispatchThreadID)
     float value = 0.0f;
     for (int y = -kernel; y <= kernel; y++)
     {
-        int yi = clamp(threadID.y + y, 0, height - 1);
+        int yy = clamp(threadID.y + y, 0, height - 1);
         for (int x = -kernel; x <= kernel; x++)
         {
-            int xi = clamp(threadID.x + x, 0, width - 1);
-            value += inputTexture[uint2(xi, yi)];
+            int xx = clamp(threadID.x + x, 0, width - 1);
+            value += inputTexture[uint2(xx, yy)];
         }
     }
     kernel = kKernel * 2 + 1;

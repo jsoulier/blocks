@@ -27,6 +27,7 @@ struct Output
     nointerpolation float3 Normal : TEXCOORD1;
     float3 Texcoord : TEXCOORD2;
     nointerpolation uint Voxel : TEXCOORD3;
+    float2 Fragment : TEXCOORD4;
 };
 
 Output main(Input input)
@@ -40,5 +41,8 @@ Output main(Input input)
     output.Position = mul(Proj, output.Position);
     output.Texcoord = GetVoxelTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
+    output.Fragment = output.Position.xy / output.Position.w;
+    output.Fragment = output.Fragment * 0.5f + 0.5f;
+    output.Fragment.y = 1.0f - output.Fragment.y;
     return output;
 }
