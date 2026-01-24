@@ -340,8 +340,8 @@ static void gen_chunk_blocks(chunk_t* chunk)
     map_clear(&chunk->lights);
     rand_get_blocks(chunk, chunk->x, chunk->z, set_chunk_block_function);
     save_get_blocks(chunk, chunk->x, chunk->z, set_chunk_block_function);
+    CHECK(SDL_GetAtomicInt(&chunk->block_state) == JOB_STATE_RUNNING);
     SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_COMPLETED);
-    // Schedule because neighbors might have lights
     if (SDL_GetAtomicInt(&chunk->voxel_state) == JOB_STATE_REQUESTED)
     {
         SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_REQUESTED);
@@ -391,6 +391,15 @@ static void gen_chunk_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[MESH_TYP
     }
     upload_voxels(chunk, voxels);
     SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_COMPLETED);
+}
+
+static void regen_chunk_voxels(int x, int z)
+{
+    CHECK(!is_chunk_on_border(x, z));
+    chunk_t* chunks[3][3] = {0};
+    get_neighborhood(x, z, chunks);
+    SDL_SetAtomicInt(&chunks[1][1]->voxel_state, JOB_STATE_RUNNING);
+    gen_chunk_voxels(chunks, cpu_voxels);
 }
 
 static void gen_chunk_lights(chunk_t* chunks[3][3], cpu_buffer_t* lights)
@@ -962,15 +971,6 @@ block_t world_get_block(const int position[3])
     }
 }
 
-static void gen_voxels_sync(int x, int z)
-{
-    CHECK(!is_chunk_on_border(x, z));
-    chunk_t* chunks[3][3] = {0};
-    get_neighborhood(x, z, chunks);
-    SDL_SetAtomicInt(&chunks[1][1]->voxel_state, JOB_STATE_RUNNING);
-    gen_chunk_voxels(chunks, cpu_voxels);
-}
-
 void world_set_block(const int position[3], block_t block)
 {
     if (position[1] < 0 || position[1] >= CHUNK_HEIGHT)
@@ -1002,22 +1002,22 @@ void world_set_block(const int position[3], block_t block)
     int local_z = position[2];
     world_to_chunk(chunk, &local_x, &local_y, &local_z);
     block_t old_block = set_chunk_block(chunk, position[0], position[1], position[2], block);
-    gen_voxels_sync(chunk_x, chunk_z);
+    regen_chunk_voxels(chunk_x, chunk_z);
     if (local_x == 0)
     {
-        gen_voxels_sync(chunk_x - 1, chunk_z);
+        regen_chunk_voxels(chunk_x - 1, chunk_z);
     }
     else if (local_x == CHUNK_WIDTH - 1)
     {
-        gen_voxels_sync(chunk_x + 1, chunk_z);
+        regen_chunk_voxels(chunk_x + 1, chunk_z);
     }
     if (local_z == 0)
     {
-        gen_voxels_sync(chunk_x, chunk_z - 1);
+        regen_chunk_voxels(chunk_x, chunk_z - 1);
     }
     else if (local_z == CHUNK_WIDTH - 1)
     {
-        gen_voxels_sync(chunk_x, chunk_z + 1);
+        regen_chunk_voxels(chunk_x, chunk_z + 1);
     }
     chunk_t* neighborhood[3][3] = {0};
     get_neighborhood(chunk_x, chunk_z, neighborhood);

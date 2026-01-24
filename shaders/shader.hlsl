@@ -84,14 +84,14 @@ float3 GetCubePosition(uint vertexID)
     return kPositions[kIndices[vertexID]];
 }
 
-bool IsCloud(float3 color)
-{
-    return length(color) > (1.0f - kEpsilon);
-}
-
 bool IsSky(uint voxel)
 {
     return voxel == 0;
+}
+
+bool IsCloud(float3 color)
+{
+    return length(color) > (1.0f - kEpsilon);
 }
 
 struct Light
@@ -101,11 +101,6 @@ struct Light
     int Y;
     int Z;
 };
-
-float3 GetAmbientLight()
-{
-    return float3(0.5f, 0.5f, 0.5f);
-}
 
 float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 position, float3 normal)
 {
@@ -184,20 +179,24 @@ float GetSunLight(Texture2D<float> texture, SamplerState sampler, float4x4 trans
     }
 }
 
+float3 GetAmbientLight()
+{
+    return float3(0.5f, 0.5f, 0.5f);
+}
+
+float GetFog(float x)
+{
+    return min(pow(x / 250.0f, 2.5f), 1.0f);
+}
+
 float3 GetSkyColor(float3 position)
 {
     static const float3 kTop = float3(0.212f, 0.773f, 0.957f);
     static const float3 kBottom = float3(0.220f, 0.349f, 0.702f);
     float dy = position.y;
     float dx = length(float2(position.x, position.z));
-    float pitch = atan2(dy, dx);
-    float alpha = (pitch + kPi / 2.0f) / kPi;
+    float alpha = (atan2(dy, dx) + kPi / 2.0f) / kPi;
     return lerp(kBottom, kTop, alpha);
-}
-
-float GetFog(const float x)
-{
-    return min(pow(x / 250.0f, 2.5f), 1.0f);
 }
 
 float2 GetRandom2(float2 position)

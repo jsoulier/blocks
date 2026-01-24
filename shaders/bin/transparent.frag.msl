@@ -160,18 +160,17 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& 
         }
         break; // unreachable workaround
     } while(false);
-    float3 _250 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
-    float4 _272 = positionTexture.sample(positionSampler, in.in_var_TEXCOORD4);
-    float _284;
+    float3 _246 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
+    float _278;
     if (((in.in_var_TEXCOORD3 >> 26u) & 63u) == 16u)
     {
-        _284 = _108 + ((in.in_var_TEXCOORD0.y - _272.y) * 0.100000001490116119384765625);
+        _278 = _108 + ((in.in_var_TEXCOORD0.y - positionTexture.sample(positionSampler, in.in_var_TEXCOORD4).y) * 0.100000001490116119384765625);
     }
     else
     {
-        _284 = _108;
+        _278 = _108;
     }
-    out.out_var_SV_Target0 = float4(mix(_106.xyz * (((_113 * 2.0) + float3(0.5)) + float3(_242)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_250.y, length(float2(_250.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _284);
+    out.out_var_SV_Target0 = float4(mix(_106.xyz * (((_113 * 2.0) + float3(0.5)) + float3(_242)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_246.y, length(float2(_246.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _278);
     return out;
 }
 

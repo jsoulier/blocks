@@ -43,15 +43,13 @@ float4 main(Input input) : SV_Target0
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, input.Normal);
     float3 ambient = GetAmbientLight();
     float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position.xyz, input.Normal, input.Voxel);
-    float3 finalColor = albedo * (diffuse + ambient + sun);
-    float3 skyColor = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
+    float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
-    finalColor = lerp(finalColor, skyColor, fog);
-    float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
     if (GetIndex(input.Voxel) == kWater)
     {
-        // TODO: Causing bug where alpha is 0 or 1 as camera approaches water
+        // TODO: Causes bug where alpha is 0 or 1 as camera approaches water
+        float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
         alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
     }
-    return float4(finalColor, alpha);
+    return float4(lerp(albedo * (diffuse + ambient + sun), sky, fog), alpha);
 }

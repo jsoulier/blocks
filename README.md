@@ -44,8 +44,8 @@ cd bin
 
 #### Shaders
 
-Shaders are prebuilt.
-To build locally, install [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
+Shaders are precompiled.
+To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
 
 ### Controls
 

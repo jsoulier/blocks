@@ -202,6 +202,7 @@ void camera_move(camera_t* camera, float x, float y, float z)
     camera->x += cp * (sy * z) + cy * x;
     camera->y += y + z * sp;
     camera->z -= cp * (cy * z) - sy * x;
+    camera->y = SDL_clamp(camera->y, -camera->far, camera->far);
 }
 
 void camera_resize(camera_t* camera, int width, int height)

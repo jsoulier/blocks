@@ -1,4 +1,5 @@
 *.comp linguist-language=HLSL
 *.frag linguist-language=HLSL
+*.inc linguist-language=C
 *.vert linguist-language=HLSL
 lib/** linguist-vendored

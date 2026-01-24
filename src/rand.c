@@ -9,8 +9,8 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
     for (int a = 0; a < CHUNK_WIDTH; a++)
     for (int b = 0; b < CHUNK_WIDTH; b++)
     {
-        const int x = cx + a;
-        const int z = cz + b;
+        int x = cx + a;
+        int z = cz + b;
         bool low = false;
         bool grass = false;
         float height = stb_perlin_fbm_noise3(x * 0.005f, 0.0f, z * 0.005f, 2.0f, 0.5f, 6);
@@ -64,10 +64,10 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
         }
         if (low && grass)
         {
-            const float plant = stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
+            float plant = stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
             if (plant > 0.8f && a > 2 && a < CHUNK_WIDTH - 2 && b > 2 && b < CHUNK_WIDTH - 2)
             {
-                const int log = 3 + plant * 2.0f;
+                int log = 3 + plant * 2.0f;
                 for (int dy = 0; dy < log; dy++)
                 {
                     function(userdata, x, y + dy + 1, z, BLOCK_LOG);
@@ -88,8 +88,8 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
             }
             else if (plant > 0.52f)
             {
-                const int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
-                const block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
+                int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
+                block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
                 function(userdata, x, y + 1, z, flowers[value]);
             }
         }
@@ -97,7 +97,7 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
         {
             continue;
         }
-        const float cloud = stb_perlin_turbulence_noise3(x * 0.015f, 0.0f, z * 0.015f, 2.0f, 0.5f, 6);
+        float cloud = stb_perlin_turbulence_noise3(x * 0.015f, 0.0f, z * 0.015f, 2.0f, 0.5f, 6);
         int scale = -1;
         if (cloud > 0.9f)
         {
