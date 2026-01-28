@@ -15,7 +15,8 @@ struct Output
     float4 Position : SV_POSITION;
 };
 
-static const float kScale = 1.01f;
+static const float kScale = 1.02f;
+static const float kBias = 0.002f;
 
 Output main(uint vertexID : SV_VertexID)
 {
@@ -24,5 +25,6 @@ Output main(uint vertexID : SV_VertexID)
     position *= kScale;
     position += BlockPosition + 0.5f;
     output.Position = mul(Transform, float4(position, 1.0f));
+    output.Position.z -= kBias;
     return output;
 }
