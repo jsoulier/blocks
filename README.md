@@ -1,6 +1,6 @@
 # Blocks
 
-![](doc/image1.png)
+![](image.png)
 
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
@@ -61,41 +61,12 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 ### Passes
 
 1. Render opaques to depth texture (for shadows)
-
-![](doc/image2.png)
-
 2. Render sky to G-buffer
-
-![](doc/image3.png)
-
 3. Render opaques to G-buffer
-
-![](doc/image4.png)
-
 4. Calculate SSAO
-
-![](doc/image5.png)
-
 5. Blur SSAO
-
-![](doc/image6.png)
-
 6. Composite G-buffer
-
-![](doc/image7.png)
-
 7. Render transparents to depth teture (for predepth)
-
-![](doc/image8.png)
-
 8. Render transparents and composite
-
-![](doc/image9.png)
-
 9. Render raycast
-
-![](doc/image10.png)
-
 10. Render UI
-
-![](doc/image11.png)
