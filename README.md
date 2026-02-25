@@ -49,14 +49,17 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 
 ### Controls
 
-- `WASDEQ` to move
+- `WASD` to move
+- `Space` to jump
+- `F5` to toggle first person/freecam controller
 - `Escape` to unfocus
 - `Left Click` to break a block
 - `Middle Click` to select a block
 - `Right Click` to place a block
 - `Scroll` to change blocks
 - `F11` to toggle fullscreen
-- `LControl` to move quickly
+- `LControl` to sprint
+- `E/Q` to move up/down in freecam
 
 ### Passes
 
