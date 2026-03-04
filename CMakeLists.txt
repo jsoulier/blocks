@@ -23,7 +23,6 @@ add_executable(blocks WIN32
     src/camera.c
     src/main.c
     src/map.c
-    src/physics.c
     src/player.c
     src/rand.c
     src/save.c
