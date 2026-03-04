@@ -49,7 +49,7 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 
 ### Controls
 
-- `WASD` to move
+- `WASDEQ` to move
 - `Space` to jump
 - `F5` to toggle fly
 - `Escape` to unfocus
@@ -59,7 +59,6 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `Scroll` to change blocks
 - `F11` to toggle fullscreen
 - `LControl` to sprint
-- `EQ` to move up and down (fly only)
 
 ### Passes
 

@@ -245,6 +245,11 @@ void player_place_block(const player_t* player)
     {
         return;
     }
+    if (!block_is_solid(player->block))
+    {
+        world_set_block(player->query.previous, player->block);
+        return;
+    }
     const aabb_t aabb = get_aabb();
     for (int i = 0; i < 3; i++)
     {

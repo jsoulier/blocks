@@ -143,7 +143,7 @@ kernel void main0(texture2d<uint> voxelTexture [[texture(0)]], texture2d<float> 
                     float _191 = _97.y;
                     _57[4] = _190 - _191;
                     _57[5] = _191 - _190;
-                    _199 = _57[_95] > 0.00999999977648258209228515625;
+                    _199 = _57[_95] > 0.0500000007450580596923828125;
                     break;
                 } while(false);
                 _114 = _106 + (float(_199) / precise::max(distance(_88, float2(_139)), 1.0));
