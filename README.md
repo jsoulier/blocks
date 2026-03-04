@@ -8,11 +8,11 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
 - Procedural world generation
 - Asynchronous chunk loading
-- Blocks and sprites
 - Persistent worlds
+- Physics
 - Directional shadows
 - Clustered dynamic lighting
-- Basic transparency
+- Blocks and sprites
 
 ### Building
 
@@ -51,7 +51,7 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 
 - `WASD` to move
 - `Space` to jump
-- `F5` to toggle first person/freecam controller
+- `F5` to toggle fly
 - `Escape` to unfocus
 - `Left Click` to break a block
 - `Middle Click` to select a block
@@ -59,7 +59,7 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `Scroll` to change blocks
 - `F11` to toggle fullscreen
 - `LControl` to sprint
-- `E/Q` to move up/down in freecam
+- `EQ` to move up and down (fly only)
 
 ### Passes
 

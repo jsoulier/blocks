@@ -14,8 +14,6 @@ static const int PLAYER_ID = 0;
 static const float ATLAS_WIDTH = 512.0f;
 static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
-static const float PLAYER_SENSITIVITY = 0.1f;
-static const float PLAYER_REACH = 10.0f;
 static const int SHADOW_RESOLUTION = 4096.0f;
 static const float SHADOW_Y = 30.0f;
 static const float SHADOW_ORTHO = 300.0f;
@@ -52,60 +50,8 @@ static SDL_GPUSampler* linear_sampler;
 static SDL_GPUSampler* nearest_sampler;
 static camera_t shadow_camera;
 static player_t player;
-static world_query_t player_query;
 static Uint64 ticks1;
 static Uint64 ticks2;
-
-static void update_shadow_camera()
-{
-    camera_init(&shadow_camera, CAMERA_TYPE_ORTHO);
-    shadow_camera.ortho = SHADOW_ORTHO;
-    shadow_camera.far = SHADOW_FAR;
-    shadow_camera.x = SDL_floor(player.camera.x / CHUNK_WIDTH) * CHUNK_WIDTH;
-    shadow_camera.y = SHADOW_Y;
-    shadow_camera.z = SDL_floor(player.camera.z / CHUNK_WIDTH) * CHUNK_WIDTH;
-    shadow_camera.pitch = SHADOW_PITCH;
-    shadow_camera.yaw = SHADOW_YAW;
-    camera_update(&shadow_camera);
-}
-
-static void save_or_load_player(bool save)
-{
-    struct
-    {
-        float x;
-        float y;
-        float z;
-        float pitch;
-        float yaw;
-        block_t block;
-    }
-    data;
-    if (save)
-    {
-        data.x = player.camera.x;
-        data.y = player.camera.y;
-        data.z = player.camera.z;
-        data.pitch = player.camera.pitch;
-        data.yaw = player.camera.yaw;
-        data.block = player.block;
-        save_set_player(PLAYER_ID, &data, sizeof(data));
-    }
-    else
-    {
-        player_init(&player);
-        if (save_get_player(PLAYER_ID, &data, sizeof(data)))
-        {
-            player.block = data.block;
-            player.camera.x = data.x;
-            player.camera.y = data.y;
-            player.camera.z = data.z;
-            player.camera.pitch = data.pitch;
-            player.camera.yaw = data.yaw;
-        }
-        player_update_grounded(&player);
-    }
-}
 
 static bool create_atlas()
 {
@@ -583,10 +529,8 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     set_window_icon(BLOCK_GRASS);
     save_init(SAVE_PATH);
     world_init(device);
-    save_or_load_player(false);
+    player_save_or_load(&player, PLAYER_ID, false);
     world_update(&player.camera);
-    player_query = world_raycast(&player.camera, PLAYER_REACH);
-    update_shadow_camera();
     ticks2 = SDL_GetTicks();
     ticks1 = 0;
     return SDL_APP_CONTINUE;
@@ -596,7 +540,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
     SDL_HideWindow(window);
     world_free();
-    save_or_load_player(true);
+    player_save_or_load(&player, PLAYER_ID, true);
     save_free();
     SDL_ReleaseGPUSampler(device, linear_sampler);
     SDL_ReleaseGPUSampler(device, nearest_sampler);
@@ -717,6 +661,19 @@ static bool resize(int width, int height)
     }
     camera_resize(&player.camera, width, height);
     return true;
+}
+
+static void update_shadow_camera()
+{
+    camera_init(&shadow_camera, CAMERA_TYPE_ORTHO);
+    shadow_camera.ortho = SHADOW_ORTHO;
+    shadow_camera.far = SHADOW_FAR;
+    shadow_camera.x = SDL_floor(player.camera.x / CHUNK_WIDTH) * CHUNK_WIDTH;
+    shadow_camera.y = SHADOW_Y;
+    shadow_camera.z = SDL_floor(player.camera.z / CHUNK_WIDTH) * CHUNK_WIDTH;
+    shadow_camera.pitch = SHADOW_PITCH;
+    shadow_camera.yaw = SHADOW_YAW;
+    camera_update(&shadow_camera);
 }
 
 static void render_shadow(SDL_GPUCommandBuffer* cbuf)
@@ -916,14 +873,14 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
 
 static void render_raycast(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
 {
-    if (player_query.block == BLOCK_EMPTY)
+    if (player.query.block == BLOCK_EMPTY)
     {
         return;
     }
     SDL_PushGPUDebugGroup(cbuf, "raycast");
     SDL_BindGPUGraphicsPipeline(pass, raycast_pipeline);
     SDL_PushGPUVertexUniformData(cbuf, 0, player.camera.matrix, 64);
-    SDL_PushGPUVertexUniformData(cbuf, 1, player_query.current, 12);
+    SDL_PushGPUVertexUniformData(cbuf, 1, player.query.current, 12);
     SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
     SDL_PopGPUDebugGroup(cbuf);
 }
@@ -1036,52 +993,13 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     ticks1 = ticks2;
     if (SDL_GetWindowRelativeMouseMode(window))
     {
-        player_move(&player, dt, SDL_GetKeyboardState(NULL));
-        player_query = world_raycast(&player.camera, PLAYER_REACH);
-        save_or_load_player(true);
+        player_move(&player, dt);
+        player_save_or_load(&player, PLAYER_ID, true);
     }
     update_shadow_camera();
     world_update(&player.camera);
     render();
     return SDL_APP_CONTINUE;
-}
-
-static void rotate_player(float pitch, float yaw)
-{
-    player_rotate(&player, pitch, yaw, PLAYER_SENSITIVITY);
-    player_query = world_raycast(&player.camera, PLAYER_REACH);
-}
-
-static void break_block()
-{
-    if (player_query.block != BLOCK_EMPTY)
-    {
-        world_set_block(player_query.current, BLOCK_EMPTY);
-    }
-}
-
-static void select_block()
-{
-    if (player_query.block != BLOCK_EMPTY)
-    {
-        player.block = player_query.block;
-    }
-}
-
-static void place_block()
-{
-    if (player_query.block != BLOCK_EMPTY && !player_overlaps_block(&player, player_query.previous))
-    {
-        world_set_block(player_query.previous, player.block);
-    }
-}
-
-static void change_block(int dy)
-{
-    static const int COUNT = BLOCK_COUNT - BLOCK_EMPTY - 1;
-    int block = player.block - (BLOCK_EMPTY + 1) + dy;
-    block = (block + COUNT) % COUNT;
-    player.block = block + BLOCK_EMPTY + 1;
 }
 
 SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
@@ -1093,7 +1011,7 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
     case SDL_EVENT_MOUSE_MOTION:
         if (SDL_GetWindowRelativeMouseMode(window))
         {
-            rotate_player(event->motion.yrel, event->motion.xrel);
+            player_rotate(&player, event->motion.yrel, event->motion.xrel);
         }
         break;
     case SDL_EVENT_KEY_DOWN:
@@ -1105,7 +1023,6 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         else if (event->key.scancode == SDL_SCANCODE_F5)
         {
             player_toggle_controller(&player);
-            SDL_Log("Controller mode: %s", player_controller_name(player.controller));
         }
         else if (event->key.scancode == SDL_SCANCODE_F11)
         {
@@ -1130,20 +1047,20 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         {
             if (event->button.button == SDL_BUTTON_LEFT)
             {
-                break_block();
+                player_break_block(&player);
             }
             else if (event->button.button == SDL_BUTTON_MIDDLE)
             {
-                select_block();
+                player_select_block(&player);
             }
             else if (event->button.button == SDL_BUTTON_RIGHT)
             {
-                place_block();
+                player_place_block(&player);
             }
         }
         break;
     case SDL_EVENT_MOUSE_WHEEL:
-        change_block(event->wheel.y);
+        player_change_block(&player, event->wheel.y);
         break;
     }
     return SDL_APP_CONTINUE;

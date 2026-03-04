@@ -4,30 +4,32 @@
 
 #include "block.h"
 #include "camera.h"
+#include "world.h"
 
 typedef enum player_controller
 {
-    PLAYER_CONTROLLER_FP,
-    PLAYER_CONTROLLER_FREECAM,
+    PLAYER_CONTROLLER_WALK,
+    PLAYER_CONTROLLER_FLY,
+    PLAYER_CONTROLLER_COUNT,
 }
 player_controller_t;
 
 typedef struct player
 {
     camera_t camera;
-    float velocity[3];
-    bool on_ground;
-    bool jump_was_down;
-    block_t block;
     player_controller_t controller;
+    float velocity[3];
+    bool is_on_ground;
+    world_query_t query;
+    block_t block;
 }
 player_t;
 
-void player_init(player_t* player);
-void player_set_controller(player_t* player, player_controller_t controller);
+void player_save_or_load(player_t* player, int id, bool save);
 void player_toggle_controller(player_t* player);
-const char* player_controller_name(player_controller_t controller);
-void player_rotate(player_t* player, float pitch, float yaw, float sensitivity);
-void player_move(player_t* player, float dt_ms, const bool* keyboard_state);
-bool player_overlaps_block(const player_t* player, const int position[3]);
-void player_update_grounded(player_t* player);
+void player_rotate(player_t* player, float pitch, float yaw);
+void player_move(player_t* player, float dt);
+void player_place_block(const player_t* player);
+void player_select_block(player_t* player);
+void player_break_block(const player_t* player);
+void player_change_block(player_t* player, int dy);
