@@ -23,142 +23,142 @@ kernel void main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], cons
     do
     {
         uint2 _59 = uint2(colorTexture.get_width(), colorTexture.get_height());
-        bool _71;
-        if (!(gl_GlobalInvocationID.x >= _59.x))
+        bool _70;
+        if (gl_GlobalInvocationID.x < _59.x)
         {
-            _71 = gl_GlobalInvocationID.y >= _59.y;
+            _70 = gl_GlobalInvocationID.y >= _59.y;
         }
         else
         {
-            _71 = true;
+            _70 = true;
         }
-        if (_71)
+        if (_70)
         {
             break;
         }
-        float2 _76 = float2(UniformBuffer.Viewport);
-        float2 _77 = _76 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
-        float _80 = precise::max(_77.x, _77.y);
-        float _81 = 50.0 * _80;
-        float _82 = 10.0 * _80;
-        float2 _85 = float2(_82) + float2(_81);
-        float _86 = float(gl_GlobalInvocationID.x);
-        float _93 = float(uint(UniformBuffer.Viewport.y) - gl_GlobalInvocationID.y);
-        bool _99;
-        if (_86 > _82)
+        float2 _75 = float2(UniformBuffer.Viewport);
+        float2 _76 = _75 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
+        float _79 = precise::max(_76.x, _76.y);
+        float _80 = 50.0 * _79;
+        float _81 = 10.0 * _79;
+        float2 _84 = float2(_81) + float2(_80);
+        float _85 = float(gl_GlobalInvocationID.x);
+        float _92 = float(uint(UniformBuffer.Viewport.y) - gl_GlobalInvocationID.y);
+        bool _98;
+        if (_85 > _81)
         {
-            _99 = _86 < _85.x;
+            _98 = _85 < _84.x;
         }
         else
         {
-            _99 = false;
+            _98 = false;
         }
-        bool _103;
-        if (_99)
+        bool _102;
+        if (_98)
         {
-            _103 = _93 > _82;
-        }
-        else
-        {
-            _103 = false;
-        }
-        bool _108;
-        if (_103)
-        {
-            _108 = _93 < _85.y;
+            _102 = _92 > _81;
         }
         else
         {
-            _108 = false;
+            _102 = false;
         }
-        if (_108)
+        bool _107;
+        if (_102)
         {
-            float3 _121 = float3((_86 - _82) / _81, 1.0 - ((_93 - _82) / _81), float(UniformBuffer_1.Index));
-            float4 _123 = atlasTexture.sample(atlasSampler, _121.xy, uint(rint(_121.z)), level(0.0));
-            float _124 = _123.w;
-            if (_124 > 0.001000000047497451305389404296875)
+            _107 = _92 < _84.y;
+        }
+        else
+        {
+            _107 = false;
+        }
+        if (_107)
+        {
+            float3 _120 = float3((_85 - _81) / _80, 1.0 - ((_92 - _81) / _80), float(UniformBuffer_1.Index));
+            float4 _122 = atlasTexture.sample(atlasSampler, _120.xy, uint(rint(_120.z)), level(0.0));
+            float _123 = _122.w;
+            if (_123 > 0.001000000047497451305389404296875)
             {
                 spvImageFence(colorTexture);
-                float4 _130 = colorTexture.read(uint2(gl_GlobalInvocationID.xy));
-                float _131 = fast::clamp(_124, 0.0, 1.0);
-                float _136 = 1.0 - _131;
-                colorTexture.write(float4((_123.xyz * _131) + (_130.xyz * _136), _131 + (_130.w * _136)), uint2(gl_GlobalInvocationID.xy));
+                float4 _129 = colorTexture.read(uint2(gl_GlobalInvocationID.xy));
+                float _130 = fast::clamp(_123, 0.0, 1.0);
+                float _135 = 1.0 - _130;
+                colorTexture.write(float4((_122.xyz * _130) + (_129.xyz * _135), _130 + (_129.w * _135)), uint2(gl_GlobalInvocationID.xy));
                 break;
             }
         }
-        float _146 = 8.0 * _80;
-        float _147 = 2.0 * _80;
-        float2 _148 = _76 * 0.5;
-        float2 _149 = float2(_146, _147);
-        float2 _150 = _148 - _149;
-        float2 _151 = _148 + _149;
-        float2 _152 = float2(_147, _146);
-        float2 _153 = _148 - _152;
-        float2 _154 = _148 + _152;
-        bool _161;
-        if (_86 > _150.x)
+        float _145 = 8.0 * _79;
+        float _146 = 2.0 * _79;
+        float2 _147 = _75 * 0.5;
+        float2 _148 = float2(_145, _146);
+        float2 _149 = _147 - _148;
+        float2 _150 = _147 + _148;
+        float2 _151 = float2(_146, _145);
+        float2 _152 = _147 - _151;
+        float2 _153 = _147 + _151;
+        bool _160;
+        if (_85 > _149.x)
         {
-            _161 = _93 > _150.y;
+            _160 = _92 > _149.y;
         }
         else
         {
-            _161 = false;
+            _160 = false;
         }
-        bool _166;
-        if (_161)
+        bool _165;
+        if (_160)
         {
-            _166 = _86 < _151.x;
-        }
-        else
-        {
-            _166 = false;
-        }
-        bool _171;
-        if (_166)
-        {
-            _171 = _93 < _151.y;
+            _165 = _85 < _150.x;
         }
         else
         {
-            _171 = false;
+            _165 = false;
         }
-        bool _192;
-        if (!_171)
+        bool _170;
+        if (_165)
         {
-            bool _181;
-            if (_86 > _153.x)
+            _170 = _92 < _150.y;
+        }
+        else
+        {
+            _170 = false;
+        }
+        bool _191;
+        if (!_170)
+        {
+            bool _180;
+            if (_85 > _152.x)
             {
-                _181 = _93 > _153.y;
+                _180 = _92 > _152.y;
             }
             else
             {
-                _181 = false;
+                _180 = false;
             }
-            bool _186;
-            if (_181)
+            bool _185;
+            if (_180)
             {
-                _186 = _86 < _154.x;
+                _185 = _85 < _153.x;
             }
             else
             {
-                _186 = false;
+                _185 = false;
             }
-            bool _191;
-            if (_186)
+            bool _190;
+            if (_185)
             {
-                _191 = _93 < _154.y;
+                _190 = _92 < _153.y;
             }
             else
             {
-                _191 = false;
+                _190 = false;
             }
-            _192 = _191;
+            _191 = _190;
         }
         else
         {
-            _192 = true;
+            _191 = true;
         }
-        if (_192)
+        if (_191)
         {
             colorTexture.write(float4(1.0), uint2(gl_GlobalInvocationID.xy));
             break;

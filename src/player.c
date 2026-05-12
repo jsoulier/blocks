@@ -227,7 +227,6 @@ void player_move(player_t* player, float dt)
         {
             player->is_on_ground = false;
         }
-        player->query = world_raycast(&player->camera, REACH);
     }
     else
     {
@@ -237,6 +236,7 @@ void player_move(player_t* player, float dt)
         float dz = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
         camera_move(&player->camera, dx * speed * dt, dy * speed * dt, dz * speed * dt);
     }
+    player->query = world_raycast(&player->camera, REACH);
 }
 
 void player_place_block(const player_t* player)
