@@ -100,10 +100,10 @@ static void frustum(float planes[6][4], float a[4][4])
     planes[3][1] = a[1][3] - a[1][1];
     planes[3][2] = a[2][3] - a[2][1];
     planes[3][3] = a[3][3] - a[3][1];
-    planes[4][0] = a[0][3] + a[0][2];
-    planes[4][1] = a[1][3] + a[1][2];
-    planes[4][2] = a[2][3] + a[2][2];
-    planes[4][3] = a[3][3] + a[3][2];
+    planes[4][0] = a[0][2];
+    planes[4][1] = a[1][2];
+    planes[4][2] = a[2][2];
+    planes[4][3] = a[3][2];
     planes[5][0] = a[0][3] - a[0][2];
     planes[5][1] = a[1][3] - a[1][2];
     planes[5][2] = a[2][3] - a[2][2];
