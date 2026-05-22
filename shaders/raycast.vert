@@ -15,16 +15,14 @@ struct Output
     float4 Position : SV_POSITION;
 };
 
-static const float kScale = 1.02f;
-static const float kBias = 0.002f;
+static const float kZ = 0.1f;
 
 Output main(uint vertexID : SV_VertexID)
 {
     Output output;
     float3 position = GetCubePosition(vertexID);
-    position *= kScale;
     position += BlockPosition + 0.5f;
     output.Position = mul(Transform, float4(position, 1.0f));
-    output.Position.z -= kBias;
+    output.Position.z = kZ;
     return output;
 }

@@ -8,12 +8,10 @@
 
 static void multiply(float matrix[4][4], float a[4][4], float b[4][4])
 {
-    // TODO: matrix layout
-    float c[4][4];
+    float c[4][4] = {0};
     for (int i = 0; i < 4; i++)
     for (int j = 0; j < 4; j++)
     {
-        c[i][j] = 0.0f;
         c[i][j] += a[0][j] * b[i][0];
         c[i][j] += a[1][j] * b[i][1];
         c[i][j] += a[2][j] * b[i][2];
@@ -38,11 +36,9 @@ static void perspective(float matrix[4][4], float aspect, float fov, float near,
     matrix[1][3] = 0.0f;
     matrix[2][0] = 0.0f;
     matrix[2][1] = 0.0f;
-    matrix[2][2] = -(far + near) / (far - near);
+    matrix[2][2] = -far / (far - near);
     matrix[2][3] = -1.0f;
-    matrix[3][0] = 0.0f;
-    matrix[3][1] = 0.0f;
-    matrix[3][2] = -(2.0f * far * near) / (far - near);
+    matrix[3][2] = -(near * far) / (far - near);
     matrix[3][3] = 0.0f;
 }
 

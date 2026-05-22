@@ -7,20 +7,6 @@
 static const float kEpsilon = 0.001f;
 static const float kPi = 3.14159265f;
 
-static const float3 kPositions[10] =
-{
-    float3(-0.5f,-0.5f,-0.5f ),
-    float3( 0.5f,-0.5f,-0.5f ),
-    float3( 0.5f, 0.5f,-0.5f ),
-    float3(-0.5f, 0.5f,-0.5f ),
-    float3(-0.5f,-0.5f, 0.5f ),
-    float3( 0.5f,-0.5f, 0.5f ),
-    float3( 0.5f, 0.5f, 0.5f ),
-    float3(-0.5f, 0.5f, 0.5f ),
-    float3( 0.0f, 0.0f, 0.0f ),
-    float3( 0.0f, 0.0f, 0.0f ),
-};
-
 static const float3 kNormals[10] =
 {
     float3( 0.0f, 0.0f, 1.0f ),
@@ -35,7 +21,29 @@ static const float3 kNormals[10] =
     float3( 0.0f, 1.0f, 0.0f ),
 };
 
-static const uint kIndices[36] =
+static const float3 kCubePositions[8] =
+{
+    float3(-0.5f,-0.5f,-0.5f ),
+    float3( 0.5f,-0.5f,-0.5f ),
+    float3( 0.5f, 0.5f,-0.5f ),
+    float3(-0.5f, 0.5f,-0.5f ),
+    float3(-0.5f,-0.5f, 0.5f ),
+    float3( 0.5f,-0.5f, 0.5f ),
+    float3( 0.5f, 0.5f, 0.5f ),
+    float3(-0.5f, 0.5f, 0.5f ),
+};
+
+static const float3 kCubeNormals[6] =
+{
+    float3( 0.0f, 0.0f,-1.0f ),
+    float3( 0.0f, 0.0f, 1.0f ),
+    float3(-1.0f, 0.0f, 0.0f ),
+    float3( 1.0f, 0.0f, 0.0f ),
+    float3( 0.0f, 1.0f, 0.0f ),
+    float3( 0.0f,-1.0f, 0.0f ),
+};
+
+static const uint kCubeIndices[36] =
 {
     0, 1, 2, 0, 2, 3,
     5, 4, 7, 5, 7, 6,
@@ -82,7 +90,12 @@ float3 GetNormal(uint voxel)
 
 float3 GetCubePosition(uint vertexID)
 {
-    return kPositions[kIndices[vertexID]];
+    return kCubePositions[kCubeIndices[vertexID]];
+}
+
+float3 GetCubeNormal(uint vertexID)
+{
+    return kCubeNormals[vertexID / 6];
 }
 
 bool IsSky(uint voxel)
@@ -137,7 +150,7 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
     return finalColor * kLight;
 }
 
-float GetSunLight(Texture2D<float> texture, SamplerState sampler, float4x4 transform, float3 position, float3 normal, uint voxel)
+float GetSunLight(Texture2D<float> texture, SamplerState state, float4x4 transform, float3 position, float3 normal, uint voxel)
 {
     static const float kBias = 0.001f;
     static const float kBase = 0.0f;
@@ -161,7 +174,7 @@ float GetSunLight(Texture2D<float> texture, SamplerState sampler, float4x4 trans
         }
     }
     float depth = shadowPosition.z;
-    float closestDepth = texture.SampleLevel(sampler, uv, 0);
+    float closestDepth = texture.SampleLevel(state, uv, 0);
     if (depth < closestDepth + kBias)
     {
         return kBase - kShadow * ratio;
