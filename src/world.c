@@ -12,6 +12,8 @@
 
 #define WORKERS 4
 
+static const int AO_LEVEL_CLEAR = 3;
+
 typedef enum job_type
 {
     JOB_TYPE_NONE,
@@ -267,7 +269,25 @@ static block_t get_neighborhood_block(chunk_t* chunks[3][3], int bx, int by, int
         return chunk->blocks[bx][by][bz];
     }
     chunk_to_world(chunk, &bx, &by, &bz);
-    chunk_t* neighbor = chunks[dx + 1][dz + 1];
+    int cx = 1;
+    int cz = 1;
+    if (bx < chunk->x)
+    {
+        cx--;
+    }
+    else if (bx >= chunk->x + CHUNK_WIDTH)
+    {
+        cx++;
+    }
+    if (bz < chunk->z)
+    {
+        cz--;
+    }
+    else if (bz >= chunk->z + CHUNK_WIDTH)
+    {
+        cz++;
+    }
+    chunk_t* neighbor = chunks[cx][cz];
     CHECK(neighbor);
     return get_chunk_block(neighbor, bx, by, bz);
 }
@@ -331,6 +351,42 @@ static bool is_visible(block_t block, block_t neighbor)
     return false;
 }
 
+static int get_ao(chunk_t* chunks[3][3], int bx, int by, int bz, direction_t direction, int vertex)
+{
+    int position[3];
+    voxel_get_cube_position(direction, vertex, position);
+    int side1[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    int side2[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    int corner[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    int side = 0;
+    for (int i = 0; i < 3; i++)
+    {
+        if (DIRECTIONS[direction][i])
+        {
+            continue;
+        }
+        int offset = position[i] ? 1 : -1;
+        if (side++ == 0)
+        {
+            side1[i] = offset;
+        }
+        else
+        {
+            side2[i] = offset;
+        }
+        corner[i] = offset;
+    }
+    CHECK(side == 2);
+    bool has_side1 = block_has_occlusion(get_neighborhood_block(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
+    bool has_side2 = block_has_occlusion(get_neighborhood_block(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
+    bool has_corner = block_has_occlusion(get_neighborhood_block(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
+    if (has_side1 && has_side2)
+    {
+        return 0;
+    }
+    return AO_LEVEL_CLEAR - has_side1 - has_side2 - has_corner;
+}
+
 static void gen_chunk_blocks(chunk_t* chunk)
 {
     CHECK(SDL_GetAtomicInt(&chunk->block_state) == JOB_STATE_RUNNING);
@@ -382,9 +438,23 @@ static void gen_chunk_voxels(chunk_t* chunks[3][3], cpu_buffer_t voxels[MESH_TYP
             {
                 continue;
             }
+            int ao[4];
+            int order[] = {0, 1, 2, 3};
             for (int k = 0; k < 4; k++)
             {
-                voxel_t voxel = voxel_pack_cube(block, bx, by, bz, j, k);
+                ao[k] = get_ao(chunks, bx, by, bz, j, k);
+            }
+            if (ao[0] + ao[3] > ao[1] + ao[2])
+            {
+                order[0] = 1;
+                order[1] = 3;
+                order[2] = 0;
+                order[3] = 2;
+            }
+            for (int k = 0; k < 4; k++)
+            {
+                int vertex = order[k];
+                voxel_t voxel = voxel_pack_cube(block, bx, by, bz, j, vertex, ao[vertex]);
                 cpu_buffer_append(&voxels[get_mesh_for_block(block)], &voxel);
             }
         }
@@ -1002,22 +1072,19 @@ void world_set_block(const int position[3], block_t block)
     int local_z = position[2];
     world_to_chunk(chunk, &local_x, &local_y, &local_z);
     block_t old_block = set_chunk_block(chunk, position[0], position[1], position[2], block);
-    regen_chunk_voxels(chunk_x, chunk_z);
-    if (local_x == 0)
+    int min_x = local_x == 0 ? -1 : 0;
+    int max_x = local_x == CHUNK_WIDTH - 1 ? 1 : 0;
+    int min_z = local_z == 0 ? -1 : 0;
+    int max_z = local_z == CHUNK_WIDTH - 1 ? 1 : 0;
+    for (int x = min_x; x <= max_x; x++)
+    for (int z = min_z; z <= max_z; z++)
     {
-        regen_chunk_voxels(chunk_x - 1, chunk_z);
-    }
-    else if (local_x == CHUNK_WIDTH - 1)
-    {
-        regen_chunk_voxels(chunk_x + 1, chunk_z);
-    }
-    if (local_z == 0)
-    {
-        regen_chunk_voxels(chunk_x, chunk_z - 1);
-    }
-    else if (local_z == CHUNK_WIDTH - 1)
-    {
-        regen_chunk_voxels(chunk_x, chunk_z + 1);
+        int cx = chunk_x + x;
+        int cz = chunk_z + z;
+        if (is_chunk_local(cx, cz) && !is_chunk_on_border(cx, cz))
+        {
+            regen_chunk_voxels(cx, cz);
+        }
     }
     chunk_t* neighborhood[3][3] = {0};
     get_neighborhood(chunk_x, chunk_z, neighborhood);

@@ -27,6 +27,7 @@ struct Output
     nointerpolation float3 Normal : TEXCOORD1;
     float3 Texcoord : TEXCOORD2;
     nointerpolation uint Voxel : TEXCOORD3;
+    float AO : TEXCOORD4;
 };
 
 Output main(Input input)
@@ -40,5 +41,6 @@ Output main(Input input)
     output.Position = mul(Proj, output.Position);
     output.Texcoord = GetTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
+    output.AO = GetAO(input.Voxel);
     return output;
 }

@@ -53,9 +53,10 @@ static const uint kCubeIndices[36] =
     4, 5, 1, 4, 1, 0
 };
 
-bool GetOcclusion(uint voxel)
+float GetAO(uint voxel)
 {
-    return (voxel >> OCCLUSION_OFFSET) & OCCLUSION_MASK;
+    static const float kAO[4] = {0.4f, 0.6f, 0.8f, 1.0f};
+    return kAO[(voxel >> AO_OFFSET) & AO_MASK];
 }
 
 uint GetDirection(uint voxel)
@@ -165,7 +166,7 @@ float GetSunLight(Texture2D<float> texture, SamplerState state, float4x4 transfo
     }
     float3 direction = normalize(float3(transform[2].xyz));
     float ratio = -0.707f;
-    if (GetOcclusion(voxel))
+    if (GetShadow(voxel))
     {
         ratio = dot(normal, direction);
         if (ratio > 0.0f)
@@ -203,26 +204,6 @@ float3 GetSkyColor(float3 position)
     float dx = length(float2(position.x, position.z));
     float alpha = (atan2(dy, dx) + kPi / 2.0f) / kPi;
     return lerp(kBottom, kTop, alpha);
-}
-
-float2 GetRandom2(float2 position)
-{
-    float2 k1 = float2(127.1f, 311.7f);
-    float2 k2 = float2(269.5f, 183.3f);
-    float n = sin(dot(position, k1)) * 43758.5453f;
-    float m = sin(dot(position, k2)) * 43758.5453f;
-    float2 r = frac(float2(n, m));
-    return r * 2.0f - 1.0f;
-}
-
-float2 GetRandom2(float3 position)
-{
-    float3 k1 = float3(127.1, 311.7, 74.7);
-    float3 k2 = float3(269.5, 183.3, 246.1);
-    float n = sin(dot(position, k1)) * 43758.5453f;
-    float m = sin(dot(position, k2)) * 43758.5453f;
-    float2 r = frac(float2(n, m));
-    return r * 2.0f - 1.0f;
 }
 
 #endif

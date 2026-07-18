@@ -81,7 +81,7 @@ struct main0_in
 vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]])
 {
     main0_out out = {};
-    float3 _88 = float3(float((in.in_var_TEXCOORD0 >> 6u) & 31u), float((in.in_var_TEXCOORD0 >> 11u) & 255u), float((in.in_var_TEXCOORD0 >> 19u) & 31u)) + float3(int3(float3(float(UniformBuffer_2.ChunkPosition.x), 0.0, float(UniformBuffer_2.ChunkPosition.y))));
+    float3 _88 = float3(float((in.in_var_TEXCOORD0 >> 7u) & 31u), float((in.in_var_TEXCOORD0 >> 12u) & 255u), float((in.in_var_TEXCOORD0 >> 20u) & 31u)) + float3(int3(float3(float(UniformBuffer_2.ChunkPosition.x), 0.0, float(UniformBuffer_2.ChunkPosition.y))));
     float4 _89 = float4(_88.x, _88.y, _88.z, _66.w);
     float4 _101 = UniformBuffer_1.View * float4(_88, 1.0);
     _89.w = _101.z;
@@ -90,8 +90,8 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& Un
     _122.y = 1.0 - _122.y;
     out.gl_Position = _106;
     out.out_var_TEXCOORD0 = _89;
-    out.out_var_TEXCOORD1 = _65[((in.in_var_TEXCOORD0 >> 1u) & 15u) - 1u];
-    out.out_var_TEXCOORD2 = float3(float((in.in_var_TEXCOORD0 >> 24u) & 1u), float((in.in_var_TEXCOORD0 >> 25u) & 1u), float((in.in_var_TEXCOORD0 >> 26u) & 63u));
+    out.out_var_TEXCOORD1 = _65[((in.in_var_TEXCOORD0 >> 2u) & 15u) - 1u];
+    out.out_var_TEXCOORD2 = float3(float((in.in_var_TEXCOORD0 >> 25u) & 1u), float((in.in_var_TEXCOORD0 >> 26u) & 1u), float((in.in_var_TEXCOORD0 >> 27u) & 31u));
     out.out_var_TEXCOORD3 = in.in_var_TEXCOORD0;
     out.out_var_TEXCOORD4 = _122;
     return out;

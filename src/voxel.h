@@ -8,4 +8,5 @@
 typedef Uint32 voxel_t;
 
 voxel_t voxel_pack_sprite(block_t block, int x, int y, int z, direction_t direction, int i);
-voxel_t voxel_pack_cube(block_t block, int x, int y, int z, direction_t direction, int i);
+voxel_t voxel_pack_cube(block_t block, int x, int y, int z, direction_t direction, int i, int ao);
+void voxel_get_cube_position(direction_t direction, int i, int position[3]);
