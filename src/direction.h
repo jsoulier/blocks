@@ -1,6 +1,6 @@
 #pragma once
 
-typedef enum direction
+typedef enum Direction
 {
     DIRECTION_NORTH,
     DIRECTION_SOUTH,
@@ -10,7 +10,7 @@ typedef enum direction
     DIRECTION_DOWN,
     DIRECTION_COUNT,
 }
-direction_t;
+Direction;
 
 static const int DIRECTIONS[DIRECTION_COUNT][3] =
 {

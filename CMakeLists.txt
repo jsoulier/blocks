@@ -22,7 +22,6 @@ add_executable(blocks WIN32
     src/buffer.c
     src/camera.c
     src/main.c
-    src/map.c
     src/player.c
     src/rand.c
     src/save.c
@@ -32,6 +31,7 @@ add_executable(blocks WIN32
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
+target_compile_definitions(blocks PRIVATE SDL_ASSERT_LEVEL=$<IF:$<CONFIG:Debug>,3,0>)
 target_include_directories(blocks PUBLIC lib/jsmn)
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
@@ -99,4 +99,5 @@ add_shader(sky.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(sky.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(transparent.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(transparent.vert shaders/shader.hlsl src/voxel.inc)
-add_shader(ui.comp shaders/shader.hlsl src/voxel.inc)
+add_shader(ui.frag)
+add_shader(ui.vert)

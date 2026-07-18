@@ -4,14 +4,14 @@
 
 #include "block.h"
 
-typedef void (*save_set_block_t)(void* userdata, int bx, int by, int bz, block_t block);
+typedef void (*SaveSetBlock)(void* userdata, int bx, int by, int bz, Block block);
 
-bool save_init(const char* path);
-void save_free();
-void save_commit();
-void save_set_player(int id, const void* data, int size);
-bool save_get_player(int id, void* data, int size);
-void save_set_sky(float time_of_day);
-bool save_get_sky(float* time_of_day);
-void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block);
-void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t function);
+bool Save_Init(const char* path);
+void Save_Free();
+void Save_Commit();
+void Save_SetPlayer(int id, const void* data, int size);
+bool Save_GetPlayer(int id, void* data, int size);
+void Save_SetSky(float time_of_day);
+bool Save_GetSky(float* time_of_day);
+void Save_SetBlock(int cx, int cz, int bx, int by, int bz, Block block);
+void Save_GetBlocks(void* userdata, int cx, int cz, SaveSetBlock function);

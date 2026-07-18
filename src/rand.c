@@ -4,7 +4,7 @@
 #include "rand.h"
 #include "world.h"
 
-void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
+void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock function)
 {
     for (int a = 0; a < CHUNK_WIDTH; a++)
     for (int b = 0; b < CHUNK_WIDTH; b++)
@@ -24,8 +24,8 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
             low = true;
         }
         float biome = stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 6);
-        block_t top;
-        block_t bottom;
+        Block top;
+        Block bottom;
         if (height + biome < 31)
         {
             top = BLOCK_SAND;
@@ -89,7 +89,7 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
             else if (plant > 0.52f)
             {
                 int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
-                block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
+                Block flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
                 function(userdata, x, y + 1, z, flowers[value]);
             }
         }

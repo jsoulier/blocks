@@ -6,12 +6,23 @@
 #include "save.h"
 #include "world.h"
 
-typedef struct aabb
+typedef struct AABB
 {
     float min[3];
     float max[3];
 }
-aabb_t;
+AABB;
+
+typedef struct PlayerSave
+{
+    float x;
+    float y;
+    float z;
+    float pitch;
+    float yaw;
+    Block block;
+}
+PlayerSave;
 
 static const float PHYSICS_EPSILON = 0.001f;
 static const float WALK_SPEED = 5.0f;
@@ -29,19 +40,19 @@ static const float COLLISION_RADIUS = 0.3f;
 static const float COLLISION_HEIGHT = 1.8f;
 static const float EYE_OFFSET = 1.62f;
 
-static aabb_t get_aabb()
+static AABB GetAABB()
 {
-    return (aabb_t) {{-COLLISION_RADIUS, -EYE_OFFSET, -COLLISION_RADIUS},
+    return (AABB) {{-COLLISION_RADIUS, -EYE_OFFSET, -COLLISION_RADIUS},
         {COLLISION_RADIUS, COLLISION_HEIGHT - EYE_OFFSET, COLLISION_RADIUS}};
 }
 
-static bool is_solid(const float position[3])
+static bool IsSolid(const float position[3])
 {
     int index[3] = {position[0], position[1], position[2]};
-    return block_is_solid(world_get_block(index));
+    return Block_IsSolid(World_GetBlock(index));
 }
 
-static bool is_colliding(const aabb_t *aabb, const float position[3])
+static bool IsColliding(const AABB *aabb, const float position[3])
 {
     int min[3];
     int max[3];
@@ -55,7 +66,7 @@ static bool is_colliding(const aabb_t *aabb, const float position[3])
     for (int bz = min[2]; bz <= max[2]; bz++)
     {
         float location[3] = {bx, by, bz};
-        if (is_solid(location))
+        if (IsSolid(location))
         {
             return true;
         }
@@ -63,7 +74,7 @@ static bool is_colliding(const aabb_t *aabb, const float position[3])
     return false;
 }
 
-static void bisect(const aabb_t* aabb, float position[3], int axis, float step)
+static void Bisect(const AABB* aabb, float position[3], int axis, float step)
 {
     float start[3] = {position[0], position[1], position[2]};
     float lower = 0.0f;
@@ -73,7 +84,7 @@ static void bisect(const aabb_t* aabb, float position[3], int axis, float step)
         float t = (lower + upper) * 0.5f;
         float location[3] = {start[0], start[1], start[2]};
         location[axis] += step * t;
-        if (is_colliding(aabb, location))
+        if (IsColliding(aabb, location))
         {
             upper = t;
         }
@@ -85,7 +96,7 @@ static void bisect(const aabb_t* aabb, float position[3], int axis, float step)
     position[axis] = start[axis] + step * lower;
 }
 
-static bool move(const aabb_t* aabb, float position[3], int axis, float delta)
+static bool Move(const AABB* aabb, float position[3], int axis, float delta)
 {
     if (SDL_fabsf(delta) <= SDL_FLT_EPSILON)
     {
@@ -98,9 +109,9 @@ static bool move(const aabb_t* aabb, float position[3], int axis, float delta)
     {
         float location[3] = {position[0], position[1], position[2]};
         location[axis] += step;
-        if (is_colliding(aabb, location))
+        if (IsColliding(aabb, location))
         {
-            bisect(aabb, position, axis, step);
+            Bisect(aabb, position, axis, step);
             return true;
         }
         SDL_memcpy(position, location, 12);
@@ -108,36 +119,16 @@ static bool move(const aabb_t* aabb, float position[3], int axis, float delta)
     return false;
 }
 
-void player_save_or_load(player_t* player, int id, bool save)
+void Player_Load(Player* player, int id)
 {
-    struct
-    {
-        float x;
-        float y;
-        float z;
-        float pitch;
-        float yaw;
-        block_t block;
-    }
-    data;
-    if (save)
-    {
-        data.x = player->camera.x;
-        data.y = player->camera.y;
-        data.z = player->camera.z;
-        data.pitch = player->camera.pitch;
-        data.yaw = player->camera.yaw;
-        data.block = player->block;
-        save_set_player(id, &data, sizeof(data));
-        return;
-    }
-    camera_init(&player->camera, CAMERA_TYPE_PERSPECTIVE);
+    PlayerSave data;
+    Camera_Init(&player->camera, CAMERA_TYPE_PERSPECTIVE);
     player->camera.x = -200.0f;
     player->camera.y = 50.0f;
     player->camera.z = 0.0f;
     player->controller = PLAYER_CONTROLLER_WALK;
     player->block = BLOCK_YELLOW_TORCH;
-    if (save_get_player(id, &data, sizeof(data)))
+    if (Save_GetPlayer(id, &data, sizeof(data)))
     {
         player->block = data.block;
         player->camera.x = data.x;
@@ -146,27 +137,39 @@ void player_save_or_load(player_t* player, int id, bool save)
         player->camera.pitch = data.pitch;
         player->camera.yaw = data.yaw;
     }
-    player->query = world_raycast(&player->camera, REACH);
+    player->query = World_Raycast(&player->camera, REACH);
 }
 
-void player_toggle_controller(player_t* player)
+void Player_Save(const Player* player, int id)
+{
+    PlayerSave data;
+    data.x = player->camera.x;
+    data.y = player->camera.y;
+    data.z = player->camera.z;
+    data.pitch = player->camera.pitch;
+    data.yaw = player->camera.yaw;
+    data.block = player->block;
+    Save_SetPlayer(id, &data, sizeof(data));
+}
+
+void Player_ToggleController(Player* player)
 {
     player->controller++;
     player->controller %= PLAYER_CONTROLLER_COUNT;
 }
 
-void player_rotate(player_t* player, float pitch, float yaw)
+void Player_Rotate(Player* player, float pitch, float yaw)
 {
-    camera_rotate(&player->camera, pitch * -SENSITIVITY, yaw * SENSITIVITY);
-    player->query = world_raycast(&player->camera, REACH);
+    Camera_Rotate(&player->camera, pitch * -SENSITIVITY, yaw * SENSITIVITY);
+    player->query = World_Raycast(&player->camera, REACH);
 }
 
-void player_move(player_t* player, float dt)
+void Player_Move(Player* player, float dt)
 {
     const bool* keys = SDL_GetKeyboardState(NULL);
     if (player->controller == PLAYER_CONTROLLER_WALK)
     {
-        const aabb_t aabb = get_aabb();
+        const AABB aabb = GetAABB();
         dt = SDL_min(dt * 0.001f, 0.05f);
         float input_x = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
         float input_z = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
@@ -205,7 +208,7 @@ void player_move(player_t* player, float dt)
         bool hits[3];
         for (int i = 0; i < 3; i++)
         {
-            hits[i] = move(&aabb, player->camera.position, i, player->velocity[i] * dt);
+            hits[i] = Move(&aabb, player->camera.position, i, player->velocity[i] * dt);
         }
         if (hits[0])
         {
@@ -234,36 +237,36 @@ void player_move(player_t* player, float dt)
         float dx = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
         float dy = (keys[SDL_SCANCODE_E] || keys[SDL_SCANCODE_SPACE]) - (keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_LSHIFT]);
         float dz = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
-        camera_move(&player->camera, dx * speed * dt, dy * speed * dt, dz * speed * dt);
+        Camera_Move(&player->camera, dx * speed * dt, dy * speed * dt, dz * speed * dt);
     }
-    player->query = world_raycast(&player->camera, REACH);
+    player->query = World_Raycast(&player->camera, REACH);
 }
 
-void player_place_block(const player_t* player)
+void Player_PlaceBlock(const Player* player)
 {
     if (player->query.block == BLOCK_EMPTY)
     {
         return;
     }
-    if (!block_is_solid(player->block))
+    if (!Block_IsSolid(player->block))
     {
-        world_set_block(player->query.previous, player->block);
+        World_SetBlock(player->query.previous, player->block);
         return;
     }
-    const aabb_t aabb = get_aabb();
+    const AABB aabb = GetAABB();
     for (int i = 0; i < 3; i++)
     {
         float min = player->camera.position[i] + aabb.min[i] + PHYSICS_EPSILON;
         float max = player->camera.position[i] + aabb.max[i] - PHYSICS_EPSILON;
         if (max <= player->query.previous[i] || min >= player->query.previous[i] + 1.0f)
         {
-            world_set_block(player->query.previous, player->block);
+            World_SetBlock(player->query.previous, player->block);
             break;
         }
     }
 }
 
-void player_select_block(player_t* player)
+void Player_SelectBlock(Player* player)
 {
     if (player->query.block != BLOCK_EMPTY)
     {
@@ -271,15 +274,15 @@ void player_select_block(player_t* player)
     }
 }
 
-void player_break_block(const player_t* player)
+void Player_BreakBlock(const Player* player)
 {
     if (player->query.block != BLOCK_EMPTY)
     {
-        world_set_block(player->query.current, BLOCK_EMPTY);
+        World_SetBlock(player->query.current, BLOCK_EMPTY);
     }
 }
 
-void player_change_block(player_t* player, int dy)
+void Player_ChangeBlock(Player* player, int dy)
 {
     static const int COUNT = BLOCK_COUNT - BLOCK_EMPTY - 1;
     int block = player->block - (BLOCK_EMPTY + 1) + dy;

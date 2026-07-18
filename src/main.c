@@ -4,7 +4,6 @@
 
 #include "block.h"
 #include "camera.h"
-#include "check.h"
 #include "player.h"
 #include "save.h"
 #include "shader.h"
@@ -29,23 +28,23 @@ static SDL_GPUGraphicsPipeline* depth_pipeline;
 static SDL_GPUGraphicsPipeline* shadow_pipeline;
 static SDL_GPUGraphicsPipeline* sky_pipeline;
 static SDL_GPUGraphicsPipeline* raycast_pipeline;
-static SDL_GPUComputePipeline* ui_pipeline;
+static SDL_GPUGraphicsPipeline* ui_pipeline;
 static SDL_Surface* atlas_surface;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUTexture* depth_texture;
 static SDL_GPUTexture* position_texture;
-static SDL_GPUTexture* composite_texture;
 static SDL_GPUTexture* multisample_color_texture;
 static SDL_GPUTexture* multisample_position_texture;
 static SDL_GPUTexture* shadow_texture;
+static SDL_GPUBuffer* block_buffer;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* shadow_sampler;
-static sky_t sky;
-static player_t player;
+static Sky sky;
+static Player player;
 static Uint64 ticks1;
 static Uint64 ticks2;
 
-static bool create_atlas()
+static bool CreateAtlas()
 {
     char path[512] = {0};
     SDL_snprintf(path, sizeof(path), "%satlas.png", SDL_GetBasePath());
@@ -151,7 +150,7 @@ static bool create_atlas()
     return true;
 }
 
-static void set_window_icon(block_t block)
+static void SetWindowIcon(Block block)
 {
     if (!atlas_surface)
     {
@@ -164,7 +163,7 @@ static void set_window_icon(block_t block)
         return;
     }
     SDL_Rect src;
-    src.x = block_get_index(block, DIRECTION_NORTH) * BLOCK_WIDTH;
+    src.x = Block_GetIndex(block, DIRECTION_NORTH) * BLOCK_WIDTH;
     src.y = 0;
     src.w = BLOCK_WIDTH;
     src.h = BLOCK_WIDTH;
@@ -183,7 +182,7 @@ static void set_window_icon(block_t block)
     SDL_DestroySurface(icon);
 }
 
-static bool create_opaque_pipeline()
+static bool CreateOpaquePipeline()
 {
     SDL_GPUColorTargetDescription color_targets[2] = {0};
     color_targets[0].format = color_format;
@@ -193,8 +192,8 @@ static bool create_opaque_pipeline()
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "opaque.vert");
-    info.fragment_shader = shader_load(device, "opaque.frag");
+    info.vertex_shader = Shader_Load(device, "opaque.vert");
+    info.fragment_shader = Shader_Load(device, "opaque.frag");
     info.target_info.num_color_targets = 2;
     info.target_info.color_target_descriptions = color_targets;
     info.target_info.has_depth_stencil_target = true;
@@ -218,15 +217,15 @@ static bool create_opaque_pipeline()
     return opaque_pipeline != NULL;
 }
 
-static bool create_depth_pipeline()
+static bool CreateDepthPipeline()
 {
     SDL_GPUVertexAttribute vertex_attributes[1] = {0};
     SDL_GPUVertexBufferDescription vertex_buffers[1] = {0};
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "depth.vert");
-    info.fragment_shader = shader_load(device, "depth.frag");
+    info.vertex_shader = Shader_Load(device, "depth.vert");
+    info.fragment_shader = Shader_Load(device, "depth.frag");
     info.target_info.has_depth_stencil_target = true;
     info.target_info.depth_stencil_format = depth_format;
     info.vertex_input_state.num_vertex_attributes = 1;
@@ -248,7 +247,7 @@ static bool create_depth_pipeline()
     return depth_pipeline != NULL;
 }
 
-static bool create_transparent_pipeline()
+static bool CreateTransparentPipeline()
 {
     SDL_GPUColorTargetDescription color_targets[1] = {0};
     color_targets[0].format = color_format;
@@ -264,8 +263,8 @@ static bool create_transparent_pipeline()
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "transparent.vert");
-    info.fragment_shader = shader_load(device, "transparent.frag");
+    info.vertex_shader = Shader_Load(device, "transparent.vert");
+    info.fragment_shader = Shader_Load(device, "transparent.frag");
     info.target_info.num_color_targets = 1;
     info.target_info.color_target_descriptions = color_targets;
     info.target_info.has_depth_stencil_target = true;
@@ -288,15 +287,15 @@ static bool create_transparent_pipeline()
     return transparent_pipeline != NULL;
 }
 
-static bool create_shadow_pipeline()
+static bool CreateShadowPipeline()
 {
     SDL_GPUVertexAttribute vertex_attributes[1] = {0};
     SDL_GPUVertexBufferDescription vertex_buffers[1] = {0};
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "shadow.vert");
-    info.fragment_shader = shader_load(device, "shadow.frag");
+    info.vertex_shader = Shader_Load(device, "shadow.vert");
+    info.fragment_shader = Shader_Load(device, "shadow.frag");
     info.target_info.has_depth_stencil_target = true;
     info.target_info.depth_stencil_format = depth_format;
     info.vertex_input_state.num_vertex_attributes = 1;
@@ -320,14 +319,14 @@ static bool create_shadow_pipeline()
     return shadow_pipeline != NULL;
 }
 
-static bool create_sky_pipeline()
+static bool CreateSkyPipeline()
 {
     SDL_GPUColorTargetDescription color_targets[2] = {0};
     color_targets[0].format = color_format;
     color_targets[1].format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "sky.vert");
-    info.fragment_shader = shader_load(device, "sky.frag");
+    info.vertex_shader = Shader_Load(device, "sky.vert");
+    info.fragment_shader = Shader_Load(device, "sky.frag");
     info.target_info.num_color_targets = 2;
     info.target_info.color_target_descriptions = color_targets;
     info.target_info.has_depth_stencil_target = true;
@@ -342,7 +341,7 @@ static bool create_sky_pipeline()
     return sky_pipeline != NULL;
 }
 
-static bool create_raycast_pipeline()
+static bool CreateRaycastPipeline()
 {
     SDL_GPUColorTargetDescription color_targets[1] = {0};
     color_targets[0].format = color_format;
@@ -354,8 +353,8 @@ static bool create_raycast_pipeline()
     color_targets[0].blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
     color_targets[0].blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
-    info.vertex_shader = shader_load(device, "raycast.vert");
-    info.fragment_shader = shader_load(device, "raycast.frag");
+    info.vertex_shader = Shader_Load(device, "raycast.vert");
+    info.fragment_shader = Shader_Load(device, "raycast.frag");
     info.target_info.num_color_targets = 1;
     info.target_info.color_target_descriptions = color_targets;
     info.target_info.has_depth_stencil_target = true;
@@ -372,7 +371,33 @@ static bool create_raycast_pipeline()
     return raycast_pipeline != NULL;
 }
 
-static bool create_samplers()
+static bool CreateUIPipeline()
+{
+    SDL_GPUColorTargetDescription color_target = {0};
+    color_target.format = color_format;
+    color_target.blend_state.enable_blend = true;
+    color_target.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+    color_target.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+    color_target.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+    color_target.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+    color_target.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+    color_target.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+    SDL_GPUGraphicsPipelineCreateInfo info = {0};
+    info.vertex_shader = Shader_Load(device, "ui.vert");
+    info.fragment_shader = Shader_Load(device, "ui.frag");
+    info.target_info.num_color_targets = 1;
+    info.target_info.color_target_descriptions = &color_target;
+    info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
+    if (info.vertex_shader && info.fragment_shader)
+    {
+        ui_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+    }
+    SDL_ReleaseGPUShader(device, info.vertex_shader);
+    SDL_ReleaseGPUShader(device, info.fragment_shader);
+    return ui_pipeline != NULL;
+}
+
+static bool CreateSamplers()
 {
     SDL_GPUSamplerCreateInfo info = {0};
     info.min_filter = SDL_GPU_FILTER_LINEAR;
@@ -402,7 +427,7 @@ static bool create_samplers()
     return true;
 }
 
-static bool create_textures()
+static bool CreateTextures()
 {
     SDL_GPUTextureCreateInfo info = {0};
     info.type = SDL_GPU_TEXTURETYPE_2D;
@@ -454,73 +479,73 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         return false;
     }
     SDL_SetGPUSwapchainParameters(device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
-    color_format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+    color_format = SDL_GetGPUSwapchainTextureFormat(device, window);
     depth_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    if (!create_atlas())
+    if (!CreateAtlas())
     {
         SDL_Log("Failed to create atlas: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_samplers())
+    if (!CreateSamplers())
     {
         SDL_Log("Failed to create samplers: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_textures())
+    if (!CreateTextures())
     {
         SDL_Log("Failed to create textures: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_opaque_pipeline())
+    if (!CreateOpaquePipeline())
     {
         SDL_Log("Failed to create opaque pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_transparent_pipeline())
+    if (!CreateTransparentPipeline())
     {
         SDL_Log("Failed to create transparent pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_depth_pipeline())
+    if (!CreateDepthPipeline())
     {
         SDL_Log("Failed to create predepth pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_shadow_pipeline())
+    if (!CreateShadowPipeline())
     {
         SDL_Log("Failed to create shadow pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_sky_pipeline())
+    if (!CreateSkyPipeline())
     {
         SDL_Log("Failed to create sky pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!create_raycast_pipeline())
+    if (!CreateRaycastPipeline())
     {
         SDL_Log("Failed to create raycast pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    ui_pipeline = shader_load(device, "ui.comp");
-    if (!ui_pipeline)
+    if (!CreateUIPipeline())
     {
-        SDL_Log("Failed to load ui pipeline");
+        SDL_Log("Failed to create ui pipeline: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    if (!block_init(device))
+    block_buffer = Block_GetBuffer(device);
+    if (!block_buffer)
     {
-        SDL_Log("Failed to initialize blocks");
+        SDL_Log("Failed to create block buffer");
         return SDL_APP_FAILURE;
     }
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
-    set_window_icon(BLOCK_GRASS);
-    save_init(SAVE_PATH);
-    sky_save_or_load(&sky, false);
-    world_init(device);
-    player_save_or_load(&player, PLAYER_ID, false);
-    world_update(&player.camera);
+    SetWindowIcon(BLOCK_GRASS);
+    Save_Init(SAVE_PATH);
+    Sky_Load(&sky);
+    World_Init(device);
+    Player_Load(&player, PLAYER_ID);
+    World_Update(&player.camera);
     ticks2 = SDL_GetTicks();
     ticks1 = ticks2;
     return SDL_APP_CONTINUE;
@@ -529,22 +554,21 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
 void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
     SDL_HideWindow(window);
-    world_free();
-    block_free();
-    player_save_or_load(&player, PLAYER_ID, true);
-    sky_save_or_load(&sky, true);
-    save_free();
+    World_Free();
+    Player_Save(&player, PLAYER_ID);
+    Sky_Save(&sky);
+    Save_Free();
     SDL_ReleaseGPUSampler(device, nearest_sampler);
     SDL_ReleaseGPUSampler(device, shadow_sampler);
     SDL_ReleaseGPUTexture(device, shadow_texture);
     SDL_ReleaseGPUTexture(device, multisample_position_texture);
     SDL_ReleaseGPUTexture(device, multisample_color_texture);
-    SDL_ReleaseGPUTexture(device, composite_texture);
     SDL_ReleaseGPUTexture(device, position_texture);
     SDL_ReleaseGPUTexture(device, depth_texture);
     SDL_ReleaseGPUTexture(device, atlas_texture);
+    SDL_ReleaseGPUBuffer(device, block_buffer);
     SDL_DestroySurface(atlas_surface);
-    SDL_ReleaseGPUComputePipeline(device, ui_pipeline);
+    SDL_ReleaseGPUGraphicsPipeline(device, ui_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, raycast_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, sky_pipeline);
     SDL_ReleaseGPUGraphicsPipeline(device, shadow_pipeline);
@@ -557,16 +581,14 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_Quit();
 }
 
-static bool resize(int width, int height)
+static bool Resize(int width, int height)
 {
     SDL_ReleaseGPUTexture(device, depth_texture);
     SDL_ReleaseGPUTexture(device, position_texture);
-    SDL_ReleaseGPUTexture(device, composite_texture);
     SDL_ReleaseGPUTexture(device, multisample_color_texture);
     SDL_ReleaseGPUTexture(device, multisample_position_texture);
     depth_texture = NULL;
     position_texture = NULL;
-    composite_texture = NULL;
     multisample_color_texture = NULL;
     multisample_position_texture = NULL;
     SDL_GPUTextureCreateInfo info = {0};
@@ -594,13 +616,6 @@ static bool resize(int width, int height)
         return false;
     }
     info.format = color_format;
-    info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-    composite_texture = SDL_CreateGPUTexture(device, &info);
-    if (!composite_texture)
-    {
-        SDL_Log("Failed to create composite texture: %s", SDL_GetError());
-        return false;
-    }
     info.sample_count = SAMPLE_COUNT;
     info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
     multisample_color_texture = SDL_CreateGPUTexture(device, &info);
@@ -616,11 +631,11 @@ static bool resize(int width, int height)
         SDL_Log("Failed to create multisample position texture: %s", SDL_GetError());
         return false;
     }
-    camera_resize(&player.camera, width, height);
+    Camera_Resize(&player.camera, width, height);
     return true;
 }
 
-static void render_shadow(SDL_GPUCommandBuffer* cbuf)
+static void RenderShadow(SDL_GPUCommandBuffer* cbuf)
 {
     if (!sky.has_sun)
     {
@@ -640,15 +655,13 @@ static void render_shadow(SDL_GPUCommandBuffer* cbuf)
         return;
     }
     SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
-    SDL_GPUBuffer* block_buffer = block_get_buffer();
-    SDL_BindGPUVertexStorageBuffers(pass, 0, &block_buffer, 1);
     SDL_PushGPUDebugGroup(cbuf, "shadow");
-    world_render(&sky.shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
+    World_Render(&sky.shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
     SDL_PopGPUDebugGroup(cbuf);
     SDL_EndGPURenderPass(pass);
 }
 
-static void render_sky(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+static void RenderSky(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
 {
     SDL_PushGPUDebugGroup(cbuf, "sky");
     SDL_BindGPUGraphicsPipeline(pass, sky_pipeline);
@@ -659,7 +672,7 @@ static void render_sky(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     SDL_PopGPUDebugGroup(cbuf);
 }
 
-static void render_opaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+static void RenderOpaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
 {
     SDL_GPUTextureSamplerBinding sampler_bindings[2] = {0};
     sampler_bindings[0].texture = atlas_texture;
@@ -672,11 +685,12 @@ static void render_opaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
     SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
-    world_render(&player.camera, cbuf, pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
+    SDL_BindGPUFragmentStorageBuffers(pass, 0, &block_buffer, 1);
+    World_Render(&player.camera, cbuf, pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);
 }
 
-static void render_opaque_forward(SDL_GPUCommandBuffer* cbuf)
+static void RenderOpaqueForward(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUColorTargetInfo color_info[2] = {0};
     color_info[0].load_op = SDL_GPU_LOADOP_CLEAR;
@@ -702,12 +716,12 @@ static void render_opaque_forward(SDL_GPUCommandBuffer* cbuf)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    render_sky(cbuf, pass);
-    render_opaque(cbuf, pass);
+    RenderSky(cbuf, pass);
+    RenderOpaque(cbuf, pass);
     SDL_EndGPURenderPass(pass);
 }
 
-static void render_depth(SDL_GPUCommandBuffer* cbuf)
+static void RenderDepth(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_LOAD;
@@ -721,12 +735,12 @@ static void render_depth(SDL_GPUCommandBuffer* cbuf)
     }
     SDL_PushGPUDebugGroup(cbuf, "depth");
     SDL_BindGPUGraphicsPipeline(pass, depth_pipeline);
-    world_render(&player.camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT);
+    World_Render(&player.camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT);
     SDL_PopGPUDebugGroup(cbuf);
     SDL_EndGPURenderPass(pass);
 }
 
-static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+static void RenderTransparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
 {
     SDL_GPUTextureSamplerBinding sampler_bindings[3] = {0};
     sampler_bindings[0].texture = atlas_texture;
@@ -741,11 +755,12 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
     SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 3);
-    world_render(&player.camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
+    SDL_BindGPUFragmentStorageBuffers(pass, 0, &block_buffer, 1);
+    World_Render(&player.camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);
 }
 
-static void render_raycast(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
+static void RenderRaycast(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
 {
     if (player.query.block == BLOCK_EMPTY)
     {
@@ -759,14 +774,13 @@ static void render_raycast(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     SDL_PopGPUDebugGroup(cbuf);
 }
 
-static void render_forward(SDL_GPUCommandBuffer* cbuf)
+static void RenderForward(SDL_GPUCommandBuffer* cbuf, SDL_GPUTexture* swapchain_texture)
 {
     SDL_GPUColorTargetInfo color_info = {0};
     color_info.load_op = SDL_GPU_LOADOP_LOAD;
     color_info.texture = multisample_color_texture;
     color_info.store_op = SDL_GPU_STOREOP_RESOLVE;
-    color_info.resolve_texture = composite_texture;
-    color_info.cycle_resolve_texture = true;
+    color_info.resolve_texture = swapchain_texture;
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_LOAD;
     depth_info.store_op = SDL_GPU_STOREOP_STORE;
@@ -777,52 +791,45 @@ static void render_forward(SDL_GPUCommandBuffer* cbuf)
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    render_transparent(cbuf, pass);
-    render_raycast(cbuf, pass);
+    RenderTransparent(cbuf, pass);
+    RenderRaycast(cbuf, pass);
     SDL_EndGPURenderPass(pass);
 }
 
-static void render_ui(SDL_GPUCommandBuffer* cbuf)
+static void RenderUI(SDL_GPUCommandBuffer* cbuf, SDL_GPUTexture* swapchain_texture)
 {
-    SDL_GPUStorageTextureReadWriteBinding write_textures[1] = {0};
-    write_textures[0].texture = composite_texture;
-    SDL_GPUComputePass* compute_pass = SDL_BeginGPUComputePass(cbuf, write_textures, 1, NULL, 0);
-    if (!compute_pass)
+    SDL_GPUColorTargetInfo color_info = {0};
+    color_info.load_op = SDL_GPU_LOADOP_LOAD;
+    color_info.store_op = SDL_GPU_STOREOP_STORE;
+    color_info.texture = swapchain_texture;
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(cbuf, &color_info, 1, NULL);
+    if (!pass)
     {
-        SDL_Log("Failed to begin compute pass: %s", SDL_GetError());
+        SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    SDL_GPUTextureSamplerBinding read_textures[1] = {0};
-    read_textures[0].texture = atlas_texture;
-    read_textures[0].sampler = nearest_sampler;
-    Sint32 index = block_get_index(player.block, DIRECTION_NORTH);
-    int groups_x = (player.camera.width + 8 - 1) / 8;
-    int groups_y = (player.camera.height + 8 - 1) / 8;
+    SDL_GPUTextureSamplerBinding sampler_binding = {0};
+    sampler_binding.texture = atlas_texture;
+    sampler_binding.sampler = nearest_sampler;
+    struct
+    {
+        int viewport[2];
+        Uint32 index;
+    }
+    uniform;
+    uniform.viewport[0] = player.camera.width;
+    uniform.viewport[1] = player.camera.height;
+    uniform.index = Block_GetIndex(player.block, DIRECTION_NORTH);
     SDL_PushGPUDebugGroup(cbuf, "ui");
-    SDL_BindGPUComputePipeline(compute_pass, ui_pipeline);
-    SDL_BindGPUComputeSamplers(compute_pass, 0, read_textures, 1);
-    SDL_PushGPUComputeUniformData(cbuf, 0, player.camera.size, 8);
-    SDL_PushGPUComputeUniformData(cbuf, 1, &index, 4);
-    SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);
-    SDL_EndGPUComputePass(compute_pass);
+    SDL_BindGPUGraphicsPipeline(pass, ui_pipeline);
+    SDL_BindGPUFragmentSamplers(pass, 0, &sampler_binding, 1);
+    SDL_PushGPUVertexUniformData(cbuf, 0, &uniform, sizeof(uniform));
+    SDL_DrawGPUPrimitives(pass, 6, 3, 0, 0);
     SDL_PopGPUDebugGroup(cbuf);
+    SDL_EndGPURenderPass(pass);
 }
 
-static void render_swapchain(SDL_GPUCommandBuffer* cbuf, SDL_GPUTexture* swapchain_texture)
-{
-    SDL_GPUBlitInfo info = {0};
-    info.source.texture = composite_texture;
-    info.source.w = player.camera.width;
-    info.source.h = player.camera.height;
-    info.destination.texture = swapchain_texture;
-    info.destination.w = player.camera.width;
-    info.destination.h = player.camera.height;
-    info.load_op = SDL_GPU_LOADOP_DONT_CARE;
-    info.filter = SDL_GPU_FILTER_NEAREST;
-    SDL_BlitGPUTexture(cbuf, &info);
-}
-
-static void render()
+static void Render()
 {
     SDL_GPUCommandBuffer* cbuf = SDL_AcquireGPUCommandBuffer(device);
     if (!cbuf)
@@ -844,18 +851,17 @@ static void render()
         SDL_SubmitGPUCommandBuffer(cbuf);
         return;
     }
-    if ((width != player.camera.width || height != player.camera.height) && !resize(width, height))
+    if ((width != player.camera.width || height != player.camera.height) && !Resize(width, height))
     {
         SDL_SubmitGPUCommandBuffer(cbuf);
         return;
     }
-    camera_update(&player.camera);
-    render_shadow(cbuf);
-    render_opaque_forward(cbuf);
-    render_depth(cbuf);
-    render_forward(cbuf);
-    render_ui(cbuf);
-    render_swapchain(cbuf, swapchain_texture);
+    Camera_Update(&player.camera);
+    RenderShadow(cbuf);
+    RenderOpaqueForward(cbuf);
+    RenderDepth(cbuf);
+    RenderForward(cbuf, swapchain_texture);
+    RenderUI(cbuf, swapchain_texture);
     SDL_SubmitGPUCommandBuffer(cbuf);
 }
 
@@ -864,15 +870,15 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     ticks2 = SDL_GetTicks();
     float dt = ticks2 - ticks1;
     ticks1 = ticks2;
-    sky_update(&sky, dt / 1000.0f);
+    Sky_Update(&sky, dt / 1000.0f);
     if (SDL_GetWindowRelativeMouseMode(window))
     {
-        player_move(&player, dt);
-        player_save_or_load(&player, PLAYER_ID, true);
+        Player_Move(&player, dt);
+        Player_Save(&player, PLAYER_ID);
     }
-    sky_update_shadow(&sky, &player.camera, SHADOW_RESOLUTION);
-    world_update(&player.camera);
-    render();
+    Sky_UpdateShadow(&sky, &player.camera, SHADOW_RESOLUTION);
+    World_Update(&player.camera);
+    Render();
     return SDL_APP_CONTINUE;
 }
 
@@ -885,7 +891,7 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
     case SDL_EVENT_MOUSE_MOTION:
         if (SDL_GetWindowRelativeMouseMode(window))
         {
-            player_rotate(&player, event->motion.yrel, event->motion.xrel);
+            Player_Rotate(&player, event->motion.yrel, event->motion.xrel);
         }
         break;
     case SDL_EVENT_KEY_DOWN:
@@ -896,7 +902,7 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         }
         else if (event->key.scancode == SDL_SCANCODE_F5)
         {
-            player_toggle_controller(&player);
+            Player_ToggleController(&player);
         }
         else if (event->key.scancode == SDL_SCANCODE_F11)
         {
@@ -921,20 +927,20 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         {
             if (event->button.button == SDL_BUTTON_LEFT)
             {
-                player_break_block(&player);
+                Player_BreakBlock(&player);
             }
             else if (event->button.button == SDL_BUTTON_MIDDLE)
             {
-                player_select_block(&player);
+                Player_SelectBlock(&player);
             }
             else if (event->button.button == SDL_BUTTON_RIGHT)
             {
-                player_place_block(&player);
+                Player_PlaceBlock(&player);
             }
         }
         break;
     case SDL_EVENT_MOUSE_WHEEL:
-        player_change_block(&player, event->wheel.y);
+        Player_ChangeBlock(&player, event->wheel.y);
         break;
     }
     return SDL_APP_CONTINUE;

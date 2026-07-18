@@ -5,8 +5,8 @@
 #include "block.h"
 #include "direction.h"
 
-typedef Uint32 voxel_t;
+typedef Uint32 Voxel;
 
-voxel_t voxel_pack_sprite(block_t block, int x, int y, int z, direction_t direction, int i);
-voxel_t voxel_pack_cube(block_t block, int x, int y, int z, direction_t direction, int i, int ao);
-void voxel_get_cube_position(direction_t direction, int i, int position[3]);
+Voxel Voxel_PackSprite(Block block, int x, int y, int z, Direction direction, int i);
+Voxel Voxel_PackCube(Block block, int x, int y, int z, Direction direction, int i, int ao);
+void Voxel_GetCubePosition(Direction direction, int i, int position[3]);

@@ -11,7 +11,6 @@ struct Block
 {
     uint IsSprite;
     uint HasOcclusion;
-    uint HasShadow;
     uint IsFullbright;
     uint Indices[6];
 };

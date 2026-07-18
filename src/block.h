@@ -4,8 +4,8 @@
 
 #include "direction.h"
 
-typedef Uint8 block_t;
-enum // block_t
+typedef Uint8 Block;
+enum // Block
 {
     BLOCK_EMPTY,
 
@@ -35,7 +35,7 @@ enum // block_t
     BLOCK_COUNT,
 };
 
-typedef struct light
+typedef struct Light
 {
     Uint8 red;
     Uint8 green;
@@ -45,26 +45,23 @@ typedef struct light
     Sint32 y;
     Sint32 z;
 }
-light_t;
+Light;
 
-typedef struct block_gpu
+typedef struct BlockGPU
 {
     Uint32 is_sprite;
     Uint32 has_occlusion;
-    Uint32 has_shadow;
     Uint32 is_fullbright;
     Uint32 indices[DIRECTION_COUNT];
 }
-block_gpu_t;
+BlockGPU;
 
-bool block_init(SDL_GPUDevice* device);
-void block_free();
-SDL_GPUBuffer* block_get_buffer();
+SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device);
 
-bool block_is_opaque(block_t block);
-bool block_is_sprite(block_t block);
-bool block_is_solid(block_t block);
-bool block_has_occlusion(block_t block);
-int block_get_index(block_t block, direction_t direction);
-bool block_is_light(block_t block);
-light_t block_get_light(block_t block);
+bool Block_IsOpaque(Block block);
+bool Block_IsSprite(Block block);
+bool Block_IsSolid(Block block);
+bool Block_HasOcclusion(Block block);
+int Block_GetIndex(Block block, Direction direction);
+bool Block_IsLight(Block block);
+Light Block_GetLight(Block block);

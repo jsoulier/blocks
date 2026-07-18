@@ -4,25 +4,26 @@
 
 #include "camera.h"
 
-typedef struct sky_render
+typedef struct SkyRender
 {
     float sun[4];
     float top[4];
     float horizon[4];
     float ambient[4];
 }
-sky_render_t;
+SkyRender;
 
-typedef struct sky
+typedef struct Sky
 {
     float time_of_day;
     bool has_sun;
-    sky_render_t render;
-    camera_t shadow_camera;
+    SkyRender render;
+    Camera shadow_camera;
     int shadow_frame;
 }
-sky_t;
+Sky;
 
-void sky_save_or_load(sky_t* sky, bool save);
-void sky_update(sky_t* sky, float dt);
-void sky_update_shadow(sky_t* sky, const camera_t* camera, int resolution);
+void Sky_Load(Sky* sky);
+void Sky_Save(const Sky* sky);
+void Sky_Update(Sky* sky, float dt);
+void Sky_UpdateShadow(Sky* sky, const Camera* camera, int resolution);

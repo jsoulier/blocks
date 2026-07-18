@@ -40,7 +40,7 @@ static sqlite3_stmt* set_block;
 static sqlite3_stmt* get_blocks;
 static SDL_Mutex* mutex;
 
-bool save_init(const char* path)
+bool Save_Init(const char* path)
 {
     if (sqlite3_open(path, &handle))
     {
@@ -107,7 +107,7 @@ bool save_init(const char* path)
     return true;
 }
 
-void save_free()
+void Save_Free()
 {
     SDL_DestroyMutex(mutex);
     sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
@@ -128,7 +128,7 @@ void save_free()
     mutex = NULL;
 }
 
-void save_commit()
+void Save_Commit()
 {
     if (!handle)
     {
@@ -139,7 +139,7 @@ void save_commit()
     SDL_UnlockMutex(mutex);
 }
 
-void save_set_player(int id, const void* data, int size)
+void Save_SetPlayer(int id, const void* data, int size)
 {
     if (!handle)
     {
@@ -156,7 +156,7 @@ void save_set_player(int id, const void* data, int size)
     SDL_UnlockMutex(mutex);
 }
 
-bool save_get_player(int id, void* data, int size)
+bool Save_GetPlayer(int id, void* data, int size)
 {
     if (!handle)
     {
@@ -183,7 +183,7 @@ bool save_get_player(int id, void* data, int size)
     return has_player;
 }
 
-void save_set_sky(float time_of_day)
+void Save_SetSky(float time_of_day)
 {
     if (!handle)
     {
@@ -199,7 +199,7 @@ void save_set_sky(float time_of_day)
     SDL_UnlockMutex(mutex);
 }
 
-bool save_get_sky(float* time_of_day)
+bool Save_GetSky(float* time_of_day)
 {
     if (!handle)
     {
@@ -216,7 +216,7 @@ bool save_get_sky(float* time_of_day)
     return has_sky;
 }
 
-void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block)
+void Save_SetBlock(int cx, int cz, int bx, int by, int bz, Block block)
 {
     if (!handle)
     {
@@ -237,7 +237,7 @@ void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block)
     SDL_UnlockMutex(mutex);
 }
 
-void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t function)
+void Save_GetBlocks(void* userdata, int cx, int cz, SaveSetBlock function)
 {
     if (!handle)
     {
@@ -251,7 +251,7 @@ void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t function)
         int bx = sqlite3_column_int(get_blocks, 0);
         int by = sqlite3_column_int(get_blocks, 1);
         int bz = sqlite3_column_int(get_blocks, 2);
-        block_t block = sqlite3_column_int(get_blocks, 3);
+        Block block = sqlite3_column_int(get_blocks, 3);
         function(userdata, bx, by, bz, block);
     }
     sqlite3_reset(get_blocks);

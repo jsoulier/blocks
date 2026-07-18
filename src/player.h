@@ -6,30 +6,31 @@
 #include "camera.h"
 #include "world.h"
 
-typedef enum player_controller
+typedef enum PlayerController
 {
     PLAYER_CONTROLLER_WALK,
     PLAYER_CONTROLLER_FLY,
     PLAYER_CONTROLLER_COUNT,
 }
-player_controller_t;
+PlayerController;
 
-typedef struct player
+typedef struct Player
 {
-    camera_t camera;
-    player_controller_t controller;
+    Camera camera;
+    PlayerController controller;
     float velocity[3];
     bool is_on_ground;
-    world_query_t query;
-    block_t block;
+    WorldQuery query;
+    Block block;
 }
-player_t;
+Player;
 
-void player_save_or_load(player_t* player, int id, bool save);
-void player_toggle_controller(player_t* player);
-void player_rotate(player_t* player, float pitch, float yaw);
-void player_move(player_t* player, float dt);
-void player_place_block(const player_t* player);
-void player_select_block(player_t* player);
-void player_break_block(const player_t* player);
-void player_change_block(player_t* player, int dy);
+void Player_Load(Player* player, int id);
+void Player_Save(const Player* player, int id);
+void Player_ToggleController(Player* player);
+void Player_Rotate(Player* player, float pitch, float yaw);
+void Player_Move(Player* player, float dt);
+void Player_PlaceBlock(const Player* player);
+void Player_SelectBlock(Player* player);
+void Player_BreakBlock(const Player* player);
+void Player_ChangeBlock(Player* player, int dy);
