@@ -13,6 +13,7 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 - Directional shadows
 - Clustered dynamic lighting
 - Blocks and sprites
+- Day and night cycle
 
 ### Building
 
@@ -59,6 +60,7 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `Scroll` to change blocks
 - `F11` to toggle fullscreen
 - `LControl` to sprint
+- `T` to reset the time of day
 
 ### Passes
 

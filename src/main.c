@@ -308,7 +308,7 @@ static bool CreateShadowPipeline()
     info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
     info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
     info.rasterizer_state.depth_bias_constant_factor = 1.0f;
-    info.rasterizer_state.depth_bias_slope_factor = 1.0f;
+    info.rasterizer_state.depth_bias_slope_factor = 2.0f;
     info.rasterizer_state.enable_depth_bias = true;
     if (info.vertex_shader && info.fragment_shader)
     {
@@ -904,6 +904,10 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         else if (event->key.scancode == SDL_SCANCODE_F5)
         {
             Player_ToggleController(&player);
+        }
+        else if (event->key.scancode == SDL_SCANCODE_T)
+        {
+            Sky_Reset(&sky);
         }
         else if (event->key.scancode == SDL_SCANCODE_F11)
         {

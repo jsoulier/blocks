@@ -24,6 +24,7 @@ typedef struct Sky
 Sky;
 
 void Sky_Load(Sky* sky);
+void Sky_Reset(Sky* sky);
 void Sky_Save(const Sky* sky);
 void Sky_Update(Sky* sky, float dt);
 void Sky_UpdateShadow(Sky* sky, const Camera* camera, int resolution);

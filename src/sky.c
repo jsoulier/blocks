@@ -104,6 +104,13 @@ void Sky_Load(Sky* sky)
     UpdateRender(sky);
 }
 
+void Sky_Reset(Sky* sky)
+{
+    sky->time_of_day = 3.0f / 8.0f;
+    sky->shadow_frame = 0;
+    UpdateRender(sky);
+}
+
 void Sky_Update(Sky* sky, float dt)
 {
     float total_length = SUNRISE_LENGTH + DAY_LENGTH + SUNSET_LENGTH + NIGHT_LENGTH;

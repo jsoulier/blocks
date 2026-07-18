@@ -176,13 +176,12 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     uint height;
     texture.GetDimensions(width, height);
     float2 texelSize = 1.0f / float2(width, height);
-    float filterRadius = abs(normal.y) < 0.5f ? 2.0f : 1.0f;
     float bias = 0.0003f + 0.001f * (1.0f - ratio);
     float visibility = 0.0f;
     for (int x = -1; x <= 1; x++)
     for (int y = -1; y <= 1; y++)
     {
-        visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize * filterRadius, shadowPosition.z - bias);
+        visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
     }
     visibility /= 9.0f;
     float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
