@@ -15,7 +15,7 @@ static const int PLAYER_ID = 0;
 static const float ATLAS_WIDTH = 512.0f;
 static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
-static const int SHADOW_RESOLUTION = 4096.0f;
+static const int SHADOW_RESOLUTION = 2048.0f;
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
 
 static SDL_Window* window;
@@ -478,7 +478,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to claim window: %s", SDL_GetError());
         return false;
     }
-    SDL_SetGPUSwapchainParameters(device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_IMMEDIATE);
+    SDL_SetGPUSwapchainParameters(device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_MAILBOX);
     color_format = SDL_GetGPUSwapchainTextureFormat(device, window);
     depth_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
     if (!CreateAtlas())
@@ -655,6 +655,7 @@ static void RenderShadow(SDL_GPUCommandBuffer* cbuf)
         return;
     }
     SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
+    SDL_BindGPUVertexStorageBuffers(pass, 0, &block_buffer, 1);
     SDL_PushGPUDebugGroup(cbuf, "shadow");
     World_Render(&sky.shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
     SDL_PopGPUDebugGroup(cbuf);

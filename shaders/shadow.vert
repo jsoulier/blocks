@@ -1,5 +1,7 @@
 #include "shader.hlsl"
 
+StructuredBuffer<Block> blockBuffer : register(t0, space0);
+
 cbuffer UniformBuffer : register(b0, space1)
 {
     float4x4 Proj;
@@ -23,6 +25,7 @@ struct Input
 struct Output
 {
     float4 Position : SV_Position;
+    float ClipDistance : SV_ClipDistance0;
 };
 
 Output main(Input input)
@@ -30,6 +33,8 @@ Output main(Input input)
     Output output;
     int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
     float3 position = GetPosition(input.Voxel) + chunkPosition;
+    Block block = blockBuffer[GetBlock(input.Voxel)];
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
+    output.ClipDistance = block.HasOcclusion ? 1.0f : -1.0f;
     return output;
 }
