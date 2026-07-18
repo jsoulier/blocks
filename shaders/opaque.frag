@@ -2,7 +2,8 @@
 
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
-StructuredBuffer<Light> lightBuffer : register(t1, space2);
+StructuredBuffer<Block> blockBuffer : register(t1, space2);
+StructuredBuffer<Light> lightBuffer : register(t2, space2);
 
 cbuffer UniformBuffer : register(b0, space3)
 {
@@ -12,10 +13,9 @@ cbuffer UniformBuffer : register(b0, space3)
 struct Input
 {
     float4 WorldPosition : TEXCOORD0;
-    nointerpolation float3 Normal : TEXCOORD1;
-    float3 Texcoord : TEXCOORD2;
-    nointerpolation uint Voxel : TEXCOORD3;
-    float AO : TEXCOORD4;
+    float2 Texcoord : TEXCOORD1;
+    nointerpolation uint Voxel : TEXCOORD2;
+    float AO : TEXCOORD3;
 };
 
 struct Output
@@ -29,7 +29,10 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    output.Color = atlasTexture.Sample(atlasSampler, input.Texcoord);
+    Block block = blockBuffer[GetBlock(input.Voxel)];
+    float3 normal = GetNormal(input.Voxel, block);
+    float3 texcoord = float3(input.Texcoord, GetIndex(input.Voxel, block));
+    output.Color = atlasTexture.Sample(atlasSampler, texcoord);
     output.Position = input.WorldPosition;
     output.Light = float4(0.0f, 0.0f, 0.0f, 0.0f);
     output.Voxel = 0;
@@ -39,8 +42,7 @@ Output main(Input input)
         return output;
     }
     output.Color.a = input.AO;
-    output.Voxel |= input.Voxel & (DIRECTION_MASK << DIRECTION_OFFSET);
-    output.Voxel |= input.Voxel & (SHADOW_MASK << SHADOW_OFFSET);
-    output.Light.rgb = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, input.Normal);
+    output.Voxel = input.Voxel & MATERIAL_MASK;
+    output.Light.rgb = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, normal);
     return output;
 }

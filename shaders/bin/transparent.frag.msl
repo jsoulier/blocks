@@ -1,7 +1,62 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wmissing-braces"
+
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
+
+template<typename T, size_t Num>
+struct spvUnsafeArray
+{
+    T elements[Num ? Num : 1];
+
+    thread T& operator [] (size_t pos) thread
+    {
+        return elements[pos];
+    }
+    constexpr const thread T& operator [] (size_t pos) const thread
+    {
+        return elements[pos];
+    }
+
+    device T& operator [] (size_t pos) device
+    {
+        return elements[pos];
+    }
+    constexpr const device T& operator [] (size_t pos) const device
+    {
+        return elements[pos];
+    }
+
+    constexpr const constant T& operator [] (size_t pos) const constant
+    {
+        return elements[pos];
+    }
+
+    threadgroup T& operator [] (size_t pos) threadgroup
+    {
+        return elements[pos];
+    }
+    constexpr const threadgroup T& operator [] (size_t pos) const threadgroup
+    {
+        return elements[pos];
+    }
+};
+
+struct Block
+{
+    uint IsSprite;
+    uint HasOcclusion;
+    uint HasShadow;
+    uint IsFullbright;
+    uint Indices[6];
+};
+
+struct type_StructuredBuffer_Block
+{
+    Block _m0[1];
+};
 
 struct Light
 {
@@ -31,6 +86,8 @@ struct type_UniformBuffer_2
     float3 PlayerPosition;
 };
 
+constant spvUnsafeArray<float3, 10> _108 = spvUnsafeArray<float3, 10>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, 1.0, 0.0) });
+
 struct main0_out
 {
     float4 out_var_SV_Target0 [[color(0)]];
@@ -39,129 +96,133 @@ struct main0_out
 struct main0_in
 {
     float4 in_var_TEXCOORD0 [[user(locn0)]];
-    float3 in_var_TEXCOORD1 [[user(locn1), flat]];
-    float3 in_var_TEXCOORD2 [[user(locn2)]];
-    uint in_var_TEXCOORD3 [[user(locn3)]];
-    float2 in_var_TEXCOORD4 [[user(locn4)]];
+    float2 in_var_TEXCOORD1 [[user(locn1)]];
+    uint in_var_TEXCOORD2 [[user(locn2)]];
+    float2 in_var_TEXCOORD3 [[user(locn3)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(3)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float> shadowTexture [[texture(1)]], texture2d<float> positionTexture [[texture(2)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]], sampler positionSampler [[sampler(2)]])
+fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], const device type_StructuredBuffer_Block& blockBuffer [[buffer(3)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(4)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float> shadowTexture [[texture(1)]], texture2d<float> positionTexture [[texture(2)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]], sampler positionSampler [[sampler(2)]])
 {
     main0_out out = {};
-    float4 _109 = atlasTexture.sample(atlasSampler, in.in_var_TEXCOORD2.xy, uint(rint(in.in_var_TEXCOORD2.z)));
-    float _111 = _109.w;
-    uint _114 = uint(UniformBuffer.LightCount);
-    float3 _116;
-    _116 = float3(0.0);
-    float3 _117;
-    for (uint _119 = 0u; _119 < _114; _116 = _117, _119++)
+    uint _127 = (in.in_var_TEXCOORD2 >> 3u) & 31u;
+    uint _133 = (in.in_var_TEXCOORD2 >> 0u) & 7u;
+    bool _134 = blockBuffer._m0[_127].IsSprite != 0u;
+    uint _137 = _133 + uint(_134 ? 6 : 0);
+    uint _140 = _134 ? 0u : _133;
+    float3 _146 = float3(in.in_var_TEXCOORD1, float(blockBuffer._m0[_127].Indices[_140]));
+    float4 _150 = atlasTexture.sample(atlasSampler, _146.xy, uint(rint(_146.z)));
+    float _152 = _150.w;
+    uint _155 = uint(UniformBuffer.LightCount);
+    float3 _157;
+    _157 = float3(0.0);
+    float3 _158;
+    for (uint _160 = 0u; _160 < _155; _157 = _158, _160++)
     {
-        float _132 = float((lightBuffer._m0[_119].Color & 4278190080u) >> 24u);
-        float3 _139 = (float3(float(lightBuffer._m0[_119].X), float(lightBuffer._m0[_119].Y), float(lightBuffer._m0[_119].Z)) + float3(0.5, 0.75, 0.5)) - in.in_var_TEXCOORD0.xyz;
-        float _140 = length(_139);
-        bool _146;
-        if (!(_140 >= _132))
+        float _173 = float((lightBuffer._m0[_160].Color & 4278190080u) >> 24u);
+        float3 _180 = (float3(float(lightBuffer._m0[_160].X), float(lightBuffer._m0[_160].Y), float(lightBuffer._m0[_160].Z)) + float3(0.5, 0.75, 0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _181 = length(_180);
+        bool _187;
+        if (!(_181 >= _173))
         {
-            _146 = _132 <= 0.0;
+            _187 = _173 <= 0.0;
         }
         else
         {
-            _146 = true;
+            _187 = true;
         }
-        if (_146)
+        if (_187)
         {
-            _117 = _116;
+            _158 = _157;
             continue;
         }
-        float _152 = fast::clamp(dot(in.in_var_TEXCOORD1, _139 / float3(_140)), 0.0, 1.0);
-        if (_152 <= 0.0)
+        float _193 = fast::clamp(dot(_108[_137], _180 / float3(_181)), 0.0, 1.0);
+        if (_193 <= 0.0)
         {
-            _117 = _116;
+            _158 = _157;
             continue;
         }
-        float _158 = fast::clamp(1.0 - (_140 / _132), 0.0, 1.0);
-        _117 = _116 + ((float3(float((lightBuffer._m0[_119].Color & 255u) >> 0u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_119].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_119].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _152) * (_158 * _158));
+        float _199 = fast::clamp(1.0 - (_181 / _173), 0.0, 1.0);
+        _158 = _157 + ((float3(float((lightBuffer._m0[_160].Color & 255u) >> 0u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_160].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_160].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _193) * (_199 * _199));
     }
-    float _240;
+    float _279;
     do
     {
-        float4 _187 = UniformBuffer_1.ShadowTransform * float4(in.in_var_TEXCOORD0.xyz, 1.0);
-        float3 _191 = _187.xyz / float3(_187.w);
-        float2 _194 = (_191.xy * 0.5) + float2(0.5);
-        float _196 = 1.0 - _194.y;
-        float2 _197 = _194;
-        _197.y = _196;
-        float _198 = _194.x;
-        bool _204;
-        if (!(_198 < 0.0))
+        float4 _228 = UniformBuffer_1.ShadowTransform * float4(in.in_var_TEXCOORD0.xyz, 1.0);
+        float3 _232 = _228.xyz / float3(_228.w);
+        float2 _235 = (_232.xy * 0.5) + float2(0.5);
+        float _237 = 1.0 - _235.y;
+        float2 _238 = _235;
+        _238.y = _237;
+        float _239 = _235.x;
+        bool _245;
+        if (!(_239 < 0.0))
         {
-            _204 = _198 > 1.0;
+            _245 = _239 > 1.0;
         }
         else
         {
-            _204 = true;
+            _245 = true;
         }
-        bool _209;
-        if (!_204)
+        bool _250;
+        if (!_245)
         {
-            _209 = _196 < 0.0;
-        }
-        else
-        {
-            _209 = true;
-        }
-        bool _214;
-        if (!_209)
-        {
-            _214 = _196 > 1.0;
+            _250 = _237 < 0.0;
         }
         else
         {
-            _214 = true;
+            _250 = true;
         }
-        if (_214)
+        bool _255;
+        if (!_250)
         {
-            _240 = 0.4000000059604644775390625;
+            _255 = _237 > 1.0;
+        }
+        else
+        {
+            _255 = true;
+        }
+        if (_255)
+        {
+            _279 = 0.4000000059604644775390625;
             break;
         }
-        float _229;
-        if (((in.in_var_TEXCOORD3 >> 6u) & 1u) != 0u)
+        float _268;
+        if (blockBuffer._m0[_127].HasOcclusion != 0u)
         {
-            float _225 = dot(in.in_var_TEXCOORD1, fast::normalize(float4(UniformBuffer_1.ShadowTransform[0][2], UniformBuffer_1.ShadowTransform[1][2], UniformBuffer_1.ShadowTransform[2][2], UniformBuffer_1.ShadowTransform[3][2]).xyz));
-            if (_225 > 0.0)
+            float _264 = dot(_108[_137], fast::normalize(float4(UniformBuffer_1.ShadowTransform[0][2], UniformBuffer_1.ShadowTransform[1][2], UniformBuffer_1.ShadowTransform[2][2], UniformBuffer_1.ShadowTransform[3][2]).xyz));
+            if (_264 > 0.0)
             {
-                _240 = 0.0;
+                _279 = 0.0;
                 break;
             }
-            _229 = _225;
+            _268 = _264;
         }
         else
         {
-            _229 = -0.7070000171661376953125;
+            _268 = -0.7070000171661376953125;
         }
-        if (_191.z < (shadowTexture.sample(shadowSampler, _197, level(0.0)).x + 0.001000000047497451305389404296875))
+        if (_232.z < (shadowTexture.sample(shadowSampler, _238, level(0.0)).x + 0.001000000047497451305389404296875))
         {
-            _240 = _229 * (-0.4000000059604644775390625);
+            _279 = _268 * (-0.4000000059604644775390625);
             break;
         }
         else
         {
-            _240 = 0.0;
+            _279 = 0.0;
             break;
         }
         break; // unreachable workaround
     } while(false);
-    float3 _244 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
-    float _276;
-    if (((in.in_var_TEXCOORD3 >> 27u) & 31u) == 16u)
+    float3 _283 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
+    float _314;
+    if (blockBuffer._m0[_127].Indices[_140] == 16u)
     {
-        _276 = _111 + ((in.in_var_TEXCOORD0.y - positionTexture.sample(positionSampler, in.in_var_TEXCOORD4).y) * 0.100000001490116119384765625);
+        _314 = _152 + ((in.in_var_TEXCOORD0.y - positionTexture.sample(positionSampler, in.in_var_TEXCOORD3).y) * 0.100000001490116119384765625);
     }
     else
     {
-        _276 = _111;
+        _314 = _152;
     }
-    out.out_var_SV_Target0 = float4(mix(_109.xyz * (((_116 * 2.0) + float3(0.5)) + float3(_240)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_244.y, length(float2(_244.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _276);
+    out.out_var_SV_Target0 = float4(mix(_150.xyz * (((_157 * 2.0) + float3(0.5)) + float3(_279)), mix(float3(0.2199999988079071044921875, 0.3490000069141387939453125, 0.70200002193450927734375), float3(0.21199999749660491943359375, 0.7730000019073486328125, 0.9570000171661376953125), float3((precise::atan2(_283.y, length(float2(_283.xz))) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _314);
     return out;
 }
-

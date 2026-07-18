@@ -1,4 +1,5 @@
 #include "block.h"
+#include "buffer.h"
 #include "direction.h"
 
 #define TORCH_INTENSITY 15
@@ -10,6 +11,7 @@ struct
     bool is_solid;
     bool has_occlusion;
     bool has_shadow;
+    bool is_fullbright;
     int indices[6];
     light_t light;
 }
@@ -92,6 +94,7 @@ static const BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .has_occlusion = false,
         .has_shadow = false,
+        .is_fullbright = true,
         .indices = {9, 9, 9, 9, 9, 9},
         .light = {0, 0, 0, 0},
     },
@@ -247,6 +250,47 @@ static const BLOCKS[BLOCK_COUNT] =
     },
 };
 
+static cpu_buffer_t cpu_blocks;
+static gpu_buffer_t gpu_blocks;
+
+bool block_init(SDL_GPUDevice* device)
+{
+    SDL_COMPILE_TIME_ASSERT("", sizeof(block_gpu_t) == sizeof(Uint32) * 10);
+    cpu_buffer_init(&cpu_blocks, device, sizeof(block_gpu_t));
+    gpu_buffer_init(&gpu_blocks, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ | SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ);
+    if (!gpu_buffer_begin_upload(&gpu_blocks))
+    {
+        return false;
+    }
+    for (int i = 0; i < BLOCK_COUNT; i++)
+    {
+        block_gpu_t block = {0};
+        block.is_sprite = BLOCKS[i].is_sprite;
+        block.has_occlusion = BLOCKS[i].has_occlusion;
+        block.has_shadow = BLOCKS[i].has_shadow;
+        block.is_fullbright = BLOCKS[i].is_fullbright;
+        for (int j = 0; j < DIRECTION_COUNT; j++)
+        {
+            block.indices[j] = BLOCKS[i].indices[j];
+        }
+        cpu_buffer_append(&cpu_blocks, &block);
+    }
+    gpu_buffer_upload(&gpu_blocks, &cpu_blocks);
+    gpu_buffer_end_upload(&gpu_blocks);
+    return gpu_blocks.size == BLOCK_COUNT;
+}
+
+void block_free()
+{
+    cpu_buffer_free(&cpu_blocks);
+    gpu_buffer_free(&gpu_blocks);
+}
+
+SDL_GPUBuffer* block_get_buffer()
+{
+    return gpu_blocks.buffer;
+}
+
 bool block_is_opaque(block_t block)
 {
     return BLOCKS[block].is_opaque;
@@ -265,11 +309,6 @@ bool block_is_solid(block_t block)
 bool block_has_occlusion(block_t block)
 {
     return BLOCKS[block].has_occlusion;
-}
-
-bool block_has_shadow(block_t block)
-{
-    return BLOCKS[block].has_shadow;
 }
 
 int block_get_index(block_t block, direction_t direction)

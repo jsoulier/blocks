@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include "block.h"
 #include "camera.h"
 #include "check.h"
 #include "player.h"
@@ -507,6 +508,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to load composite pipeline");
         return SDL_APP_FAILURE;
     }
+    if (!block_init(device))
+    {
+        SDL_Log("Failed to initialize blocks");
+        return SDL_APP_FAILURE;
+    }
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
@@ -524,6 +530,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
     SDL_HideWindow(window);
     world_free();
+    block_free();
     player_save_or_load(&player, PLAYER_ID, true);
     save_free();
     SDL_ReleaseGPUSampler(device, linear_sampler);
@@ -652,6 +659,8 @@ static void render_shadow(SDL_GPUCommandBuffer* cbuf)
         return;
     }
     SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
+    SDL_GPUBuffer* block_buffer = block_get_buffer();
+    SDL_BindGPUVertexStorageBuffers(pass, 0, &block_buffer, 1);
     SDL_PushGPUDebugGroup(cbuf, "shadow");
     world_render(&shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
     SDL_PopGPUDebugGroup(cbuf);
@@ -741,6 +750,8 @@ static void render_composite(SDL_GPUCommandBuffer* cbuf)
     SDL_BindGPUComputePipeline(compute_pass, composite_pipeline);
     SDL_BindGPUComputeStorageTextures(compute_pass, 0, read_textures, 4);
     SDL_BindGPUComputeSamplers(compute_pass, 0, &read_samplers, 1);
+    SDL_GPUBuffer* block_buffer = block_get_buffer();
+    SDL_BindGPUComputeStorageBuffers(compute_pass, 0, &block_buffer, 1);
     SDL_PushGPUComputeUniformData(cbuf, 0, &shadow_camera.matrix, 64);
     SDL_PushGPUComputeUniformData(cbuf, 1, player.camera.position, 12);
     SDL_DispatchGPUCompute(compute_pass, groups_x, groups_y, 1);

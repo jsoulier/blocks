@@ -972,8 +972,9 @@ static void render(chunk_t* chunk, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass
             light_binding = gpu_empty_lights.buffer;
             light_count = 0;
         }
+        SDL_GPUBuffer* bindings[] = {block_get_buffer(), light_binding};
         SDL_PushGPUFragmentUniformData(cbuf, 0, &light_count, 4);
-        SDL_BindGPUFragmentStorageBuffers(pass, 0, &light_binding, 1);
+        SDL_BindGPUFragmentStorageBuffers(pass, 0, bindings, 2);
     }
     SDL_PushGPUVertexUniformData(cbuf, 2, chunk->position, 12);
     SDL_BindGPUVertexBuffers(pass, 0, &voxel_binding, 1);

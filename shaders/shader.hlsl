@@ -7,6 +7,15 @@
 static const float kEpsilon = 0.001f;
 static const float kPi = 3.14159265f;
 
+struct Block
+{
+    uint IsSprite;
+    uint HasOcclusion;
+    uint HasShadow;
+    uint IsFullbright;
+    uint Indices[6];
+};
+
 static const float3 kNormals[10] =
 {
     float3( 0.0f, 0.0f, 1.0f ),
@@ -61,12 +70,12 @@ float GetAO(uint voxel)
 
 uint GetDirection(uint voxel)
 {
-    return ((voxel >> DIRECTION_OFFSET) & DIRECTION_MASK) - 1;
+    return (voxel >> DIRECTION_OFFSET) & DIRECTION_MASK;
 }
 
-bool GetShadow(uint voxel)
+uint GetBlock(uint voxel)
 {
-    return (voxel >> SHADOW_OFFSET) & SHADOW_MASK;
+    return (voxel >> BLOCK_OFFSET) & BLOCK_MASK;
 }
 
 float3 GetPosition(uint voxel)
@@ -74,19 +83,22 @@ float3 GetPosition(uint voxel)
     return float3((voxel >> X_OFFSET) & X_MASK, (voxel >> Y_OFFSET) & Y_MASK, (voxel >> Z_OFFSET) & Z_MASK);
 }
 
-uint GetIndex(uint voxel)
+uint GetIndex(uint voxel, Block block)
 {
-    return (voxel >> INDEX_OFFSET) & INDEX_MASK;
+    uint direction = block.IsSprite ? 0 : GetDirection(voxel);
+    return block.Indices[direction];
 }
 
-float3 GetTexcoord(uint voxel)
+float2 GetTexcoord(uint voxel)
 {
-    return float3((voxel >> U_OFFSET) & U_MASK, (voxel >> V_OFFSET) & V_MASK, GetIndex(voxel));
+    return float2((voxel >> U_OFFSET) & U_MASK, (voxel >> V_OFFSET) & V_MASK);
 }
 
-float3 GetNormal(uint voxel)
+float3 GetNormal(uint voxel, Block block)
 {
-    return kNormals[GetDirection(voxel)];
+    uint direction = GetDirection(voxel);
+    direction += block.IsSprite ? 6 : 0;
+    return kNormals[direction];
 }
 
 float3 GetCubePosition(uint vertexID)
@@ -102,11 +114,6 @@ float3 GetCubeNormal(uint vertexID)
 bool IsSky(uint voxel)
 {
     return voxel == 0;
-}
-
-bool IsCloud(float3 color)
-{
-    return length(color) > (1.0f - kEpsilon);
 }
 
 struct Light
@@ -151,7 +158,7 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
     return finalColor * kLight;
 }
 
-float GetSunLight(Texture2D<float> texture, SamplerState state, float4x4 transform, float3 position, float3 normal, uint voxel)
+float GetSunLight(Texture2D<float> texture, SamplerState state, float4x4 transform, float3 position, float3 normal, Block block)
 {
     static const float kBias = 0.001f;
     static const float kBase = 0.0f;
@@ -166,7 +173,7 @@ float GetSunLight(Texture2D<float> texture, SamplerState state, float4x4 transfo
     }
     float3 direction = normalize(float3(transform[2].xyz));
     float ratio = -0.707f;
-    if (GetShadow(voxel))
+    if (block.HasOcclusion)
     {
         ratio = dot(normal, direction);
         if (ratio > 0.0f)

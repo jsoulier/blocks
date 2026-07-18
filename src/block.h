@@ -48,11 +48,24 @@ typedef struct light
 }
 light_t;
 
+typedef struct block_gpu
+{
+    Uint32 is_sprite;
+    Uint32 has_occlusion;
+    Uint32 has_shadow;
+    Uint32 is_fullbright;
+    Uint32 indices[DIRECTION_COUNT];
+}
+block_gpu_t;
+
+bool block_init(SDL_GPUDevice* device);
+void block_free();
+SDL_GPUBuffer* block_get_buffer();
+
 bool block_is_opaque(block_t block);
 bool block_is_sprite(block_t block);
 bool block_is_solid(block_t block);
 bool block_has_occlusion(block_t block);
-bool block_has_shadow(block_t block);
 int block_get_index(block_t block, direction_t direction);
 bool block_is_light(block_t block);
 light_t block_get_light(block_t block);

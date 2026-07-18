@@ -6,6 +6,7 @@ Texture2D<float4> colorTexture : register(t1, space0);
 Texture2D<float4> lightTexture : register(t2, space0);
 Texture2D<uint> voxelTexture : register(t3, space0);
 Texture2D<float3> positionTexture : register(t4, space0);
+StructuredBuffer<Block> blockBuffer : register(t5, space0);
 [[vk::image_format("rgba8")]]
 RWTexture2D<float4> compositeTexture : register(u0, space1);
 
@@ -31,14 +32,15 @@ void main(uint3 threadID : SV_DispatchThreadID)
     }
     float3 albedo = colorTexture[threadID.xy].rgb;
     uint voxel = voxelTexture[threadID.xy].x;
+    Block block = blockBuffer[GetBlock(voxel)];
     float3 position = positionTexture[threadID.xy].xyz;
-    float3 normal = GetNormal(voxel);
+    float3 normal = GetNormal(voxel, block);
     float3 diffuse = lightTexture[threadID.xy].rgb;
     float3 ambient = GetAmbientLight();
-    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position, normal, voxel);
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position, normal, block);
     float ao = colorTexture[threadID.xy].a;
     float3 color;
-    if (IsCloud(albedo) || IsSky(voxel))
+    if (block.IsFullbright || IsSky(voxel))
     {
         color = albedo;
     }
