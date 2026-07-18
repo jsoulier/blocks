@@ -6,12 +6,6 @@
 #include "save.h"
 #include "world.h"
 
-typedef struct AABB
-{
-    float min[3];
-    float max[3];
-} AABB;
-
 typedef struct PlayerSave
 {
     float x;
@@ -22,38 +16,36 @@ typedef struct PlayerSave
     Block block;
 } PlayerSave;
 
-static const float PHYSICS_EPSILON = 0.001f;
-static const float WALK_SPEED = 5.0f;
-static const float SPRINT_SPEED = 9.0f;
+static const float EPSILON = 0.001f;
+static const float WALK_SPEED = 4.0f;
+static const float SPRINT_MULTIPLER = 2.5f;
 static const float SENSITIVITY = 0.1f;
 static const float REACH = 10.0f;
 static const float AIR_ACCELERATION = 6.0f;
 static const float GRAVITY = 24.0f;
 static const float JUMP_SPEED = 8.5f;
-static const float FLY_SPEED = 0.01f;
-static const float FLY_FAST_SPEED = 0.1f;
+static const float FLY_SPEED = 0.05f;
 static const float COLLISION_STEP = 0.1f;
 static const float GROUND_OFFSET = 0.002f;
-
-static const AABB PLAYER_AABB = {{-0.3f, -1.62f, -0.3f}, {0.3f, 1.8f - 1.62f, 0.3f}};
+static const float AABB[2][3] = {{-0.3f, -1.62f, -0.3f}, {0.3f, 1.8f - 1.62f, 0.3f}};
 
 static bool IsColliding(const float position[3])
 {
-    int min_block[3];
-    int max_block[3];
-    for (int axis = 0; axis < 3; axis++)
+    int min[3];
+    int max[3];
+    for (int i = 0; i < 3; i++)
     {
-        min_block[axis] = SDL_floorf(position[axis] + PLAYER_AABB.min[axis] + PHYSICS_EPSILON);
-        max_block[axis] = SDL_floorf(position[axis] + PLAYER_AABB.max[axis] - PHYSICS_EPSILON);
+        min[i] = SDL_floorf(position[i] + AABB[0][i] + EPSILON);
+        max[i] = SDL_floorf(position[i] + AABB[1][i] - EPSILON);
     }
-    for (int bx = min_block[0]; bx <= max_block[0]; bx++)
+    for (int bx = min[0]; bx <= max[0]; bx++)
     {
-        for (int by = min_block[1]; by <= max_block[1]; by++)
+        for (int by = min[1]; by <= max[1]; by++)
         {
-            for (int bz = min_block[2]; bz <= max_block[2]; bz++)
+            for (int bz = min[2]; bz <= max[2]; bz++)
             {
-                int block_position[3] = {bx, by, bz};
-                if (Block_IsSolid(World_GetBlock(block_position)))
+                int block[3] = {bx, by, bz};
+                if (Block_IsSolid(World_GetBlock(block)))
                 {
                     return true;
                 }
@@ -68,18 +60,18 @@ static void Bisect(float position[3], int axis, float step)
     float start[3] = {position[0], position[1], position[2]};
     float lower = 0.0f;
     float upper = 1.0f;
-    for (int iteration = 0; iteration < 8; iteration++)
+    for (int i = 0; i < 8; i++)
     {
-        float fraction = (lower + upper) * 0.5f;
+        float half = (lower + upper) * 0.5f;
         float location[3] = {start[0], start[1], start[2]};
-        location[axis] += step * fraction;
+        location[axis] += step * half;
         if (IsColliding(location))
         {
-            upper = fraction;
+            upper = half;
         }
         else
         {
-            lower = fraction;
+            lower = half;
         }
     }
     position[axis] = start[axis] + step * lower;
@@ -91,9 +83,9 @@ static bool Move(float position[3], int axis, float delta)
     {
         return false;
     }
-    int step_count = SDL_max(SDL_ceilf(SDL_fabsf(delta) / COLLISION_STEP), 1);
-    float step = delta / step_count;
-    for (int step_index = 0; step_index < step_count; step_index++)
+    int steps = SDL_max(SDL_ceilf(SDL_fabsf(delta) / COLLISION_STEP), 1);
+    float step = delta / steps;
+    for (int i = 0; i < steps; i++)
     {
         float location[3] = {position[0], position[1], position[2]};
         location[axis] += step;
@@ -109,35 +101,35 @@ static bool Move(float position[3], int axis, float delta)
 
 void Player_Load(Player* player)
 {
-    PlayerSave saved_player;
+    PlayerSave save;
     Camera_Init(&player->camera, CAMERA_TYPE_PERSPECTIVE);
     player->camera.x = -200.0f;
     player->camera.y = 50.0f;
     player->camera.z = 0.0f;
     player->controller = PLAYER_CONTROLLER_WALK;
     player->block = BLOCK_YELLOW_TORCH;
-    if (Save_GetPlayer(&saved_player, sizeof(saved_player)))
+    if (Save_GetPlayer(&save, sizeof(save)))
     {
-        player->block = saved_player.block;
-        player->camera.x = saved_player.x;
-        player->camera.y = saved_player.y;
-        player->camera.z = saved_player.z;
-        player->camera.pitch = saved_player.pitch;
-        player->camera.yaw = saved_player.yaw;
+        player->block = save.block;
+        player->camera.x = save.x;
+        player->camera.y = save.y;
+        player->camera.z = save.z;
+        player->camera.pitch = save.pitch;
+        player->camera.yaw = save.yaw;
     }
     player->query = World_Raycast(&player->camera, REACH);
 }
 
 void Player_Save(const Player* player)
 {
-    PlayerSave saved_player;
-    saved_player.x = player->camera.x;
-    saved_player.y = player->camera.y;
-    saved_player.z = player->camera.z;
-    saved_player.pitch = player->camera.pitch;
-    saved_player.yaw = player->camera.yaw;
-    saved_player.block = player->block;
-    Save_SetPlayer(&saved_player, sizeof(saved_player));
+    PlayerSave save;
+    save.x = player->camera.x;
+    save.y = player->camera.y;
+    save.z = player->camera.z;
+    save.pitch = player->camera.pitch;
+    save.yaw = player->camera.yaw;
+    save.block = player->block;
+    Save_SetPlayer(&save, sizeof(save));
 }
 
 void Player_ToggleController(Player* player)
@@ -158,29 +150,29 @@ void Player_Move(Player* player, float dt)
     if (player->controller == PLAYER_CONTROLLER_WALK)
     {
         dt = SDL_min(dt * 0.001f, 0.05f);
-        float input_x = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
-        float input_z = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
-        float input_length = SDL_sqrtf(input_x * input_x + input_z * input_z);
-        if (input_length > SDL_FLT_EPSILON)
+        float right = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
+        float forward = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
+        float length = SDL_sqrtf(right * right + forward * forward);
+        if (length > SDL_FLT_EPSILON)
         {
-            input_x /= input_length;
-            input_z /= input_length;
+            right /= length;
+            forward /= length;
         }
-        float speed = keys[SDL_SCANCODE_LCTRL] ? SPRINT_SPEED : WALK_SPEED;
-        float sin_yaw = SDL_sinf(player->camera.yaw);
-        float cos_yaw = SDL_cosf(player->camera.yaw);
-        float target_x = (cos_yaw * input_x + sin_yaw * input_z) * speed;
-        float target_z = (sin_yaw * input_x - cos_yaw * input_z) * speed;
+        float speed = WALK_SPEED * (keys[SDL_SCANCODE_LCTRL] ? SPRINT_MULTIPLER : 1.0f);
+        float sy = SDL_sinf(player->camera.yaw);
+        float cy = SDL_cosf(player->camera.yaw);
+        float dx = (cy * right + sy * forward) * speed;
+        float dz = (sy * right - cy * forward) * speed;
         if (player->is_on_ground)
         {
-            player->velocity[0] = target_x;
-            player->velocity[2] = target_z;
+            player->velocity[0] = dx;
+            player->velocity[2] = dz;
         }
         else
         {
             float blend = SDL_min(1.0f, AIR_ACCELERATION * dt);
-            player->velocity[0] += (target_x - player->velocity[0]) * blend;
-            player->velocity[2] += (target_z - player->velocity[2]) * blend;
+            player->velocity[0] += (dx - player->velocity[0]) * blend;
+            player->velocity[2] += (dz - player->velocity[2]) * blend;
         }
         if (keys[SDL_SCANCODE_SPACE] && player->is_on_ground)
         {
@@ -192,38 +184,22 @@ void Player_Move(Player* player, float dt)
             return;
         }
         player->velocity[1] -= GRAVITY * dt;
-        bool collisions[3];
-        for (int axis = 0; axis < 3; axis++)
+        bool hits[3];
+        for (int i = 0; i < 3; i++)
         {
-            collisions[axis] = Move(player->camera.position, axis, player->velocity[axis] * dt);
+            hits[i] = Move(player->camera.position, i, player->velocity[i] * dt);
         }
-        if (collisions[0])
+        player->is_on_ground = hits[1] && player->velocity[1] < 0.0f;
+        for (int i = 0; i < 3; i++)
         {
-            player->velocity[0] = 0.0f;
-        }
-        if (collisions[2])
-        {
-            player->velocity[2] = 0.0f;
-        }
-        if (collisions[1])
-        {
-            if (player->velocity[1] < 0.0f)
-            {
-                player->is_on_ground = true;
-            }
-            player->velocity[1] = 0.0f;
-        }
-        else
-        {
-            player->is_on_ground = false;
+            player->velocity[i] *= !hits[i];
         }
     }
     else
     {
-        float speed = keys[SDL_SCANCODE_LCTRL] ? FLY_FAST_SPEED : FLY_SPEED;
+        float speed = FLY_SPEED * (keys[SDL_SCANCODE_LCTRL] ? SPRINT_MULTIPLER : 1.0f);
         float dx = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
-        float dy =
-            (keys[SDL_SCANCODE_E] || keys[SDL_SCANCODE_SPACE]) - (keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_LSHIFT]);
+        float dy = keys[SDL_SCANCODE_SPACE] + keys[SDL_SCANCODE_E] - keys[SDL_SCANCODE_LSHIFT] - keys[SDL_SCANCODE_Q];
         float dz = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
         Camera_Move(&player->camera, dx * speed * dt, dy * speed * dt, dz * speed * dt);
     }
@@ -241,11 +217,11 @@ void Player_PlaceBlock(const Player* player)
         World_SetBlock(player->query.previous, player->block);
         return;
     }
-    for (int axis = 0; axis < 3; axis++)
+    for (int i = 0; i < 3; i++)
     {
-        float player_min = player->camera.position[axis] + PLAYER_AABB.min[axis] + PHYSICS_EPSILON;
-        float player_max = player->camera.position[axis] + PLAYER_AABB.max[axis] - PHYSICS_EPSILON;
-        if (player_max <= player->query.previous[axis] || player_min >= player->query.previous[axis] + 1.0f)
+        float min = player->camera.position[i] + AABB[0][i] + EPSILON;
+        float max = player->camera.position[i] + AABB[1][i] - EPSILON;
+        if (max <= player->query.previous[i] || min >= player->query.previous[i] + 1.0f)
         {
             World_SetBlock(player->query.previous, player->block);
             break;

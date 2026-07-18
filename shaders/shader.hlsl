@@ -210,10 +210,7 @@ float GetFogValue(float distance)
 
 float3 GetSkyColor(float3 position, float3 top, float3 horizon)
 {
-    float vertical = position.y;
-    float horizontal = length(position.xz);
-    float blend = (atan2(vertical, horizontal) + kPi / 2.0f) / kPi;
-    return lerp(horizon, top, blend);
+    return lerp(horizon, top, (atan2(position.y, length(position.xz)) + kPi / 2.0f) / kPi);
 }
 
 #endif

@@ -37,6 +37,7 @@ typedef struct Camera
 
 void Camera_Init(Camera* camera, CameraType type);
 void Camera_Update(Camera* camera);
+void Camera_Snap(Camera* camera, int resolution);
 void Camera_Move(Camera* camera, float right, float up, float forward);
 void Camera_Resize(Camera* camera, int width, int height);
 void Camera_Rotate(Camera* camera, float pitch, float yaw);
