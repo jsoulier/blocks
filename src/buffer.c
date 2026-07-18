@@ -74,11 +74,6 @@ void CPUBuffer_Append(CPUBuffer* cpu, void* item)
     cpu->size++;
 }
 
-void CPUBuffer_Clear(CPUBuffer* cpu)
-{
-    cpu->size = 0;
-}
-
 void GPUBuffer_Init(GPUBuffer* gpu, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage)
 {
     gpu->device = device;

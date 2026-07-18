@@ -11,6 +11,7 @@
 #define WORKERS 4
 
 static const int AO_LEVEL_CLEAR = 3;
+static const Uint32 INDEX_COUNT = CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH * DIRECTION_COUNT * 6;
 
 typedef enum JobType
 {
@@ -83,16 +84,13 @@ Chunk;
 static SDL_GPUDevice* device;
 static int world_x;
 static int world_z;
-static bool is_moving;
 static Worker workers[WORKERS];
-static CPUBuffer cpu_indices;
 static GPUBuffer gpu_indices;
 static CPUBuffer cpu_empty_lights;
 static GPUBuffer gpu_empty_lights;
 static CPUBuffer cpu_voxels[MESH_TYPE_COUNT];
 static Chunk* chunks[WORLD_WIDTH][WORLD_WIDTH];
 static int sorted_chunks[WORLD_WIDTH][WORLD_WIDTH][2];
-static SDL_Mutex* mutex;
 
 static bool IsBlockLocal(int bx, int by, int bz)
 {
@@ -535,40 +533,25 @@ static void GenerateLights()
     GPUBuffer_EndUpload(&gpu_empty_lights);
 }
 
-static void GenerateIndices(Uint32 size)
+static void GenerateIndices()
 {
-    SDL_LockMutex(mutex);
-    size *= 1.5;
-    if (gpu_indices.size >= size)
-    {
-        SDL_UnlockMutex(mutex);
-        return;
-    }
+    CPUBuffer indices;
+    CPUBuffer_Init(&indices, device, sizeof(Uint32));
     if (!GPUBuffer_BeginUpload(&gpu_indices))
     {
-        SDL_UnlockMutex(mutex);
+        CPUBuffer_Free(&indices);
         return;
     }
     static const int INDICES[] = {0, 1, 2, 3, 2, 1};
-    for (Uint32 i = 0; i < size; i++)
+    for (Uint32 i = 0; i < INDEX_COUNT / 6; i++)
     for (Uint32 j = 0; j < 6; j++)
     {
         Uint32 index = i * 4 + INDICES[j];
-        CPUBuffer_Append(&cpu_indices, &index);
+        CPUBuffer_Append(&indices, &index);
     }
-    GPUBuffer_Upload(&gpu_indices, &cpu_indices);
+    GPUBuffer_Upload(&gpu_indices, &indices);
     GPUBuffer_EndUpload(&gpu_indices);
-    SDL_UnlockMutex(mutex);
-}
-
-static void WaitForJob(Worker* worker)
-{
-    SDL_LockMutex(worker->mutex);
-    while (worker->job.type == JOB_TYPE_NONE)
-    {
-        SDL_WaitCondition(worker->condition, worker->mutex);
-    }
-    SDL_UnlockMutex(worker->mutex);
+    CPUBuffer_Free(&indices);
 }
 
 static void WaitForJobFinish(const Worker* worker)
@@ -581,55 +564,53 @@ static void WaitForJobFinish(const Worker* worker)
     SDL_UnlockMutex(worker->mutex);
 }
 
-static int ClearJob(Worker* worker)
-{
-    SDL_LockMutex(worker->mutex);
-    SDL_assert(worker->job.type != JOB_TYPE_NONE);
-    worker->job.type = JOB_TYPE_NONE;
-    SDL_SignalCondition(worker->condition);
-    SDL_UnlockMutex(worker->mutex);
-    return 0;
-}
-
 static int WorkerFunction(void* args)
 {
     Worker* worker = args;
     while (true)
     {
-        WaitForJob(worker);
+        SDL_LockMutex(worker->mutex);
+        while (worker->job.type == JOB_TYPE_NONE)
+        {
+            SDL_WaitCondition(worker->condition, worker->mutex);
+        }
         Job job = worker->job;
-        if (job.type == JOB_TYPE_QUIT)
+        SDL_UnlockMutex(worker->mutex);
+        if (job.type != JOB_TYPE_QUIT)
         {
-            return ClearJob(worker);
-        }
-        Chunk* chunk = GetChunk(job.x, job.z);
-        SDL_assert(chunk);
-        if (job.type == JOB_TYPE_BLOCKS)
-        {
-            GenerateChunkBlocks(chunk);
-        }
-        else
-        {
-            Chunk* chunks[3][3];
-            GetNeighborhood(job.x, job.z, chunks);
-            if (job.type == JOB_TYPE_VOXELS)
+            Chunk* chunk = GetChunk(job.x, job.z);
+            SDL_assert(chunk);
+            if (job.type == JOB_TYPE_BLOCKS)
             {
-                GenerateChunkVoxels(chunks, worker->voxels);
-                for (int i = 0; i < MESH_TYPE_COUNT; i++)
-                {
-                    GenerateIndices(chunk->gpu_voxels[i].size);
-                }
-            }
-            else if (job.type == JOB_TYPE_LIGHTS)
-            {
-                GenerateChunkLights(chunks, &worker->lights);
+                GenerateChunkBlocks(chunk);
             }
             else
             {
-                SDL_assert(false);
+                Chunk* chunks[3][3];
+                GetNeighborhood(job.x, job.z, chunks);
+                if (job.type == JOB_TYPE_VOXELS)
+                {
+                    GenerateChunkVoxels(chunks, worker->voxels);
+                }
+                else if (job.type == JOB_TYPE_LIGHTS)
+                {
+                    GenerateChunkLights(chunks, &worker->lights);
+                }
+                else
+                {
+                    SDL_assert(false);
+                }
             }
         }
-        ClearJob(worker);
+        SDL_LockMutex(worker->mutex);
+        SDL_assert(worker->job.type != JOB_TYPE_NONE);
+        worker->job.type = JOB_TYPE_NONE;
+        SDL_SignalCondition(worker->condition);
+        SDL_UnlockMutex(worker->mutex);
+        if (job.type == JOB_TYPE_QUIT)
+        {
+            return 0;
+        }
     }
     return 0;
 }
@@ -637,16 +618,9 @@ static int WorkerFunction(void* args)
 static bool IsJobRunning(const Worker* worker)
 {
     SDL_LockMutex(worker->mutex);
-    if (worker->job.type != JOB_TYPE_NONE)
-    {
-        SDL_UnlockMutex(worker->mutex);
-        return true;
-    }
-    else
-    {
-        SDL_UnlockMutex(worker->mutex);
-        return false;
-    }
+    bool running = worker->job.type != JOB_TYPE_NONE;
+    SDL_UnlockMutex(worker->mutex);
+    return running;
 }
 
 static SDL_AtomicInt* GetJobState(Chunk* chunk, JobType type)
@@ -745,15 +719,9 @@ static int SortFunction(void* userdata, const void* lhs, const void* rhs)
 
 void World_Init(SDL_GPUDevice* handle)
 {
-    mutex = SDL_CreateMutex();
-    if (!mutex)
-    {
-        SDL_Log("Failed to create mutex: %s", SDL_GetError());
-    }
     device = handle;
     world_x = SDL_MAX_SINT32;
     world_z = SDL_MAX_SINT32;
-    CPUBuffer_Init(&cpu_indices, device, sizeof(Uint32));
     GPUBuffer_Init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);
     CPUBuffer_Init(&cpu_empty_lights, device, sizeof(Light));
     GPUBuffer_Init(&gpu_empty_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
@@ -774,7 +742,7 @@ void World_Init(SDL_GPUDevice* handle)
     }
     SDL_qsort_r(sorted_chunks, WORLD_WIDTH * WORLD_WIDTH, sizeof(int) * 2, SortFunction, NULL);
     GenerateLights();
-    GenerateIndices(1000000);
+    GenerateIndices();
 }
 
 void World_Free()
@@ -788,7 +756,6 @@ void World_Free()
     {
         FreeChunk(chunks[x][z]);
     }
-    CPUBuffer_Free(&cpu_indices);
     GPUBuffer_Free(&gpu_indices);
     CPUBuffer_Free(&cpu_empty_lights);
     GPUBuffer_Free(&gpu_empty_lights);
@@ -796,20 +763,6 @@ void World_Free()
     {
         CPUBuffer_Free(&cpu_voxels[i]);
     }
-    SDL_DestroyMutex(mutex);
-}
-
-static int GetRunningCount()
-{
-    int num_running = 0;
-    for (int i = 0; i < WORKERS; i++)
-    {
-        if (IsJobRunning(&workers[i]))
-        {
-            num_running++;
-        }
-    }
-    return num_running;
 }
 
 static int GetWorkers(Worker* local_workers[WORKERS])
@@ -866,21 +819,23 @@ static void Shuffle(int offset_x, int offset_z)
         chunk->z = (world_z + z) * CHUNK_WIDTH;
     }
     SDL_assert(!size);
-    is_moving = false;
 }
 
-static void MoveChunks(const Camera* camera)
+static bool MoveChunks(const Camera* camera)
 {
     const int offset_x = camera->x / CHUNK_WIDTH - WORLD_WIDTH / 2 - world_x;
     const int offset_z = camera->z / CHUNK_WIDTH - WORLD_WIDTH / 2 - world_z;
-    if (offset_x || offset_z)
+    if (!offset_x && !offset_z)
     {
-        is_moving = true;
-        if (!GetRunningCount())
-        {
-            Shuffle(offset_x, offset_z);
-        }
+        return false;
     }
+    Worker* local_workers[WORKERS];
+    if (GetWorkers(local_workers) != WORKERS)
+    {
+        return true;
+    }
+    Shuffle(offset_x, offset_z);
+    return false;
 }
 
 static bool TryUpdateBlocks(int x, int z, Worker* worker)
@@ -892,7 +847,6 @@ static bool TryUpdateBlocks(int x, int z, Worker* worker)
         return false;
     }
     Job job = {JOB_TYPE_BLOCKS, x, z};
-    SDL_assert(!IsJobRunning(worker));
     DispatchJob(worker, &job);
     return true;
 }
@@ -909,7 +863,7 @@ static bool TryUpdateVoxelsOrLights(int x, int z, Worker* worker)
     bool do_light = SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_REQUESTED;
     if (!do_voxel && !do_light)
     {
-        return false;;
+        return false;
     }
     Chunk* neighborhood[3][3];
     GetNeighborhood(x, z, neighborhood);
@@ -940,8 +894,7 @@ static bool TryUpdateVoxelsOrLights(int x, int z, Worker* worker)
 
 void World_Update(const Camera* camera)
 {
-    MoveChunks(camera);
-    if (is_moving)
+    if (MoveChunks(camera))
     {
         return;
     }

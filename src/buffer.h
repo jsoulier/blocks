@@ -16,7 +16,6 @@ CPUBuffer;
 void CPUBuffer_Init(CPUBuffer* cpu, SDL_GPUDevice* device, Uint32 stride);
 void CPUBuffer_Free(CPUBuffer* cpu);
 void CPUBuffer_Append(CPUBuffer* cpu, void* item);
-void CPUBuffer_Clear(CPUBuffer* cpu);
 
 typedef struct GPUBuffer
 {

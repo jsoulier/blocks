@@ -295,7 +295,7 @@ static bool CreateShadowPipeline()
     vertex_buffers[0].pitch = 4;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
     info.vertex_shader = Shader_Load(device, "shadow.vert");
-    info.fragment_shader = Shader_Load(device, "shadow.frag");
+    info.fragment_shader = Shader_Load(device, "depth.frag");
     info.target_info.has_depth_stencil_target = true;
     info.target_info.depth_stencil_format = depth_format;
     info.vertex_input_state.num_vertex_attributes = 1;

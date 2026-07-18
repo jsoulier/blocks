@@ -47,15 +47,6 @@ typedef struct Light
 }
 Light;
 
-typedef struct BlockGPU
-{
-    Uint32 is_sprite;
-    Uint32 has_occlusion;
-    Uint32 is_fullbright;
-    Uint32 indices[DIRECTION_COUNT];
-}
-BlockGPU;
-
 SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device);
 
 bool Block_IsOpaque(Block block);

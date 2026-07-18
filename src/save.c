@@ -40,6 +40,26 @@ static sqlite3_stmt* set_block;
 static sqlite3_stmt* get_blocks;
 static SDL_Mutex* mutex;
 
+static bool Execute(const char* sql, const char* name)
+{
+    if (sqlite3_exec(handle, sql, NULL, NULL, NULL))
+    {
+        SDL_Log("Failed to %s: %s", name, sqlite3_errmsg(handle));
+        return false;
+    }
+    return true;
+}
+
+static bool Prepare(sqlite3_stmt** statement, const char* sql, const char* name)
+{
+    if (sqlite3_prepare_v2(handle, sql, -1, statement, NULL))
+    {
+        SDL_Log("Failed to prepare %s: %s", name, sqlite3_errmsg(handle));
+        return false;
+    }
+    return true;
+}
+
 bool Save_Init(const char* path)
 {
     if (sqlite3_open(path, &handle))
@@ -47,54 +67,17 @@ bool Save_Init(const char* path)
         SDL_Log("Failed to open %s database: %s", path, sqlite3_errmsg(handle));
         return false;
     }
-    if (sqlite3_exec(handle, PLAYER_TABLE, NULL, NULL, NULL))
+    if (!Execute(PLAYER_TABLE, "create player table") ||
+        !Execute(BLOCK_TABLE, "create block table") ||
+        !Execute(SKY_TABLE, "create sky table") ||
+        !Execute(BLOCK_INDEX, "create block index") ||
+        !Prepare(&set_player, SET_PLAYER, "set player") ||
+        !Prepare(&get_player, GET_PLAYER, "get player") ||
+        !Prepare(&set_sky, SET_SKY, "set sky") ||
+        !Prepare(&get_sky, GET_SKY, "get sky") ||
+        !Prepare(&set_block, SET_BLOCK, "set block") ||
+        !Prepare(&get_blocks, GET_BLOCKS, "get blocks"))
     {
-        SDL_Log("Failed to create player table: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_exec(handle, BLOCK_TABLE, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create block table: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_exec(handle, SKY_TABLE, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create sky table: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, SET_PLAYER, -1, &set_player, NULL))
-    {
-        SDL_Log("Failed to prepare set player: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, GET_PLAYER, -1, &get_player, NULL))
-    {
-        SDL_Log("Failed to prepare get player: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, SET_SKY, -1, &set_sky, NULL))
-    {
-        SDL_Log("Failed to prepare set sky: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, GET_SKY, -1, &get_sky, NULL))
-    {
-        SDL_Log("Failed to prepare get sky: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, SET_BLOCK, -1, &set_block, NULL))
-    {
-        SDL_Log("Failed to prepare set block: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_prepare_v2(handle, GET_BLOCKS, -1, &get_blocks, NULL))
-    {
-        SDL_Log("Failed to prepare get blocks: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_exec(handle, BLOCK_INDEX, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create block index: %s", sqlite3_errmsg(handle));
         return false;
     }
     mutex = SDL_CreateMutex();
@@ -126,17 +109,6 @@ void Save_Free()
     set_block = NULL;
     get_blocks = NULL;
     mutex = NULL;
-}
-
-void Save_Commit()
-{
-    if (!handle)
-    {
-        return;
-    }
-    SDL_LockMutex(mutex);
-    sqlite3_exec(handle, "COMMIT; BEGIN;", NULL, NULL, NULL);
-    SDL_UnlockMutex(mutex);
 }
 
 void Save_SetPlayer(int id, const void* data, int size)

@@ -6,7 +6,6 @@ typedef enum CameraType
 {
     CAMERA_TYPE_ORTHO,
     CAMERA_TYPE_PERSPECTIVE,
-    CAMERA_TYPE_COUNT,
 }
 CameraType;
 
