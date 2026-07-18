@@ -45,7 +45,14 @@ static void Perspective(float matrix[4][4], float aspect, float fov, float near,
     matrix[3][3] = 0.0f;
 }
 
-static void Ortho(float matrix[4][4], float left, float right, float bottom, float top, float near, float far)
+static void Ortho(
+    float matrix[4][4],
+    float left,
+    float right,
+    float bottom,
+    float top,
+    float near,
+    float far)
 {
     matrix[0][0] = 2.0f / (right - left);
     matrix[0][1] = 0.0f;
@@ -228,7 +235,14 @@ void Camera_GetVector(const Camera* camera, float* x, float* y, float* z)
     *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * c;
 }
 
-bool Camera_GetVisibility(const Camera* camera, float x, float y, float z, float sx, float sy, float sz)
+bool Camera_GetVisibility(
+    const Camera* camera,
+    float x,
+    float y,
+    float z,
+    float sx,
+    float sy,
+    float sz)
 {
     float x2 = x + sx;
     float y2 = y + sy;

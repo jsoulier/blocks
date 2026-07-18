@@ -18,24 +18,24 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _170;
+    float4 _49;
     do
     {
-        if (!(in.in_var_TEXCOORD2 != 0u))
+        if (in.in_var_TEXCOORD2 == 0u)
         {
-            _170 = float4(1.0);
+            _49 = float4(1.0);
             break;
         }
-        float3 _153 = float3(in.in_var_TEXCOORD0, float(in.in_var_TEXCOORD1));
-        float4 _157 = atlasTexture.sample(atlasSampler, _153.xy, uint(rint(_153.z)));
-        if (_157.w <= 0.001000000047497451305389404296875)
+        float3 _42 = float3(in.in_var_TEXCOORD0, float(in.in_var_TEXCOORD1));
+        float4 _44 = atlasTexture.sample(atlasSampler, _42.xy, uint(rint(_42.z)));
+        if (_44.w <= 0.001000000047497451305389404296875)
         {
             discard_fragment();
         }
-        _170 = _157;
+        _49 = _44;
         break;
     } while(false);
-    out.out_var_SV_Target0 = _170;
+    out.out_var_SV_Target0 = _49;
     return out;
 }
 

@@ -11,54 +11,53 @@ struct Block
 {
     uint IsSprite;
     uint HasOcclusion;
-    uint IsFullbright;
+    uint HasShadow;
+    uint CanBeInShadow;
+    float blockSunIntensity;
     uint Indices[6];
 };
 
-static const float3 kNormals[10] =
-{
-    float3(0.0f, 0.0f, 1.0f),
-    float3(0.0f, 0.0f, -1.0f),
-    float3(1.0f, 0.0f, 0.0f),
-    float3(-1.0f, 0.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
-    float3(0.0f, -1.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
+static const float3 kNormals[10] = {
+    float3(0.0f, 0.0f, 1.0f),  // North
+    float3(0.0f, 0.0f, -1.0f), // South
+    float3(1.0f, 0.0f, 0.0f),  // East
+    float3(-1.0f, 0.0f, 0.0f), // West
+    float3(0.0f, 1.0f, 0.0f),  // Up
+    float3(0.0f, -1.0f, 0.0f), // Down
+    float3(0.0f, 1.0f, 0.0f),  // Sprite north
+    float3(0.0f, 1.0f, 0.0f),  // Sprite south
+    float3(0.0f, 1.0f, 0.0f),  // Sprite east
+    float3(0.0f, 1.0f, 0.0f),  // Sprite west
 };
 
-static const float3 kCubePositions[8] =
-{
-    float3(-0.5f, -0.5f, -0.5f),
-    float3(0.5f, -0.5f, -0.5f),
-    float3(0.5f, 0.5f, -0.5f),
-    float3(-0.5f, 0.5f, -0.5f),
-    float3(-0.5f, -0.5f, 0.5f),
-    float3(0.5f, -0.5f, 0.5f),
-    float3(0.5f, 0.5f, 0.5f),
-    float3(-0.5f, 0.5f, 0.5f),
+static const float3 kCubePositions[8] = {
+    float3(-0.5f, -0.5f, -0.5f), // -X, -Y, -Z
+    float3(0.5f, -0.5f, -0.5f),  // +X, -Y, -Z
+    float3(0.5f, 0.5f, -0.5f),   // +X, +Y, -Z
+    float3(-0.5f, 0.5f, -0.5f),  // -X, +Y, -Z
+    float3(-0.5f, -0.5f, 0.5f),  // -X, -Y, +Z
+    float3(0.5f, -0.5f, 0.5f),   // +X, -Y, +Z
+    float3(0.5f, 0.5f, 0.5f),    // +X, +Y, +Z
+    float3(-0.5f, 0.5f, 0.5f),   // -X, +Y, +Z
 };
 
-static const float3 kCubeNormals[6] =
-{
-    float3(0.0f, 0.0f, -1.0f),
-    float3(0.0f, 0.0f, 1.0f),
-    float3(-1.0f, 0.0f, 0.0f),
-    float3(1.0f, 0.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
-    float3(0.0f, -1.0f, 0.0f),
+static const float3 kCubeNormals[6] = {
+    float3(0.0f, 0.0f, -1.0f), // -Z
+    float3(0.0f, 0.0f, 1.0f),  // +Z
+    float3(-1.0f, 0.0f, 0.0f), // -X
+    float3(1.0f, 0.0f, 0.0f),  // +X
+    float3(0.0f, 1.0f, 0.0f),  // +Y
+    float3(0.0f, -1.0f, 0.0f), // -Y
 };
 
-static const uint kCubeIndices[36] =
-{
-    0, 1, 2, 0, 2, 3,
-    5, 4, 7, 5, 7, 6,
-    4, 0, 3, 4, 3, 7,
-    1, 5, 6, 1, 6, 2,
-    3, 2, 6, 3, 6, 7,
-    4, 5, 1, 4, 1, 0};
+static const uint kCubeIndices[36] = {
+    0, 1, 2, 0, 2, 3, // -Z
+    5, 4, 7, 5, 7, 6, // +Z
+    4, 0, 3, 4, 3, 7, // -X
+    1, 5, 6, 1, 6, 2, // +X
+    3, 2, 6, 3, 6, 7, // +Y
+    4, 5, 1, 4, 1, 0, // -Y
+};
 
 float GetAO(uint voxel)
 {
@@ -78,7 +77,10 @@ uint GetBlock(uint voxel)
 
 float3 GetPosition(uint voxel)
 {
-    return float3((voxel >> X_OFFSET) & X_MASK, (voxel >> Y_OFFSET) & Y_MASK, (voxel >> Z_OFFSET) & Z_MASK);
+    return float3(
+        (voxel >> X_OFFSET) & X_MASK,
+        (voxel >> Y_OFFSET) & Y_MASK,
+        (voxel >> Z_OFFSET) & Z_MASK);
 }
 
 uint GetIndex(uint voxel, Block block)
@@ -117,7 +119,11 @@ struct Light
     int Z;
 };
 
-float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 position, float3 normal)
+float3 GetDiffuseLight(
+    StructuredBuffer<Light> lights,
+    uint lightCount,
+    float4 position,
+    float3 normal)
 {
     static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
@@ -149,9 +155,16 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
     return finalColor;
 }
 
-float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4x4 transform, float3 sunDirection, float sunIntensity, float3 position, float3 normal, Block block)
+float GetSunLight(
+    Texture2D<float> texture,
+    SamplerComparisonState state,
+    float4x4 transform,
+    float3 sunDirection,
+    float sunIntensity,
+    float3 position,
+    float3 normal,
+    Block block)
 {
-    static const float kShadow = 0.4f;
     if (sunIntensity <= 0.0f)
     {
         return 0.0f;
@@ -161,13 +174,18 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     {
         return 0.0f;
     }
+    if (!block.CanBeInShadow)
+    {
+        return block.blockSunIntensity * sunIntensity;
+    }
     float4 shadowPosition = mul(transform, float4(position, 1.0f));
     shadowPosition.xyz /= shadowPosition.w;
     float2 uv = shadowPosition.xy * 0.5f + 0.5f;
     uv.y = 1.0f - uv.y;
-    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f || shadowPosition.z > 1.0f)
+    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f ||
+        shadowPosition.z > 1.0f)
     {
-        return kShadow * sunIntensity * ratio;
+        return block.blockSunIntensity * sunIntensity * ratio;
     }
     uint width;
     uint height;
@@ -179,13 +197,16 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     {
         for (int y = -1; y <= 1; y++)
         {
-            visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
+            visibility += texture.SampleCmpLevelZero(
+                state,
+                uv + float2(x, y) * texelSize,
+                shadowPosition.z - bias);
         }
     }
     visibility /= 9.0f;
     float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
     visibility = lerp(1.0f, visibility, shadowFade);
-    return kShadow * sunIntensity * ratio * visibility;
+    return block.blockSunIntensity * sunIntensity * ratio * visibility;
 }
 
 float GetFog(float x)

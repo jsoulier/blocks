@@ -460,7 +460,8 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
 #ifndef NDEBUG
     device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
 #else
-    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, false, NULL);
+    device =
+        SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, false, NULL);
 #endif
     if (!device)
     {
@@ -472,7 +473,11 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to claim window: %s", SDL_GetError());
         return false;
     }
-    SDL_SetGPUSwapchainParameters(device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_MAILBOX);
+    SDL_SetGPUSwapchainParameters(
+        device,
+        window,
+        SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+        SDL_GPU_PRESENTMODE_MAILBOX);
     color_format = SDL_GetGPUSwapchainTextureFormat(device, window);
     depth_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
     if (!CreateAtlas())

@@ -41,4 +41,11 @@ void Camera_Move(Camera* camera, float x, float y, float z);
 void Camera_Resize(Camera* camera, int width, int height);
 void Camera_Rotate(Camera* camera, float pitch, float yaw);
 void Camera_GetVector(const Camera* camera, float* x, float* y, float* z);
-bool Camera_GetVisibility(const Camera* camera, float x, float y, float z, float sx, float sy, float sz);
+bool Camera_GetVisibility(
+    const Camera* camera,
+    float x,
+    float y,
+    float z,
+    float sx,
+    float sy,
+    float sz);

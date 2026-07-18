@@ -15,8 +15,7 @@ struct Output
 static const float kWidth = 1280.0f;
 static const float kHeight = 720.0f;
 
-static const float2 kPositions[6] =
-{
+static const float2 kPositions[6] = {
     float2(0.0f, 0.0f),
     float2(1.0f, 0.0f),
     float2(0.0f, 1.0f),

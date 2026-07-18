@@ -3,33 +3,32 @@
 
 #include "save.h"
 
-static const char* PLAYER_TABLE =
-"CREATE TABLE IF NOT EXISTS players ("
-"    id INT PRIMARY KEY NOT NULL,"
-"    data BLOB NOT NULL"
-");";
-static const char* BLOCK_TABLE =
-"CREATE TABLE IF NOT EXISTS blocks ("
-"    cx INTEGER NOT NULL,"
-"    cz INTEGER NOT NULL,"
-"    bx INTEGER NOT NULL,"
-"    by INTEGER NOT NULL,"
-"    bz INTEGER NOT NULL,"
-"    block INTEGER NOT NULL,"
-"    PRIMARY KEY (cx, cz, bx, by, bz)"
-");";
-static const char* SKY_TABLE =
-"CREATE TABLE IF NOT EXISTS sky ("
-"    id INTEGER PRIMARY KEY NOT NULL,"
-"    time_of_day REAL NOT NULL"
-");";
+static const char* SCHEMA =
+    "CREATE TABLE IF NOT EXISTS players ("
+    "    id INT PRIMARY KEY NOT NULL,"
+    "    data BLOB NOT NULL"
+    ");"
+    "CREATE TABLE IF NOT EXISTS blocks ("
+    "    cx INTEGER NOT NULL,"
+    "    cz INTEGER NOT NULL,"
+    "    bx INTEGER NOT NULL,"
+    "    by INTEGER NOT NULL,"
+    "    bz INTEGER NOT NULL,"
+    "    block INTEGER NOT NULL,"
+    "    PRIMARY KEY (cx, cz, bx, by, bz)"
+    ");"
+    "CREATE TABLE IF NOT EXISTS sky ("
+    "    id INTEGER PRIMARY KEY NOT NULL,"
+    "    time_of_day REAL NOT NULL"
+    ");"
+    "CREATE INDEX IF NOT EXISTS bindex ON blocks (cx, cz);";
 static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUES (0, ?);";
 static const char* GET_PLAYER = "SELECT data FROM players WHERE id = 0;";
 static const char* SET_SKY = "INSERT OR REPLACE INTO sky (id, time_of_day) VALUES (0, ?);";
 static const char* GET_SKY = "SELECT time_of_day FROM sky WHERE id = 0;";
-static const char* SET_BLOCK = "INSERT OR REPLACE INTO blocks (cx, cz, bx, by, bz, block) VALUES (?, ?, ?, ?, ?, ?);";
+static const char* SET_BLOCK =
+    "INSERT OR REPLACE INTO blocks (cx, cz, bx, by, bz, block) VALUES (?, ?, ?, ?, ?, ?);";
 static const char* GET_BLOCKS = "SELECT bx, by, bz, block FROM blocks WHERE cx = ? AND cz = ?;";
-static const char* BLOCK_INDEX = "CREATE INDEX IF NOT EXISTS bindex ON blocks (cx, cz);";
 
 static sqlite3* handle;
 static sqlite3_stmt* set_player;
@@ -77,15 +76,9 @@ bool Save_Init(const char* path)
         handle = NULL;
         return false;
     }
-    if (!Execute(PLAYER_TABLE, "create player table") ||
-        !Execute(BLOCK_TABLE, "create block table") ||
-        !Execute(SKY_TABLE, "create sky table") ||
-        !Execute(BLOCK_INDEX, "create block index") ||
-        !Prepare(&set_player, SET_PLAYER, "set player") ||
-        !Prepare(&get_player, GET_PLAYER, "get player") ||
-        !Prepare(&set_sky, SET_SKY, "set sky") ||
-        !Prepare(&get_sky, GET_SKY, "get sky") ||
-        !Prepare(&set_block, SET_BLOCK, "set block") ||
+    if (!Execute(SCHEMA, "create schema") || !Prepare(&set_player, SET_PLAYER, "set player") ||
+        !Prepare(&get_player, GET_PLAYER, "get player") || !Prepare(&set_sky, SET_SKY, "set sky") ||
+        !Prepare(&get_sky, GET_SKY, "get sky") || !Prepare(&set_block, SET_BLOCK, "set block") ||
         !Prepare(&get_blocks, GET_BLOCKS, "get blocks"))
     {
         Save_Free();

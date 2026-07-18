@@ -54,7 +54,15 @@ float4 main(Input input) : SV_Target0
     float4 position = input.WorldPosition;
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, normal);
     float3 ambient = Ambient.xyz;
-    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, position.xyz, normal, block);
+    float sun = GetSunLight(
+        shadowTexture,
+        shadowSampler,
+        ShadowTransform,
+        Sun.xyz,
+        Sun.w,
+        position.xyz,
+        normal,
+        block);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     if (index == kWater)

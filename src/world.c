@@ -228,7 +228,14 @@ static Block GetChunkBlock(Chunk* chunk, int bx, int by, int bz)
     return chunk->blocks[bx][by][bz];
 }
 
-static Block GetNeighborhoodBlock(Chunk* chunks[3][3], int bx, int by, int bz, int dx, int dy, int dz)
+static Block GetNeighborhoodBlock(
+    Chunk* chunks[3][3],
+    int bx,
+    int by,
+    int bz,
+    int dx,
+    int dy,
+    int dz)
 {
     SDL_assert(dx >= -1 && dx <= 1);
     SDL_assert(dy >= -1 && dy <= 1);
@@ -360,9 +367,12 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
         corner[i] = offset;
     }
     SDL_assert(side == 2);
-    bool has_side1 = Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
-    bool has_side2 = Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
-    bool has_corner = Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
+    bool has_side1 =
+        Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
+    bool has_side2 =
+        Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
+    bool has_corner = Block_HasOcclusion(
+        GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
     if (has_side1 && has_side2)
     {
         return 0;
@@ -873,7 +883,11 @@ void World_Update(const Camera* camera)
     }
 }
 
-static void Render(Chunk* chunk, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass, WorldFlags flags)
+static void Render(
+    Chunk* chunk,
+    SDL_GPUCommandBuffer* cbuf,
+    SDL_GPURenderPass* pass,
+    WorldFlags flags)
 {
     MeshType mesh = flags & WORLD_FLAGS_OPAQUE ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
     GPUBuffer* gpu_voxels = &chunk->gpu_voxels[mesh];
@@ -908,7 +922,11 @@ static void Render(Chunk* chunk, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* 
     SDL_DrawGPUIndexedPrimitives(pass, gpu_voxels->size * 1.5, 1, 0, 0, 0);
 }
 
-void World_Render(const Camera* camera, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass, WorldFlags flags)
+void World_Render(
+    const Camera* camera,
+    SDL_GPUCommandBuffer* cbuf,
+    SDL_GPURenderPass* pass,
+    WorldFlags flags)
 {
     SDL_PushGPUVertexUniformData(cbuf, 0, camera->proj, 64);
     SDL_PushGPUVertexUniformData(cbuf, 1, camera->view, 64);

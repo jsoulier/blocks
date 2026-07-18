@@ -64,7 +64,8 @@ void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock function)
             }
             if (low && grass)
             {
-                float plant = stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
+                float plant =
+                    stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
                 if (plant > 0.8f && a > 2 && a < CHUNK_WIDTH - 2 && b > 2 && b < CHUNK_WIDTH - 2)
                 {
                     int log = 3 + plant * 2.0f;

@@ -60,16 +60,16 @@ Output main(Input input)
     float3 normal = GetNormal(input.Voxel, block);
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, normal);
     float3 ambient = Ambient.xyz;
-    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, input.WorldPosition.xyz, normal, block);
-    float3 finalColor;
-    if (block.IsFullbright)
-    {
-        finalColor = albedo;
-    }
-    else
-    {
-        finalColor = albedo * (diffuse + ambient * input.AO + sun);
-    }
+    float sun = GetSunLight(
+        shadowTexture,
+        shadowSampler,
+        ShadowTransform,
+        Sun.xyz,
+        Sun.w,
+        input.WorldPosition.xyz,
+        normal,
+        block);
+    float3 finalColor = albedo * (diffuse + ambient * input.AO + sun);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
     float fog = GetFog(distance(input.WorldPosition.xz, PlayerPosition.xz));
     output.Color = float4(lerp(finalColor, sky, fog), 1.0f);

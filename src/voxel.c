@@ -5,8 +5,7 @@
 #include "voxel.h"
 #include "voxel.inc"
 
-static const int CUBE_POSITIONS[][4][3] =
-{
+static const int CUBE_POSITIONS[][4][3] = {
     {{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}},
     {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}},
     {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}},
@@ -15,8 +14,7 @@ static const int CUBE_POSITIONS[][4][3] =
     {{0, 0, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 1}},
 };
 
-static const int TEXCOORDS[][4][2] =
-{
+static const int TEXCOORDS[][4][2] = {
     {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
     {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
     {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
@@ -62,8 +60,7 @@ Voxel Voxel_PackSprite(Block block, int x, int y, int z, Direction direction, in
     SDL_assert(block < BLOCK_COUNT);
     SDL_assert(direction < 4);
     SDL_assert(i < 4);
-    static const int POSITIONS[][4][3] =
-    {
+    static const int POSITIONS[][4][3] = {
         {{0, 0, 0}, {0, 1, 0}, {1, 0, 1}, {1, 1, 1}},
         {{0, 0, 0}, {1, 0, 1}, {0, 1, 0}, {1, 1, 1}},
         {{0, 0, 1}, {1, 0, 0}, {0, 1, 1}, {1, 1, 0}},

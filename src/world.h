@@ -27,7 +27,11 @@ typedef struct WorldQuery
 void World_Init(SDL_GPUDevice* device);
 void World_Free();
 void World_Update(const Camera* camera);
-void World_Render(const Camera* camera, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass, WorldFlags flags);
+void World_Render(
+    const Camera* camera,
+    SDL_GPUCommandBuffer* cbuf,
+    SDL_GPURenderPass* pass,
+    WorldFlags flags);
 Block World_GetBlock(const int position[3]);
 void World_SetBlock(const int position[3], Block block);
 WorldQuery World_Raycast(const Camera* camera, float length);
