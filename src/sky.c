@@ -9,6 +9,10 @@ static const float SUNSET_LENGTH = 30.0f;
 static const float NIGHT_LENGTH = 60.0f;
 static const float SPEED = 0.1f;
 static const float AMBIENT_SCALE = 0.5f;
+static const float SHADOW_Y = 30.0f;
+static const float SHADOW_ORTHO = 300.0f;
+static const float SHADOW_FAR = 300.0f;
+static const int SHADOW_UPDATE_FRAMES = 300;
 
 static const float NIGHT_SKY_TOP[3] = {0.02f, 0.02f, 0.1f};
 static const float NIGHT_SKY_HORIZON[3] = {0.05f, 0.05f, 0.2f};
@@ -89,6 +93,10 @@ void sky_save_or_load(sky_t* sky, bool save)
         save_set_sky(sky->time_of_day);
         return;
     }
+    camera_init(&sky->shadow_camera, CAMERA_TYPE_ORTHO);
+    sky->shadow_camera.ortho = SHADOW_ORTHO;
+    sky->shadow_camera.far = SHADOW_FAR;
+    sky->shadow_frame = 0;
     float total_length = SUNRISE_LENGTH + DAY_LENGTH + SUNSET_LENGTH + NIGHT_LENGTH;
     float sunrise_end = SUNRISE_LENGTH / total_length;
     float day_end = sunrise_end + DAY_LENGTH / total_length;
@@ -107,4 +115,28 @@ void sky_update(sky_t* sky, float dt)
     sky->time_of_day += dt * SPEED / total_length;
     sky->time_of_day = SDL_fmodf(sky->time_of_day, 1.0f);
     update_render(sky);
+}
+
+void sky_update_shadow(sky_t* sky, const camera_t* camera, int resolution)
+{
+    camera_t* shadow = &sky->shadow_camera;
+    if (sky->shadow_frame == 0)
+    {
+        shadow->pitch = SDL_asinf(sky->render.sun[1]);
+        shadow->yaw = SDL_atan2f(sky->render.sun[0], -sky->render.sun[2]);
+    }
+    sky->shadow_frame = (sky->shadow_frame + 1) % SHADOW_UPDATE_FRAMES;
+    shadow->x = camera->x;
+    shadow->y = SHADOW_Y;
+    shadow->z = camera->z;
+    camera_update(shadow);
+    float texel_size = SHADOW_ORTHO * 2.0f / resolution;
+    float light_x = shadow->view[0][0] * shadow->x + shadow->view[1][0] * shadow->y + shadow->view[2][0] * shadow->z;
+    float light_y = shadow->view[0][1] * shadow->x + shadow->view[1][1] * shadow->y + shadow->view[2][1] * shadow->z;
+    float delta_x = SDL_roundf(light_x / texel_size) * texel_size - light_x;
+    float delta_y = SDL_roundf(light_y / texel_size) * texel_size - light_y;
+    shadow->x += shadow->view[0][0] * delta_x + shadow->view[0][1] * delta_y;
+    shadow->y += shadow->view[1][0] * delta_x + shadow->view[1][1] * delta_y;
+    shadow->z += shadow->view[2][0] * delta_x + shadow->view[2][1] * delta_y;
+    camera_update(shadow);
 }

@@ -17,11 +17,6 @@ static const float ATLAS_WIDTH = 512.0f;
 static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
 static const int SHADOW_RESOLUTION = 4096.0f;
-static const float SHADOW_Y = 30.0f;
-static const float SHADOW_ORTHO = 300.0f;
-static const float SHADOW_FAR = 300.0f;
-static const float SHADOW_ANGLE_STEP = SDL_PI_F / 360.0f;
-static const float SHADOW_PITCH_BIAS = SDL_PI_F / 3600.0f;
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
 
 static SDL_Window* window;
@@ -45,7 +40,6 @@ static SDL_GPUTexture* multisample_position_texture;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* shadow_sampler;
-static camera_t shadow_camera; // TODO: move into sky
 static sky_t sky;
 static player_t player;
 static Uint64 ticks1;
@@ -626,33 +620,6 @@ static bool resize(int width, int height)
     return true;
 }
 
-// TODO: shadow clamp with update shadow every N frames
-// TODO: move into sky
-static void update_shadow_camera()
-{
-    camera_init(&shadow_camera, CAMERA_TYPE_ORTHO);
-    shadow_camera.ortho = SHADOW_ORTHO;
-    shadow_camera.far = SHADOW_FAR;
-    shadow_camera.x = player.camera.x;
-    shadow_camera.y = SHADOW_Y;
-    shadow_camera.z = player.camera.z;
-    shadow_camera.pitch = SDL_asinf(SDL_clamp(sky.render.sun[1], -1.0f, 1.0f));
-    shadow_camera.pitch = SDL_roundf(shadow_camera.pitch / SHADOW_ANGLE_STEP) * SHADOW_ANGLE_STEP;
-    shadow_camera.pitch = SDL_clamp(shadow_camera.pitch, -SDL_PI_F * 0.5f + SHADOW_PITCH_BIAS, SDL_PI_F * 0.5f - SHADOW_PITCH_BIAS);
-    shadow_camera.yaw = SDL_atan2f(sky.render.sun[0], -sky.render.sun[2]);
-    shadow_camera.yaw = SDL_roundf(shadow_camera.yaw / SHADOW_ANGLE_STEP) * SHADOW_ANGLE_STEP;
-    camera_update(&shadow_camera);
-    float texel_size = SHADOW_ORTHO * 2.0f / SHADOW_RESOLUTION;
-    float light_x = shadow_camera.view[0][0] * shadow_camera.x + shadow_camera.view[1][0] * shadow_camera.y + shadow_camera.view[2][0] * shadow_camera.z;
-    float light_y = shadow_camera.view[0][1] * shadow_camera.x + shadow_camera.view[1][1] * shadow_camera.y + shadow_camera.view[2][1] * shadow_camera.z;
-    float delta_x = SDL_roundf(light_x / texel_size) * texel_size - light_x;
-    float delta_y = SDL_roundf(light_y / texel_size) * texel_size - light_y;
-    shadow_camera.x += shadow_camera.view[0][0] * delta_x + shadow_camera.view[0][1] * delta_y;
-    shadow_camera.y += shadow_camera.view[1][0] * delta_x + shadow_camera.view[1][1] * delta_y;
-    shadow_camera.z += shadow_camera.view[2][0] * delta_x + shadow_camera.view[2][1] * delta_y;
-    camera_update(&shadow_camera);
-}
-
 static void render_shadow(SDL_GPUCommandBuffer* cbuf)
 {
     if (!sky.has_sun)
@@ -676,7 +643,7 @@ static void render_shadow(SDL_GPUCommandBuffer* cbuf)
     SDL_GPUBuffer* block_buffer = block_get_buffer();
     SDL_BindGPUVertexStorageBuffers(pass, 0, &block_buffer, 1);
     SDL_PushGPUDebugGroup(cbuf, "shadow");
-    world_render(&shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
+    world_render(&sky.shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
     SDL_PopGPUDebugGroup(cbuf);
     SDL_EndGPURenderPass(pass);
 }
@@ -701,7 +668,7 @@ static void render_opaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     sampler_bindings[1].sampler = shadow_sampler;
     SDL_PushGPUDebugGroup(cbuf, "opaque");
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
-    SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
+    SDL_PushGPUFragmentUniformData(cbuf, 1, &sky.shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
     SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
@@ -770,7 +737,7 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
     sampler_bindings[2].sampler = nearest_sampler;
     SDL_PushGPUDebugGroup(cbuf, "transparent");
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
-    SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
+    SDL_PushGPUFragmentUniformData(cbuf, 1, &sky.shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
     SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 3);
@@ -903,7 +870,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
         player_move(&player, dt);
         player_save_or_load(&player, PLAYER_ID, true);
     }
-    update_shadow_camera();
+    sky_update_shadow(&sky, &player.camera, SHADOW_RESOLUTION);
     world_update(&player.camera);
     render();
     return SDL_APP_CONTINUE;
