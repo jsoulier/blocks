@@ -1,13 +1,14 @@
 {
-    "cmake.parallelJobs": 8,
-    "C_Cpp.clang_format_style": "file",
-    "editor.formatOnSave": true,
     "[c][cpp]": {
         "editor.defaultFormatter": "ms-vscode.cpptools"
     },
+    "C_Cpp.clang_format_style": "file",
+    "cmake.parallelJobs": 8,
+    "editor.formatOnSave": true,
     "files.associations": {
         "*.frag": "cpp",
         "*.hlsl": "cpp",
+        "*.inc": "cpp",
         "*.vert": "cpp"
     }
 }

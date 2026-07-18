@@ -6,12 +6,12 @@
 #include "rand.h"
 #include "save.h"
 #include "voxel.h"
+#include "voxel.inc"
 #include "world.h"
 
 #define WORKERS 4
 
-static const int AO_LEVEL_CLEAR = 3;
-static const Uint32 INDEX_COUNT = CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH * DIRECTION_COUNT * 6;
+static const Uint32 MAX_INDICES = CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH * DIRECTION_COUNT * 6;
 
 typedef enum JobType
 {
@@ -121,13 +121,13 @@ static Chunk* GetChunk(int cx, int cz)
 
 static void GetNeighborhood(int cx, int cz, Chunk* neighborhood[3][3])
 {
-    for (int offset_x = -1; offset_x <= 1; offset_x++)
+    for (int x = -1; x <= 1; x++)
     {
-        for (int offset_z = -1; offset_z <= 1; offset_z++)
+        for (int z = -1; z <= 1; z++)
         {
-            Chunk* chunk = GetChunk(cx + offset_x, cz + offset_z);
-            neighborhood[offset_x + 1][offset_z + 1] = chunk;
+            Chunk* chunk = GetChunk(cx + x, cz + z);
             SDL_assert(chunk);
+            neighborhood[x + 1][z + 1] = chunk;
         }
     }
 }
@@ -153,9 +153,9 @@ static Chunk* CreateChunk()
 static void FreeChunk(Chunk* chunk)
 {
     GPUBuffer_Free(&chunk->gpu_lights);
-    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
+    for (int i = 0; i < MESH_TYPE_COUNT; i++)
     {
-        GPUBuffer_Free(&chunk->gpu_voxels[mesh_index]);
+        GPUBuffer_Free(&chunk->gpu_voxels[i]);
     }
     SDL_free(chunk->lights);
     SDL_free(chunk);
@@ -336,39 +336,40 @@ static bool IsVisible(Block block, Block neighbor)
 static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction direction, int vertex)
 {
     int position[3];
-    Voxel_GetCubePosition(direction, vertex, position);
-    int first_side[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
-    int second_side[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    Voxel_GetPosition(direction, vertex, position);
+    int side1[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    int side2[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
     int corner[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
-    int side_count = 0;
-    for (int axis = 0; axis < 3; axis++)
+    int sides = 0;
+    for (int i = 0; i < 3; i++)
     {
-        if (DIRECTIONS[direction][axis])
+        if (DIRECTIONS[direction][i])
         {
             continue;
         }
-        int offset = position[axis] ? 1 : -1;
-        if (side_count++ == 0)
+        int offset = position[i] ? 1 : -1;
+        if (sides++ == 0)
         {
-            first_side[axis] = offset;
+            side1[i] = offset;
         }
         else
         {
-            second_side[axis] = offset;
+            side2[i] = offset;
         }
-        corner[axis] = offset;
+        corner[i] = offset;
     }
-    SDL_assert(side_count == 2);
-    bool has_first_side =
-        Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, first_side[0], first_side[1], first_side[2]));
-    bool has_second_side =
-        Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, second_side[0], second_side[1], second_side[2]));
+    SDL_assert(sides == 2);
+    bool has_side1 = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
+    bool has_side2 = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
     bool has_corner = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
-    if (has_first_side && has_second_side)
+    if (!has_side1 || !has_side2)
+    {
+        return VOXEL_AO_MASK - has_side1 - has_side2 - has_corner;
+    }
+    else
     {
         return 0;
     }
-    return AO_LEVEL_CLEAR - has_first_side - has_second_side - has_corner;
 }
 
 static void GenerateChunkBlocks(Chunk* chunk)
@@ -427,23 +428,17 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                     {
                         continue;
                     }
-                    int ambient_occlusion[4];
-                    int vertex_order[] = {0, 1, 2, 3};
-                    for (int vertex = 0; vertex < 4; vertex++)
+                    int ao[4];
+                    for (int i = 0; i < 4; i++)
                     {
-                        ambient_occlusion[vertex] = GetAO(chunks, bx, by, bz, direction, vertex);
+                        ao[i] = GetAO(chunks, bx, by, bz, direction, i);
                     }
-                    if (ambient_occlusion[0] + ambient_occlusion[3] > ambient_occlusion[1] + ambient_occlusion[2])
+                    int order[4];
+                    Voxel_GetAO(ao, order);
+                    for (int i = 0; i < 4; i++)
                     {
-                        vertex_order[0] = 1;
-                        vertex_order[1] = 3;
-                        vertex_order[2] = 0;
-                        vertex_order[3] = 2;
-                    }
-                    for (int vertex_index = 0; vertex_index < 4; vertex_index++)
-                    {
-                        int vertex = vertex_order[vertex_index];
-                        Voxel voxel = Voxel_PackCube(block, bx, by, bz, direction, vertex, ambient_occlusion[vertex]);
+                        int index = order[i];
+                        Voxel voxel = Voxel_PackCube(block, bx, by, bz, direction, index, ao[index]);
                         CPUBuffer_Append(&voxels[mesh_type], &voxel);
                     }
                 }
@@ -510,7 +505,7 @@ static void GenerateIndices()
         return;
     }
     static const int INDICES[] = {0, 1, 2, 3, 2, 1};
-    for (Uint32 quad_index = 0; quad_index < INDEX_COUNT / 6; quad_index++)
+    for (Uint32 quad_index = 0; quad_index < MAX_INDICES / 6; quad_index++)
     {
         for (Uint32 index_index = 0; index_index < 6; index_index++)
         {
