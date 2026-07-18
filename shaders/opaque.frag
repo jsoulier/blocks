@@ -48,7 +48,6 @@ Output main(Input input)
 {
     Output output;
     Block block = blockBuffer[GetBlock(input.Voxel)];
-    float3 normal = GetNormal(input.Voxel, block);
     float3 texcoord = float3(input.Texcoord, GetIndex(input.Voxel, block));
     float4 color = atlasTexture.Sample(atlasSampler, texcoord);
     output.Position = input.WorldPosition;
@@ -58,6 +57,7 @@ Output main(Input input)
         return output;
     }
     float3 albedo = color.rgb;
+    float3 normal = GetNormal(input.Voxel, block);
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, normal);
     float3 ambient = GetAmbientLight(Ambient.xyz);
     float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, input.WorldPosition.xyz, normal, block);

@@ -637,11 +637,6 @@ static void render_shadow(SDL_GPUCommandBuffer* cbuf)
     SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
     SDL_GPUBuffer* block_buffer = block_get_buffer();
     SDL_BindGPUVertexStorageBuffers(pass, 0, &block_buffer, 1);
-    SDL_BindGPUFragmentStorageBuffers(pass, 0, &block_buffer, 1);
-    SDL_GPUTextureSamplerBinding atlas_binding = {0};
-    atlas_binding.texture = atlas_texture;
-    atlas_binding.sampler = nearest_sampler;
-    SDL_BindGPUFragmentSamplers(pass, 0, &atlas_binding, 1);
     SDL_PushGPUDebugGroup(cbuf, "shadow");
     world_render(&shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
     SDL_PopGPUDebugGroup(cbuf);
