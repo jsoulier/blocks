@@ -115,7 +115,7 @@ void gpu_buffer_upload(gpu_buffer_t* gpu, cpu_buffer_t* cpu)
     }
     Uint32 size = cpu->size;
     cpu->size = 0;
-    if (size > gpu->size)
+    if (size > gpu->capacity)
     {
         SDL_ReleaseGPUBuffer(gpu->device, gpu->buffer);
         gpu->buffer = NULL;
