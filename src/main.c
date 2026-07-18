@@ -460,8 +460,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
 #ifndef NDEBUG
     device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
 #else
-    device =
-        SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, false, NULL);
+    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, false, NULL);
 #endif
     if (!device)
     {
@@ -473,11 +472,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to claim window: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    SDL_SetGPUSwapchainParameters(
-        device,
-        window,
-        SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
-        SDL_GPU_PRESENTMODE_MAILBOX);
+    SDL_SetGPUSwapchainParameters(device, window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL_GPU_PRESENTMODE_MAILBOX);
     color_format = SDL_GetGPUSwapchainTextureFormat(device, window);
     depth_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
     if (!CreateAtlas())
@@ -680,11 +675,7 @@ static void DrawOpaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     sampler_bindings[1].sampler = shadow_sampler;
     SDL_PushGPUDebugGroup(cbuf, "opaque");
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
-    SDL_PushGPUFragmentUniformData(
-        cbuf,
-        1,
-        &sky.shadow_camera.matrix,
-        sizeof(sky.shadow_camera.matrix));
+    SDL_PushGPUFragmentUniformData(cbuf, 1, &sky.shadow_camera.matrix, sizeof(sky.shadow_camera.matrix));
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, sizeof(player.camera.position));
     SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
@@ -754,11 +745,7 @@ static void DrawTransparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     sampler_bindings[2].sampler = nearest_sampler;
     SDL_PushGPUDebugGroup(cbuf, "transparent");
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
-    SDL_PushGPUFragmentUniformData(
-        cbuf,
-        1,
-        &sky.shadow_camera.matrix,
-        sizeof(sky.shadow_camera.matrix));
+    SDL_PushGPUFragmentUniformData(cbuf, 1, &sky.shadow_camera.matrix, sizeof(sky.shadow_camera.matrix));
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, sizeof(player.camera.position));
     SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 3);

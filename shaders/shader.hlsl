@@ -9,96 +9,96 @@ static const float kPi = 3.14159265f;
 
 struct Block
 {
+    uint IsOpaque;
+    uint IsSolid;
     uint IsSprite;
-    uint HasOcclusion;
-    uint HasShadow;
+    uint CanBeOccluded;
+    uint CanCreateShadow;
     uint CanBeInShadow;
-    float blockSunIntensity;
+    float SunIntensity;
+    uint LightColor;
+    int LightX;
+    int LightY;
+    int LightZ;
     uint Indices[6];
 };
 
-static const float3 kNormals[10] = {
-    float3(0.0f, 0.0f, 1.0f),  // North
-    float3(0.0f, 0.0f, -1.0f), // South
-    float3(1.0f, 0.0f, 0.0f),  // East
-    float3(-1.0f, 0.0f, 0.0f), // West
-    float3(0.0f, 1.0f, 0.0f),  // Up
-    float3(0.0f, -1.0f, 0.0f), // Down
-    float3(0.0f, 1.0f, 0.0f),  // Sprite north
-    float3(0.0f, 1.0f, 0.0f),  // Sprite south
-    float3(0.0f, 1.0f, 0.0f),  // Sprite east
-    float3(0.0f, 1.0f, 0.0f),  // Sprite west
+static const float3 kNormals[6] = {
+    float3(0.0f, 0.0f, 1.0f),  // north
+    float3(0.0f, 0.0f, -1.0f), // south
+    float3(1.0f, 0.0f, 0.0f),  // east
+    float3(-1.0f, 0.0f, 0.0f), // west
+    float3(0.0f, 1.0f, 0.0f),  // up
+    float3(0.0f, -1.0f, 0.0f), // down
 };
 
 static const float3 kCubePositions[8] = {
-    float3(-0.5f, -0.5f, -0.5f), // -X, -Y, -Z
-    float3(0.5f, -0.5f, -0.5f),  // +X, -Y, -Z
-    float3(0.5f, 0.5f, -0.5f),   // +X, +Y, -Z
-    float3(-0.5f, 0.5f, -0.5f),  // -X, +Y, -Z
-    float3(-0.5f, -0.5f, 0.5f),  // -X, -Y, +Z
-    float3(0.5f, -0.5f, 0.5f),   // +X, -Y, +Z
-    float3(0.5f, 0.5f, 0.5f),    // +X, +Y, +Z
-    float3(-0.5f, 0.5f, 0.5f),   // -X, +Y, +Z
+    float3(-0.5f, -0.5f, -0.5f), // -x, -y, -z
+    float3(0.5f, -0.5f, -0.5f),  // +x, -y, -z
+    float3(0.5f, 0.5f, -0.5f),   // +x, +y, -z
+    float3(-0.5f, 0.5f, -0.5f),  // -x, +y, -z
+    float3(-0.5f, -0.5f, 0.5f),  // -x, -y, +z
+    float3(0.5f, -0.5f, 0.5f),   // +x, -y, +z
+    float3(0.5f, 0.5f, 0.5f),    // +x, +y, +z
+    float3(-0.5f, 0.5f, 0.5f),   // -x, +y, +z
 };
 
 static const float3 kCubeNormals[6] = {
-    float3(0.0f, 0.0f, -1.0f), // -Z
-    float3(0.0f, 0.0f, 1.0f),  // +Z
-    float3(-1.0f, 0.0f, 0.0f), // -X
-    float3(1.0f, 0.0f, 0.0f),  // +X
-    float3(0.0f, 1.0f, 0.0f),  // +Y
-    float3(0.0f, -1.0f, 0.0f), // -Y
+    float3(0.0f, 0.0f, -1.0f), // -z
+    float3(0.0f, 0.0f, 1.0f),  // +z
+    float3(-1.0f, 0.0f, 0.0f), // -x
+    float3(1.0f, 0.0f, 0.0f),  // +x
+    float3(0.0f, 1.0f, 0.0f),  // +y
+    float3(0.0f, -1.0f, 0.0f), // -y
 };
 
 static const uint kCubeIndices[36] = {
-    0, 1, 2, 0, 2, 3, // -Z
-    5, 4, 7, 5, 7, 6, // +Z
-    4, 0, 3, 4, 3, 7, // -X
-    1, 5, 6, 1, 6, 2, // +X
-    3, 2, 6, 3, 6, 7, // +Y
-    4, 5, 1, 4, 1, 0, // -Y
+    0, 1, 2, 0, 2, 3, // -z
+    5, 4, 7, 5, 7, 6, // +z
+    4, 0, 3, 4, 3, 7, // -x
+    1, 5, 6, 1, 6, 2, // +x
+    3, 2, 6, 3, 6, 7, // +y
+    4, 5, 1, 4, 1, 0, // -y
 };
 
-float GetAmbientOcclusion(uint voxel)
+static const float kAO[4] = {0.4f, 0.6f, 0.8f, 1.0f};
+
+float GetOcclusion(uint voxel)
 {
-    static const float kAO[4] = {0.4f, 0.6f, 0.8f, 1.0f};
-    return kAO[(voxel >> AO_OFFSET) & AO_MASK];
+    return kAO[(voxel >> VOXEL_AO_OFFSET) & VOXEL_AO_MASK];
 }
 
 uint GetDirection(uint voxel)
 {
-    return (voxel >> DIRECTION_OFFSET) & DIRECTION_MASK;
+    return (voxel >> VOXEL_DIRECTION_OFFSET) & VOXEL_DIRECTION_MASK;
 }
 
 uint GetBlockIndex(uint voxel)
 {
-    return (voxel >> BLOCK_OFFSET) & BLOCK_MASK;
+    return (voxel >> VOXEL_BLOCK_OFFSET) & VOXEL_BLOCK_MASK;
 }
 
 float3 GetPosition(uint voxel)
 {
     return float3(
-        (voxel >> X_OFFSET) & X_MASK,
-        (voxel >> Y_OFFSET) & Y_MASK,
-        (voxel >> Z_OFFSET) & Z_MASK);
+        (voxel >> VOXEL_X_OFFSET) & VOXEL_X_MASK,
+        (voxel >> VOXEL_Y_OFFSET) & VOXEL_Y_MASK,
+        (voxel >> VOXEL_Z_OFFSET) & VOXEL_Z_MASK);
 }
 
 uint GetAtlasIndex(uint voxel, Block block)
 {
-    uint direction = block.IsSprite ? 0 : GetDirection(voxel);
-    return block.Indices[direction];
+    return block.Indices[GetDirection(voxel)];
 }
 
 float2 GetTexcoord(uint voxel)
 {
-    return float2((voxel >> U_OFFSET) & U_MASK, (voxel >> V_OFFSET) & V_MASK);
+    return float2((voxel >> VOXEL_U_OFFSET) & VOXEL_U_MASK, (voxel >> VOXEL_V_OFFSET) & VOXEL_V_MASK);
 }
 
-float3 GetNormal(uint voxel, Block block)
+float3 GetNormal(uint voxel)
 {
-    uint direction = GetDirection(voxel);
-    direction += block.IsSprite ? 6 : 0;
-    return kNormals[direction];
+    return kNormals[GetDirection(voxel)];
 }
 
 float3 GetCubePosition(uint vertexID)
@@ -119,11 +119,7 @@ struct Light
     int Z;
 };
 
-float3 GetPointLight(
-    StructuredBuffer<Light> lights,
-    uint lightCount,
-    float3 position,
-    float3 normal)
+float3 GetPointLight(StructuredBuffer<Light> lights, uint lightCount, float3 position, float3 normal)
 {
     static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
     float3 accumulatedLight = float3(0.0f, 0.0f, 0.0f);
@@ -155,7 +151,7 @@ float3 GetPointLight(
     return accumulatedLight;
 }
 
-float GetSunLight(
+float GetSunlight(
     Texture2D<float> shadowTexture,
     SamplerComparisonState shadowSampler,
     float4x4 shadowTransform,
@@ -169,12 +165,12 @@ float GetSunLight(
     {
         return 0.0f;
     }
-    float sunlight = block.blockSunIntensity * sunIntensity;
+    float sunlight = block.SunIntensity * sunIntensity;
     if (!block.CanBeInShadow)
     {
         return sunlight;
     }
-    float lightAngle = block.HasOcclusion ? saturate(-dot(normal, sunDirection)) : 0.707f;
+    float lightAngle = block.CanBeOccluded ? saturate(-dot(normal, sunDirection)) : 0.707f;
     if (lightAngle <= 0.0f)
     {
         return 0.0f;
@@ -183,8 +179,7 @@ float GetSunLight(
     shadowPosition.xyz /= shadowPosition.w;
     float2 uv = shadowPosition.xy * 0.5f + 0.5f;
     uv.y = 1.0f - uv.y;
-    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f ||
-        shadowPosition.z > 1.0f)
+    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f || shadowPosition.z > 1.0f)
     {
         return sunlight * lightAngle;
     }
@@ -198,10 +193,8 @@ float GetSunLight(
     {
         for (int y = -1; y <= 1; y++)
         {
-            shadowVisibility += shadowTexture.SampleCmpLevelZero(
-                shadowSampler,
-                uv + float2(x, y) * texelSize,
-                shadowPosition.z - bias);
+            shadowVisibility +=
+                shadowTexture.SampleCmpLevelZero(shadowSampler, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
         }
     }
     shadowVisibility /= 9.0f;
@@ -210,7 +203,7 @@ float GetSunLight(
     return sunlight * lightAngle * shadowVisibility;
 }
 
-float GetFogAmount(float distance)
+float GetFogValue(float distance)
 {
     return min(pow(distance / 250.0f, 2.5f), 1.0f);
 }

@@ -136,10 +136,8 @@ void Sky_UpdateShadow(Sky* sky, const Camera* camera, int resolution)
     shadow->z = camera->z;
     Camera_Update(shadow);
     float texel_size = SHADOW_ORTHO * 2.0f / resolution;
-    float light_x = shadow->view[0][0] * shadow->x + shadow->view[1][0] * shadow->y +
-                    shadow->view[2][0] * shadow->z;
-    float light_y = shadow->view[0][1] * shadow->x + shadow->view[1][1] * shadow->y +
-                    shadow->view[2][1] * shadow->z;
+    float light_x = shadow->view[0][0] * shadow->x + shadow->view[1][0] * shadow->y + shadow->view[2][0] * shadow->z;
+    float light_y = shadow->view[0][1] * shadow->x + shadow->view[1][1] * shadow->y + shadow->view[2][1] * shadow->z;
     float delta_x = SDL_roundf(light_x / texel_size) * texel_size - light_x;
     float delta_y = SDL_roundf(light_y / texel_size) * texel_size - light_y;
     shadow->x += shadow->view[0][0] * delta_x + shadow->view[0][1] * delta_y;

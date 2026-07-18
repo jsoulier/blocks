@@ -45,7 +45,7 @@ static const uint kWater = 16;
 float4 main(Input input) : SV_Target0
 {
     Block block = blockBuffer[GetBlockIndex(input.Voxel)];
-    float3 normal = GetNormal(input.Voxel, block);
+    float3 normal = GetNormal(input.Voxel);
     uint index = GetAtlasIndex(input.Voxel, block);
     float3 texcoord = float3(input.Texcoord, index);
     float4 texel = atlasTexture.Sample(atlasSampler, texcoord);
@@ -54,17 +54,10 @@ float4 main(Input input) : SV_Target0
     float4 position = input.WorldPosition;
     float3 pointLight = GetPointLight(lightBuffer, LightCount, position.xyz, normal);
     float3 ambient = Ambient.xyz;
-    float sunlight = GetSunLight(
-        shadowTexture,
-        shadowSampler,
-        ShadowTransform,
-        Sun.xyz,
-        Sun.w,
-        position.xyz,
-        normal,
-        block);
+    float sunlight =
+        GetSunlight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, position.xyz, normal, block);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
-    float fog = GetFogAmount(distance(position.xz, PlayerPosition.xz));
+    float fog = GetFogValue(distance(position.xz, PlayerPosition.xz));
     if (index == kWater)
     {
         float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;

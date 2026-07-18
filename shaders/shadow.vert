@@ -35,6 +35,6 @@ Output main(Input input)
     float3 position = GetPosition(input.Voxel) + chunkPosition;
     Block block = blockBuffer[GetBlockIndex(input.Voxel)];
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
-    output.ClipDistance = block.HasShadow ? 1.0f : -1.0f;
+    output.ClipDistance = block.CanCreateShadow ? 1.0f : -1.0f;
     return output;
 }

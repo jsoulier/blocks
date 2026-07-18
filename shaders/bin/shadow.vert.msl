@@ -5,11 +5,17 @@ using namespace metal;
 
 struct Block
 {
+    uint IsOpaque;
+    uint IsSolid;
     uint IsSprite;
-    uint HasOcclusion;
-    uint HasShadow;
+    uint CanBeOccluded;
+    uint CanCreateShadow;
     uint CanBeInShadow;
-    float blockSunIntensity;
+    float SunIntensity;
+    uint LightColor;
+    int LightX;
+    int LightY;
+    int LightZ;
     uint Indices[6];
 };
 
@@ -49,7 +55,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& Un
 {
     main0_out out = {};
     out.gl_Position = UniformBuffer.Proj * (UniformBuffer_1.View * float4(float3(float((in.in_var_TEXCOORD0 >> 10u) & 31u), float((in.in_var_TEXCOORD0 >> 15u) & 255u), float((in.in_var_TEXCOORD0 >> 23u) & 31u)) + float3(int3(UniformBuffer_2.ChunkPosition.x, 0, UniformBuffer_2.ChunkPosition.y)), 1.0));
-    out.gl_ClipDistance[0u] = (blockBuffer._m0[(in.in_var_TEXCOORD0 >> 3u) & 31u].HasShadow != 0u) ? 1.0 : (-1.0);
+    out.gl_ClipDistance[0u] = (blockBuffer._m0[(in.in_var_TEXCOORD0 >> 3u) & 31u].CanCreateShadow != 0u) ? 1.0 : (-1.0);
     out.gl_ClipDistance_0 = out.gl_ClipDistance[0];
     return out;
 }

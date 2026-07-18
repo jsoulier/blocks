@@ -15,19 +15,15 @@ void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock callback)
             bool is_lowland = false;
             bool has_grass = false;
             float terrain_height =
-                stb_perlin_fbm_noise3(world_x * 0.005f, 0.0f, world_z * 0.005f, 2.0f, 0.5f, 6) *
-                50.0f;
+                stb_perlin_fbm_noise3(world_x * 0.005f, 0.0f, world_z * 0.005f, 2.0f, 0.5f, 6) * 50.0f;
             terrain_height = SDL_powf(SDL_max(terrain_height, 0.0f), 1.3f) + 30.0f;
             terrain_height = SDL_clamp(terrain_height, 0.0f, CHUNK_HEIGHT - 1.0f);
             if (terrain_height < 40.0f)
             {
-                terrain_height +=
-                    stb_perlin_fbm_noise3(-world_x * 0.01f, 0.0f, world_z * 0.01f, 2.0f, 0.5f, 6) *
-                    12.0f;
+                terrain_height += stb_perlin_fbm_noise3(-world_x * 0.01f, 0.0f, world_z * 0.01f, 2.0f, 0.5f, 6) * 12.0f;
                 is_lowland = true;
             }
-            float biome =
-                stb_perlin_fbm_noise3(world_x * 0.2f, 0.0f, world_z * 0.2f, 2.0f, 0.5f, 6);
+            float biome = stb_perlin_fbm_noise3(world_x * 0.2f, 0.0f, world_z * 0.2f, 2.0f, 0.5f, 6);
             Block surface_block;
             Block fill_block;
             if (terrain_height + biome < 31.0f)
@@ -69,11 +65,9 @@ void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock callback)
             if (is_lowland && has_grass)
             {
                 float plant_noise =
-                    stb_perlin_fbm_noise3(world_x * 0.2f, 0.0f, world_z * 0.2f, 2.0f, 0.5f, 3) *
-                        0.5f +
-                    0.5f;
-                bool can_grow_tree = local_x > 2 && local_x < CHUNK_WIDTH - 2 && local_z > 2 &&
-                                     local_z < CHUNK_WIDTH - 2;
+                    stb_perlin_fbm_noise3(world_x * 0.2f, 0.0f, world_z * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
+                bool can_grow_tree =
+                    local_x > 2 && local_x < CHUNK_WIDTH - 2 && local_z > 2 && local_z < CHUNK_WIDTH - 2;
                 if (plant_noise > 0.8f && can_grow_tree)
                 {
                     int trunk_height = 3 + plant_noise * 2.0f;
@@ -89,12 +83,7 @@ void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock callback)
                             {
                                 if (dx || dz || dy)
                                 {
-                                    callback(
-                                        userdata,
-                                        world_x + dx,
-                                        y + trunk_height + dy,
-                                        world_z + dz,
-                                        BLOCK_LEAVES);
+                                    callback(userdata, world_x + dx, y + trunk_height + dy, world_z + dz, BLOCK_LEAVES);
                                 }
                             }
                         }
@@ -115,13 +104,7 @@ void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock callback)
             {
                 continue;
             }
-            float cloud_noise = stb_perlin_turbulence_noise3(
-                world_x * 0.015f,
-                0.0f,
-                world_z * 0.015f,
-                2.0f,
-                0.5f,
-                6);
+            float cloud_noise = stb_perlin_turbulence_noise3(world_x * 0.015f, 0.0f, world_z * 0.015f, 2.0f, 0.5f, 6);
             int cloud_half_height = -1;
             if (cloud_noise > 0.9f)
             {

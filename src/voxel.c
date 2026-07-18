@@ -33,32 +33,32 @@ static Voxel Pack(
     Direction direction,
     int ambient_occlusion)
 {
-    SDL_COMPILE_TIME_ASSERT("", AO_OFFSET + AO_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", X_OFFSET + X_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", Y_OFFSET + Y_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", Z_OFFSET + Z_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", U_OFFSET + U_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", V_OFFSET + V_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", DIRECTION_OFFSET + DIRECTION_BITS <= 32);
-    SDL_COMPILE_TIME_ASSERT("", BLOCK_OFFSET + BLOCK_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_AO_OFFSET + VOXEL_AO_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_X_OFFSET + VOXEL_X_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_Y_OFFSET + VOXEL_Y_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_Z_OFFSET + VOXEL_Z_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_U_OFFSET + VOXEL_U_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_V_OFFSET + VOXEL_V_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32);
+    SDL_COMPILE_TIME_ASSERT("", VOXEL_BLOCK_OFFSET + VOXEL_BLOCK_BITS <= 32);
     SDL_assert(direction < DIRECTION_COUNT);
-    SDL_assert(block <= BLOCK_MASK);
-    SDL_assert(x <= X_MASK);
-    SDL_assert(y <= Y_MASK);
-    SDL_assert(z <= Z_MASK);
-    SDL_assert(texture_u <= U_MASK);
-    SDL_assert(texture_v <= V_MASK);
-    SDL_assert(direction <= DIRECTION_MASK);
-    SDL_assert(ambient_occlusion <= AO_MASK);
+    SDL_assert(block <= VOXEL_BLOCK_MASK);
+    SDL_assert(x <= VOXEL_X_MASK);
+    SDL_assert(y <= VOXEL_Y_MASK);
+    SDL_assert(z <= VOXEL_Z_MASK);
+    SDL_assert(texture_u <= VOXEL_U_MASK);
+    SDL_assert(texture_v <= VOXEL_V_MASK);
+    SDL_assert(direction <= VOXEL_DIRECTION_MASK);
+    SDL_assert(ambient_occlusion <= VOXEL_AO_MASK);
     Voxel voxel = 0;
-    voxel |= direction << DIRECTION_OFFSET;
-    voxel |= block << BLOCK_OFFSET;
-    voxel |= ambient_occlusion << AO_OFFSET;
-    voxel |= x << X_OFFSET;
-    voxel |= y << Y_OFFSET;
-    voxel |= z << Z_OFFSET;
-    voxel |= texture_u << U_OFFSET;
-    voxel |= texture_v << V_OFFSET;
+    voxel |= direction << VOXEL_DIRECTION_OFFSET;
+    voxel |= block << VOXEL_BLOCK_OFFSET;
+    voxel |= ambient_occlusion << VOXEL_AO_OFFSET;
+    voxel |= x << VOXEL_X_OFFSET;
+    voxel |= y << VOXEL_Y_OFFSET;
+    voxel |= z << VOXEL_Z_OFFSET;
+    voxel |= texture_u << VOXEL_U_OFFSET;
+    voxel |= texture_v << VOXEL_V_OFFSET;
     return voxel;
 }
 
@@ -83,18 +83,11 @@ Voxel Voxel_PackSprite(Block block, int x, int y, int z, Direction direction, in
         z + offset[2],
         texcoord[0],
         texcoord[1],
-        direction,
-        AO_MASK);
+        DIRECTION_UP,
+        VOXEL_AO_MASK);
 }
 
-Voxel Voxel_PackCube(
-    Block block,
-    int x,
-    int y,
-    int z,
-    Direction direction,
-    int vertex,
-    int ambient_occlusion)
+Voxel Voxel_PackCube(Block block, int x, int y, int z, Direction direction, int vertex, int ambient_occlusion)
 {
     SDL_assert(block > BLOCK_EMPTY);
     SDL_assert(block < BLOCK_COUNT);

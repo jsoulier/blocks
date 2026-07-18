@@ -222,8 +222,8 @@ void Player_Move(Player* player, float dt)
     {
         float speed = keys[SDL_SCANCODE_LCTRL] ? FLY_FAST_SPEED : FLY_SPEED;
         float dx = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
-        float dy = (keys[SDL_SCANCODE_E] || keys[SDL_SCANCODE_SPACE]) -
-                   (keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_LSHIFT]);
+        float dy =
+            (keys[SDL_SCANCODE_E] || keys[SDL_SCANCODE_SPACE]) - (keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_LSHIFT]);
         float dz = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
         Camera_Move(&player->camera, dx * speed * dt, dy * speed * dt, dz * speed * dt);
     }
@@ -245,8 +245,7 @@ void Player_PlaceBlock(const Player* player)
     {
         float player_min = player->camera.position[axis] + PLAYER_AABB.min[axis] + PHYSICS_EPSILON;
         float player_max = player->camera.position[axis] + PLAYER_AABB.max[axis] - PHYSICS_EPSILON;
-        if (player_max <= player->query.previous[axis] ||
-            player_min >= player->query.previous[axis] + 1.0f)
+        if (player_max <= player->query.previous[axis] || player_min >= player->query.previous[axis] + 1.0f)
         {
             World_SetBlock(player->query.previous, player->block);
             break;

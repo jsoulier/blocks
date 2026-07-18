@@ -26,8 +26,7 @@ static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUE
 static const char* GET_PLAYER = "SELECT data FROM players WHERE id = 0;";
 static const char* SET_SKY = "INSERT OR REPLACE INTO sky (id, time_of_day) VALUES (0, ?);";
 static const char* GET_SKY = "SELECT time_of_day FROM sky WHERE id = 0;";
-static const char* SET_BLOCK =
-    "INSERT OR REPLACE INTO blocks (cx, cz, bx, by, bz, block) VALUES (?, ?, ?, ?, ?, ?);";
+static const char* SET_BLOCK = "INSERT OR REPLACE INTO blocks (cx, cz, bx, by, bz, block) VALUES (?, ?, ?, ?, ?, ?);";
 static const char* GET_BLOCKS = "SELECT bx, by, bz, block FROM blocks WHERE cx = ? AND cz = ?;";
 
 static sqlite3* handle;

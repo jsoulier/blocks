@@ -5,24 +5,24 @@
 #define DEGREES(rad) ((rad) * 180.0f / SDL_PI_F)
 #define RADIANS(deg) ((deg) * SDL_PI_F / 180.0f)
 
-static void MultiplyMatrices(float output[4][4], float left[4][4], float right[4][4])
+static void MultiplyMatrices(float matrix[4][4], float lhs[4][4], float rhs[4][4])
 {
-    float result[4][4] = {0};
-    for (int row = 0; row < 4; row++)
+    float c[4][4] = {0};
+    for (int i = 0; i < 4; i++)
     {
-        for (int column = 0; column < 4; column++)
+        for (int j = 0; j < 4; j++)
         {
-            result[row][column] += left[0][column] * right[row][0];
-            result[row][column] += left[1][column] * right[row][1];
-            result[row][column] += left[2][column] * right[row][2];
-            result[row][column] += left[3][column] * right[row][3];
+            c[i][j] += lhs[0][j] * rhs[i][0];
+            c[i][j] += lhs[1][j] * rhs[i][1];
+            c[i][j] += lhs[2][j] * rhs[i][2];
+            c[i][j] += lhs[3][j] * rhs[i][3];
         }
     }
-    for (int row = 0; row < 4; row++)
+    for (int i = 0; i < 4; i++)
     {
-        for (int column = 0; column < 4; column++)
+        for (int j = 0; j < 4; j++)
         {
-            output[row][column] = result[row][column];
+            matrix[i][j] = c[i][j];
         }
     }
 }
@@ -45,14 +45,7 @@ static void Perspective(float matrix[4][4], float aspect, float fov, float near,
     matrix[3][3] = 0.0f;
 }
 
-static void Ortho(
-    float matrix[4][4],
-    float left,
-    float right,
-    float bottom,
-    float top,
-    float near,
-    float far)
+static void Ortho(float matrix[4][4], float left, float right, float bottom, float top, float near, float far)
 {
     matrix[0][0] = 2.0f / (right - left);
     matrix[0][1] = 0.0f;
@@ -236,14 +229,7 @@ void Camera_GetVector(const Camera* camera, float* x, float* y, float* z)
     *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * cos_pitch;
 }
 
-bool Camera_GetVisibility(
-    const Camera* camera,
-    float x,
-    float y,
-    float z,
-    float width,
-    float height,
-    float depth)
+bool Camera_GetVisibility(const Camera* camera, float x, float y, float z, float width, float height, float depth)
 {
     float max_x = x + width;
     float max_y = y + height;

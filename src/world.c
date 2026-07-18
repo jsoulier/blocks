@@ -227,14 +227,7 @@ static Block GetChunkBlock(Chunk* chunk, int bx, int by, int bz)
     return chunk->blocks[bx][by][bz];
 }
 
-static Block GetNeighborhoodBlock(
-    Chunk* chunks[3][3],
-    int bx,
-    int by,
-    int bz,
-    int dx,
-    int dy,
-    int dz)
+static Block GetNeighborhoodBlock(Chunk* chunks[3][3], int bx, int by, int bz, int dx, int dy, int dz)
 {
     SDL_assert(dx >= -1 && dx <= 1);
     SDL_assert(dy >= -1 && dy <= 1);
@@ -344,14 +337,8 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
 {
     int position[3];
     Voxel_GetCubePosition(direction, vertex, position);
-    int first_side[3] = {
-        DIRECTIONS[direction][0],
-        DIRECTIONS[direction][1],
-        DIRECTIONS[direction][2]};
-    int second_side[3] = {
-        DIRECTIONS[direction][0],
-        DIRECTIONS[direction][1],
-        DIRECTIONS[direction][2]};
+    int first_side[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    int second_side[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
     int corner[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
     int side_count = 0;
     for (int axis = 0; axis < 3; axis++)
@@ -372,12 +359,11 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
         corner[axis] = offset;
     }
     SDL_assert(side_count == 2);
-    bool has_first_side = Block_HasOcclusion(
-        GetNeighborhoodBlock(chunks, bx, by, bz, first_side[0], first_side[1], first_side[2]));
-    bool has_second_side = Block_HasOcclusion(
-        GetNeighborhoodBlock(chunks, bx, by, bz, second_side[0], second_side[1], second_side[2]));
-    bool has_corner = Block_HasOcclusion(
-        GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
+    bool has_first_side =
+        Block_CanBeOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, first_side[0], first_side[1], first_side[2]));
+    bool has_second_side =
+        Block_CanBeOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, second_side[0], second_side[1], second_side[2]));
+    bool has_corner = Block_CanBeOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
     if (has_first_side && has_second_side)
     {
         return 0;
@@ -430,8 +416,7 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                     }
                     continue;
                 }
-                MeshType mesh_type =
-                    Block_IsOpaque(block) ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
+                MeshType mesh_type = Block_IsOpaque(block) ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
                 for (Direction direction = 0; direction < DIRECTION_COUNT; direction++)
                 {
                     int dx = DIRECTIONS[direction][0];
@@ -448,8 +433,7 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                     {
                         ambient_occlusion[vertex] = GetAO(chunks, bx, by, bz, direction, vertex);
                     }
-                    if (ambient_occlusion[0] + ambient_occlusion[3] >
-                        ambient_occlusion[1] + ambient_occlusion[2])
+                    if (ambient_occlusion[0] + ambient_occlusion[3] > ambient_occlusion[1] + ambient_occlusion[2])
                     {
                         vertex_order[0] = 1;
                         vertex_order[1] = 3;
@@ -459,14 +443,7 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                     for (int vertex_index = 0; vertex_index < 4; vertex_index++)
                     {
                         int vertex = vertex_order[vertex_index];
-                        Voxel voxel = Voxel_PackCube(
-                            block,
-                            bx,
-                            by,
-                            bz,
-                            direction,
-                            vertex,
-                            ambient_occlusion[vertex]);
+                        Voxel voxel = Voxel_PackCube(block, bx, by, bz, direction, vertex, ambient_occlusion[vertex]);
                         CPUBuffer_Append(&voxels[mesh_type], &voxel);
                     }
                 }
@@ -667,10 +644,8 @@ static int SortFunction(void* userdata, const void* lhs, const void* rhs)
     int center = WORLD_WIDTH / 2;
     const int* left = lhs;
     const int* right = rhs;
-    int left_distance =
-        (left[0] - center) * (left[0] - center) + (left[1] - center) * (left[1] - center);
-    int right_distance =
-        (right[0] - center) * (right[0] - center) + (right[1] - center) * (right[1] - center);
+    int left_distance = (left[0] - center) * (left[0] - center) + (left[1] - center) * (left[1] - center);
+    int right_distance = (right[0] - center) * (right[0] - center) + (right[1] - center) * (right[1] - center);
     if (left_distance < right_distance)
     {
         return -1;
@@ -843,8 +818,7 @@ static bool TryUpdateVoxelsOrLights(int x, int z, Worker* worker)
     {
         for (int neighbor_z = 0; neighbor_z < 3; neighbor_z++)
         {
-            if (SDL_GetAtomicInt(&neighborhood[neighbor_x][neighbor_z]->block_state) !=
-                JOB_STATE_COMPLETED)
+            if (SDL_GetAtomicInt(&neighborhood[neighbor_x][neighbor_z]->block_state) != JOB_STATE_COMPLETED)
             {
                 return false;
             }
@@ -900,11 +874,7 @@ void World_Update(const Camera* camera)
     }
 }
 
-static void Render(
-    Chunk* chunk,
-    SDL_GPUCommandBuffer* command_buffer,
-    SDL_GPURenderPass* render_pass,
-    WorldFlags flags)
+static void Render(Chunk* chunk, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, WorldFlags flags)
 {
     MeshType mesh = flags & WORLD_FLAGS_OPAQUE ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
     GPUBuffer* gpu_voxels = &chunk->gpu_voxels[mesh];
@@ -963,14 +933,7 @@ void World_Render(
             {
                 continue;
             }
-            if (!Camera_GetVisibility(
-                    camera,
-                    chunk->x,
-                    0.0f,
-                    chunk->z,
-                    CHUNK_WIDTH,
-                    CHUNK_HEIGHT,
-                    CHUNK_WIDTH))
+            if (!Camera_GetVisibility(camera, chunk->x, 0.0f, chunk->z, CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_WIDTH))
             {
                 continue;
             }
@@ -1054,9 +1017,7 @@ void World_SetBlock(const int position[3], Block block)
         {
             for (int neighbor_z = 0; neighbor_z < 3; neighbor_z++)
             {
-                SDL_SetAtomicInt(
-                    &neighborhood[neighbor_x][neighbor_z]->light_state,
-                    JOB_STATE_REQUESTED);
+                SDL_SetAtomicInt(&neighborhood[neighbor_x][neighbor_z]->light_state, JOB_STATE_REQUESTED);
             }
         }
     }
@@ -1085,14 +1046,12 @@ WorldQuery World_Raycast(const Camera* camera, float max_distance)
         if (direction[axis] < 0.0f)
         {
             steps[axis] = -1;
-            next_distances[axis] =
-                (camera->position[axis] - query.current[axis]) * step_distances[axis];
+            next_distances[axis] = (camera->position[axis] - query.current[axis]) * step_distances[axis];
         }
         else
         {
             steps[axis] = 1;
-            next_distances[axis] =
-                (query.current[axis] + 1.0f - camera->position[axis]) * step_distances[axis];
+            next_distances[axis] = (query.current[axis] + 1.0f - camera->position[axis]) * step_distances[axis];
         }
     }
     float distance = 0.0f;

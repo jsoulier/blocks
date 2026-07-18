@@ -32,13 +32,7 @@ SDL_GPUShader* Shader_Load(SDL_GPUDevice* device, const char* name)
     }
     char shader_path[512] = {0};
     char shader_json_path[512] = {0};
-    SDL_snprintf(
-        shader_path,
-        sizeof(shader_path),
-        "%s%s.%s",
-        SDL_GetBasePath(),
-        name,
-        file_extension);
+    SDL_snprintf(shader_path, sizeof(shader_path), "%s%s.%s", SDL_GetBasePath(), name, file_extension);
     SDL_snprintf(shader_json_path, sizeof(shader_json_path), "%s%s.json", SDL_GetBasePath(), name);
     size_t shader_size;
     size_t shader_json_size;

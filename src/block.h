@@ -47,12 +47,11 @@ typedef struct Light
 } Light;
 
 SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device);
-
 bool Block_IsOpaque(Block block);
-bool Block_IsSprite(Block block);
 bool Block_IsSolid(Block block);
-bool Block_HasOcclusion(Block block);
-bool Block_HasShadow(Block block);
+bool Block_IsSprite(Block block);
+bool Block_CanBeOccluded(Block block);
+bool Block_CanCreateShadow(Block block);
 bool Block_CanBeInShadow(Block block);
 int Block_GetIndex(Block block, Direction direction);
 bool Block_IsLight(Block block);
