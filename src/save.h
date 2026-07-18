@@ -11,5 +11,7 @@ void save_free();
 void save_commit();
 void save_set_player(int id, const void* data, int size);
 bool save_get_player(int id, void* data, int size);
+void save_set_sky(float time_of_day);
+bool save_get_sky(float* time_of_day);
 void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block);
 void save_get_blocks(void* userdata, int cx, int cz, save_set_block_t function);

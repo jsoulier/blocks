@@ -18,8 +18,15 @@ static const char* BLOCK_TABLE =
     "    block INTEGER NOT NULL,"
     "    PRIMARY KEY (cx, cz, bx, by, bz)"
     ");";
+static const char* SKY_TABLE =
+    "CREATE TABLE IF NOT EXISTS sky ("
+    "    id INTEGER PRIMARY KEY NOT NULL,"
+    "    time_of_day REAL NOT NULL"
+    ");";
 static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUES (?, ?);";
 static const char* GET_PLAYER = "SELECT data FROM players WHERE id = ?;";
+static const char* SET_SKY = "INSERT OR REPLACE INTO sky (id, time_of_day) VALUES (0, ?);";
+static const char* GET_SKY = "SELECT time_of_day FROM sky WHERE id = 0;";
 static const char* SET_BLOCK = "INSERT OR REPLACE INTO blocks (cx, cz, bx, by, bz, block) VALUES (?, ?, ?, ?, ?, ?);";
 static const char* GET_BLOCKS = "SELECT bx, by, bz, block FROM blocks WHERE cx = ? AND cz = ?;";
 static const char* BLOCK_INDEX = "CREATE INDEX IF NOT EXISTS bindex ON blocks (cx, cz);";
@@ -27,6 +34,8 @@ static const char* BLOCK_INDEX = "CREATE INDEX IF NOT EXISTS bindex ON blocks (c
 static sqlite3* handle;
 static sqlite3_stmt* set_player;
 static sqlite3_stmt* get_player;
+static sqlite3_stmt* set_sky;
+static sqlite3_stmt* get_sky;
 static sqlite3_stmt* set_block;
 static sqlite3_stmt* get_blocks;
 static SDL_Mutex* mutex;
@@ -48,6 +57,11 @@ bool save_init(const char* path)
         SDL_Log("Failed to create block table: %s", sqlite3_errmsg(handle));
         return false;
     }
+    if (sqlite3_exec(handle, SKY_TABLE, NULL, NULL, NULL))
+    {
+        SDL_Log("Failed to create sky table: %s", sqlite3_errmsg(handle));
+        return false;
+    }
     if (sqlite3_prepare_v2(handle, SET_PLAYER, -1, &set_player, NULL))
     {
         SDL_Log("Failed to prepare set player: %s", sqlite3_errmsg(handle));
@@ -56,6 +70,16 @@ bool save_init(const char* path)
     if (sqlite3_prepare_v2(handle, GET_PLAYER, -1, &get_player, NULL))
     {
         SDL_Log("Failed to prepare get player: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_prepare_v2(handle, SET_SKY, -1, &set_sky, NULL))
+    {
+        SDL_Log("Failed to prepare set sky: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_prepare_v2(handle, GET_SKY, -1, &get_sky, NULL))
+    {
+        SDL_Log("Failed to prepare get sky: %s", sqlite3_errmsg(handle));
         return false;
     }
     if (sqlite3_prepare_v2(handle, SET_BLOCK, -1, &set_block, NULL))
@@ -89,12 +113,16 @@ void save_free()
     sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
     sqlite3_finalize(set_player);
     sqlite3_finalize(get_player);
+    sqlite3_finalize(set_sky);
+    sqlite3_finalize(get_sky);
     sqlite3_finalize(set_block);
     sqlite3_finalize(get_blocks);
     sqlite3_close(handle);
     handle = NULL;
     set_player = NULL;
     get_player = NULL;
+    set_sky = NULL;
+    get_sky = NULL;
     set_block = NULL;
     get_blocks = NULL;
     mutex = NULL;
@@ -153,6 +181,39 @@ bool save_get_player(int id, void* data, int size)
     sqlite3_reset(get_player);
     SDL_UnlockMutex(mutex);
     return has_player;
+}
+
+void save_set_sky(float time_of_day)
+{
+    if (!handle)
+    {
+        return;
+    }
+    SDL_LockMutex(mutex);
+    sqlite3_bind_double(set_sky, 1, time_of_day);
+    if (sqlite3_step(set_sky) != SQLITE_DONE)
+    {
+        SDL_Log("Failed to set sky: %s", sqlite3_errmsg(handle));
+    }
+    sqlite3_reset(set_sky);
+    SDL_UnlockMutex(mutex);
+}
+
+bool save_get_sky(float* time_of_day)
+{
+    if (!handle)
+    {
+        return false;
+    }
+    SDL_LockMutex(mutex);
+    bool has_sky = sqlite3_step(get_sky) == SQLITE_ROW;
+    if (has_sky)
+    {
+        *time_of_day = (float) sqlite3_column_double(get_sky, 0);
+    }
+    sqlite3_reset(get_sky);
+    SDL_UnlockMutex(mutex);
+    return has_sky;
 }
 
 void save_set_block(int cx, int cz, int bx, int by, int bz, block_t block)

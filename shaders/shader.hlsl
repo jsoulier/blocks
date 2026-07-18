@@ -152,10 +152,14 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
     return finalColor * kLight;
 }
 
-float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4x4 transform, float3 sunDirection, float3 position, float3 normal, Block block)
+float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4x4 transform, float3 sunDirection, float sunIntensity, float3 position, float3 normal, Block block)
 {
     static const float kBase = 0.0f;
     static const float kShadow = 0.4f;
+    if (sunIntensity <= 0.0f)
+    {
+        return kBase;
+    }
     float ratio = block.HasOcclusion ? saturate(-dot(normal, sunDirection)) : 0.707f;
     if (ratio <= 0.0f)
     {
@@ -167,7 +171,7 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     uv.y = 1.0f - uv.y;
     if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f || shadowPosition.z > 1.0f)
     {
-        return kBase + kShadow * ratio;
+        return kBase + kShadow * sunIntensity * ratio;
     }
     uint width;
     uint height;
@@ -181,12 +185,12 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
         visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
     }
     visibility /= 9.0f;
-    return kBase + kShadow * ratio * visibility;
+    return kBase + kShadow * sunIntensity * ratio * visibility;
 }
 
-float3 GetAmbientLight()
+float3 GetAmbientLight(float3 color)
 {
-    return float3(0.5f, 0.5f, 0.5f);
+    return color;
 }
 
 float GetFog(float x)
@@ -194,14 +198,12 @@ float GetFog(float x)
     return min(pow(x / 250.0f, 2.5f), 1.0f);
 }
 
-float3 GetSkyColor(float3 position)
+float3 GetSkyColor(float3 position, float3 top, float3 horizon)
 {
-    static const float3 kTop = float3(0.212f, 0.773f, 0.957f);
-    static const float3 kBottom = float3(0.220f, 0.349f, 0.702f);
     float dy = position.y;
     float dx = length(float2(position.x, position.z));
     float alpha = (atan2(dy, dx) + kPi / 2.0f) / kPi;
-    return lerp(kBottom, kTop, alpha);
+    return lerp(horizon, top, alpha);
 }
 
 #endif

@@ -8,6 +8,7 @@
 #include "player.h"
 #include "save.h"
 #include "shader.h"
+#include "sky.h"
 #include "world.h"
 
 static const char* SAVE_PATH = "blocks.sqlite3";
@@ -19,8 +20,6 @@ static const int SHADOW_RESOLUTION = 4096.0f;
 static const float SHADOW_Y = 30.0f;
 static const float SHADOW_ORTHO = 300.0f;
 static const float SHADOW_FAR = 300.0f;
-static const float SHADOW_PITCH = -SDL_PI_F / 4.0f;
-static const float SHADOW_YAW = SDL_PI_F / 4.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -37,12 +36,12 @@ static SDL_Surface* atlas_surface;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUTexture* depth_texture;
 static SDL_GPUTexture* position_texture;
-static SDL_GPUTexture* composite_texture; // TODO: remove, replace with swapchain
+static SDL_GPUTexture* composite_texture;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* shadow_sampler;
 static camera_t shadow_camera;
-static float sun_direction[3];
+static sky_t sky;
 static player_t player;
 static Uint64 ticks1;
 static Uint64 ticks2;
@@ -514,11 +513,12 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
     set_window_icon(BLOCK_GRASS);
     save_init(SAVE_PATH);
+    sky_save_or_load(&sky, false);
     world_init(device);
     player_save_or_load(&player, PLAYER_ID, false);
     world_update(&player.camera);
     ticks2 = SDL_GetTicks();
-    ticks1 = 0;
+    ticks1 = ticks2;
     return SDL_APP_CONTINUE;
 }
 
@@ -528,6 +528,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     world_free();
     block_free();
     player_save_or_load(&player, PLAYER_ID, true);
+    sky_save_or_load(&sky, true);
     save_free();
     SDL_ReleaseGPUSampler(device, nearest_sampler);
     SDL_ReleaseGPUSampler(device, shadow_sampler);
@@ -600,8 +601,8 @@ static void update_shadow_camera()
     shadow_camera.x = player.camera.x;
     shadow_camera.y = SHADOW_Y;
     shadow_camera.z = player.camera.z;
-    shadow_camera.pitch = SHADOW_PITCH;
-    shadow_camera.yaw = SHADOW_YAW;
+    shadow_camera.pitch = SDL_asinf(SDL_clamp(sky.render.sun[1], -1.0f, 1.0f));
+    shadow_camera.yaw = SDL_atan2f(sky.render.sun[0], -sky.render.sun[2]);
     camera_update(&shadow_camera);
     float texel_size = SHADOW_ORTHO * 2.0f / SHADOW_RESOLUTION;
     float light_x = shadow_camera.view[0][0] * shadow_camera.x + shadow_camera.view[1][0] * shadow_camera.y + shadow_camera.view[2][0] * shadow_camera.z;
@@ -612,11 +613,14 @@ static void update_shadow_camera()
     shadow_camera.y += shadow_camera.view[1][0] * delta_x + shadow_camera.view[1][1] * delta_y;
     shadow_camera.z += shadow_camera.view[2][0] * delta_x + shadow_camera.view[2][1] * delta_y;
     camera_update(&shadow_camera);
-    camera_get_vector(&shadow_camera, &sun_direction[0], &sun_direction[1], &sun_direction[2]);
 }
 
 static void render_shadow(SDL_GPUCommandBuffer* cbuf)
 {
+    if (!sky.has_sun)
+    {
+        return;
+    }
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
     depth_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
@@ -650,6 +654,7 @@ static void render_sky(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     SDL_BindGPUGraphicsPipeline(pass, sky_pipeline);
     SDL_PushGPUVertexUniformData(cbuf, 0, player.camera.proj, 64);
     SDL_PushGPUVertexUniformData(cbuf, 1, player.camera.view, 64);
+    SDL_PushGPUFragmentUniformData(cbuf, 0, &sky.render, sizeof(sky.render));
     SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
     SDL_PopGPUDebugGroup(cbuf);
 }
@@ -665,7 +670,7 @@ static void render_opaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
     SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
-    SDL_PushGPUFragmentUniformData(cbuf, 3, sun_direction, 12);
+    SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
     world_render(&player.camera, cbuf, pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);
@@ -732,7 +737,7 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
     SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
-    SDL_PushGPUFragmentUniformData(cbuf, 3, sun_direction, 12);
+    SDL_PushGPUFragmentUniformData(cbuf, 3, &sky.render, sizeof(sky.render));
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 3);
     world_render(&player.camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);
@@ -855,6 +860,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     ticks2 = SDL_GetTicks();
     float dt = ticks2 - ticks1;
     ticks1 = ticks2;
+    sky_update(&sky, dt / 1000.0f);
     if (SDL_GetWindowRelativeMouseMode(window))
     {
         player_move(&player, dt);

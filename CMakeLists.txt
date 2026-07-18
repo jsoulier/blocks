@@ -27,6 +27,7 @@ add_executable(blocks WIN32
     src/rand.c
     src/save.c
     src/shader.c
+    src/sky.c
     src/voxel.c
     src/world.c
 )

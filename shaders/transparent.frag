@@ -26,7 +26,10 @@ cbuffer UniformBuffer : register(b2, space3)
 
 cbuffer UniformBuffer : register(b3, space3)
 {
-    float3 SunDirection : packoffset(c0);
+    float4 Sun : packoffset(c0);
+    float4 SkyTop : packoffset(c1);
+    float4 SkyHorizon : packoffset(c2);
+    float4 Ambient : packoffset(c3);
 };
 
 struct Input
@@ -49,9 +52,9 @@ float4 main(Input input) : SV_Target0
     float alpha = color.a;
     float4 position = input.WorldPosition;
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, normal);
-    float3 ambient = GetAmbientLight();
-    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, SunDirection, position.xyz, normal, block);
-    float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
+    float3 ambient = GetAmbientLight(Ambient.xyz);
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, position.xyz, normal, block);
+    float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     if (GetIndex(input.Voxel, block) == kWater)
     {
