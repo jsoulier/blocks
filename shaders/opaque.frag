@@ -3,7 +3,7 @@
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
 Texture2D<float> shadowTexture : register(t1, space2);
-SamplerState shadowSampler : register(s1, space2);
+SamplerComparisonState shadowSampler : register(s1, space2);
 StructuredBuffer<Block> blockBuffer : register(t2, space2);
 StructuredBuffer<Light> lightBuffer : register(t3, space2);
 
@@ -20,6 +20,11 @@ cbuffer UniformBuffer : register(b1, space3)
 cbuffer UniformBuffer : register(b2, space3)
 {
     float3 PlayerPosition : packoffset(c0);
+};
+
+cbuffer UniformBuffer : register(b3, space3)
+{
+    float3 SunDirection : packoffset(c0);
 };
 
 struct Input
@@ -52,7 +57,7 @@ Output main(Input input)
     float3 albedo = color.rgb;
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, normal);
     float3 ambient = GetAmbientLight();
-    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, input.WorldPosition.xyz, normal, block);
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, SunDirection, input.WorldPosition.xyz, normal, block);
     float3 finalColor;
     if (block.IsFullbright)
     {

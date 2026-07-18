@@ -25,6 +25,8 @@ struct Input
 struct Output
 {
     float4 Position : SV_Position;
+    float2 Texcoord : TEXCOORD0;
+    nointerpolation uint Voxel : TEXCOORD1;
     float ClipDistance : SV_ClipDistance0;
 };
 
@@ -35,6 +37,8 @@ Output main(Input input)
     float3 position = GetPosition(input.Voxel) + chunkPosition;
     Block block = blockBuffer[GetBlock(input.Voxel)];
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
+    output.Texcoord = GetTexcoord(input.Voxel);
+    output.Voxel = input.Voxel;
     output.ClipDistance = block.HasShadow ? 1.0f : -1.0f;
     return output;
 }

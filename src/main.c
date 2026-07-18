@@ -19,8 +19,8 @@ static const int SHADOW_RESOLUTION = 4096.0f;
 static const float SHADOW_Y = 30.0f;
 static const float SHADOW_ORTHO = 300.0f;
 static const float SHADOW_FAR = 300.0f;
-static const float SHADOW_PITCH = -45.0f;
-static const float SHADOW_YAW = 45.0f;
+static const float SHADOW_PITCH = -SDL_PI_F / 4.0f;
+static const float SHADOW_YAW = SDL_PI_F / 4.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -37,11 +37,12 @@ static SDL_Surface* atlas_surface;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUTexture* depth_texture;
 static SDL_GPUTexture* position_texture;
-static SDL_GPUTexture* composite_texture;
+static SDL_GPUTexture* composite_texture; // TODO: remove, replace with swapchain
 static SDL_GPUTexture* shadow_texture;
-static SDL_GPUSampler* linear_sampler;
 static SDL_GPUSampler* nearest_sampler;
+static SDL_GPUSampler* shadow_sampler;
 static camera_t shadow_camera;
+static float sun_direction[3];
 static player_t player;
 static Uint64 ticks1;
 static Uint64 ticks2;
@@ -304,6 +305,11 @@ static bool create_shadow_pipeline()
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.enable_depth_write = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
+    info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
+    info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+    info.rasterizer_state.depth_bias_constant_factor = 1.0f;
+    info.rasterizer_state.depth_bias_slope_factor = 1.0f;
+    info.rasterizer_state.enable_depth_bias = true;
     if (info.vertex_shader && info.fragment_shader)
     {
         shadow_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
@@ -372,18 +378,22 @@ static bool create_samplers()
     info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
     info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
     info.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-    linear_sampler = SDL_CreateGPUSampler(device, &info);
-    if (!linear_sampler)
-    {
-        SDL_Log("Failed to create linear sampler: %s", SDL_GetError());
-        return false;
-    }
     info.min_filter = SDL_GPU_FILTER_NEAREST;
     info.mag_filter = SDL_GPU_FILTER_NEAREST;
     nearest_sampler = SDL_CreateGPUSampler(device, &info);
     if (!nearest_sampler)
     {
         SDL_Log("Failed to create nearest sampler: %s", SDL_GetError());
+        return false;
+    }
+    info.min_filter = SDL_GPU_FILTER_LINEAR;
+    info.mag_filter = SDL_GPU_FILTER_LINEAR;
+    info.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+    info.enable_compare = true;
+    shadow_sampler = SDL_CreateGPUSampler(device, &info);
+    if (!shadow_sampler)
+    {
+        SDL_Log("Failed to create shadow sampler: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -519,8 +529,8 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     block_free();
     player_save_or_load(&player, PLAYER_ID, true);
     save_free();
-    SDL_ReleaseGPUSampler(device, linear_sampler);
     SDL_ReleaseGPUSampler(device, nearest_sampler);
+    SDL_ReleaseGPUSampler(device, shadow_sampler);
     SDL_ReleaseGPUTexture(device, shadow_texture);
     SDL_ReleaseGPUTexture(device, composite_texture);
     SDL_ReleaseGPUTexture(device, position_texture);
@@ -587,12 +597,22 @@ static void update_shadow_camera()
     camera_init(&shadow_camera, CAMERA_TYPE_ORTHO);
     shadow_camera.ortho = SHADOW_ORTHO;
     shadow_camera.far = SHADOW_FAR;
-    shadow_camera.x = SDL_floor(player.camera.x / CHUNK_WIDTH) * CHUNK_WIDTH;
+    shadow_camera.x = player.camera.x;
     shadow_camera.y = SHADOW_Y;
-    shadow_camera.z = SDL_floor(player.camera.z / CHUNK_WIDTH) * CHUNK_WIDTH;
+    shadow_camera.z = player.camera.z;
     shadow_camera.pitch = SHADOW_PITCH;
     shadow_camera.yaw = SHADOW_YAW;
     camera_update(&shadow_camera);
+    float texel_size = SHADOW_ORTHO * 2.0f / SHADOW_RESOLUTION;
+    float light_x = shadow_camera.view[0][0] * shadow_camera.x + shadow_camera.view[1][0] * shadow_camera.y + shadow_camera.view[2][0] * shadow_camera.z;
+    float light_y = shadow_camera.view[0][1] * shadow_camera.x + shadow_camera.view[1][1] * shadow_camera.y + shadow_camera.view[2][1] * shadow_camera.z;
+    float delta_x = SDL_roundf(light_x / texel_size) * texel_size - light_x;
+    float delta_y = SDL_roundf(light_y / texel_size) * texel_size - light_y;
+    shadow_camera.x += shadow_camera.view[0][0] * delta_x + shadow_camera.view[0][1] * delta_y;
+    shadow_camera.y += shadow_camera.view[1][0] * delta_x + shadow_camera.view[1][1] * delta_y;
+    shadow_camera.z += shadow_camera.view[2][0] * delta_x + shadow_camera.view[2][1] * delta_y;
+    camera_update(&shadow_camera);
+    camera_get_vector(&shadow_camera, &sun_direction[0], &sun_direction[1], &sun_direction[2]);
 }
 
 static void render_shadow(SDL_GPUCommandBuffer* cbuf)
@@ -613,6 +633,11 @@ static void render_shadow(SDL_GPUCommandBuffer* cbuf)
     SDL_BindGPUGraphicsPipeline(pass, shadow_pipeline);
     SDL_GPUBuffer* block_buffer = block_get_buffer();
     SDL_BindGPUVertexStorageBuffers(pass, 0, &block_buffer, 1);
+    SDL_BindGPUFragmentStorageBuffers(pass, 0, &block_buffer, 1);
+    SDL_GPUTextureSamplerBinding atlas_binding = {0};
+    atlas_binding.texture = atlas_texture;
+    atlas_binding.sampler = nearest_sampler;
+    SDL_BindGPUFragmentSamplers(pass, 0, &atlas_binding, 1);
     SDL_PushGPUDebugGroup(cbuf, "shadow");
     world_render(&shadow_camera, cbuf, pass, WORLD_FLAGS_OPAQUE);
     SDL_PopGPUDebugGroup(cbuf);
@@ -635,11 +660,12 @@ static void render_opaque(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass)
     sampler_bindings[0].texture = atlas_texture;
     sampler_bindings[0].sampler = nearest_sampler;
     sampler_bindings[1].texture = shadow_texture;
-    sampler_bindings[1].sampler = linear_sampler;
+    sampler_bindings[1].sampler = shadow_sampler;
     SDL_PushGPUDebugGroup(cbuf, "opaque");
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
     SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
+    SDL_PushGPUFragmentUniformData(cbuf, 3, sun_direction, 12);
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 2);
     world_render(&player.camera, cbuf, pass, WORLD_FLAGS_OPAQUE | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);
@@ -699,13 +725,14 @@ static void render_transparent(SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pa
     sampler_bindings[0].texture = atlas_texture;
     sampler_bindings[0].sampler = nearest_sampler;
     sampler_bindings[1].texture = shadow_texture;
-    sampler_bindings[1].sampler = linear_sampler;
+    sampler_bindings[1].sampler = shadow_sampler;
     sampler_bindings[2].texture = position_texture;
     sampler_bindings[2].sampler = nearest_sampler;
     SDL_PushGPUDebugGroup(cbuf, "transparent");
     SDL_BindGPUGraphicsPipeline(pass, transparent_pipeline);
     SDL_PushGPUFragmentUniformData(cbuf, 1, &shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(cbuf, 2, player.camera.position, 12);
+    SDL_PushGPUFragmentUniformData(cbuf, 3, sun_direction, 12);
     SDL_BindGPUFragmentSamplers(pass, 0, sampler_bindings, 3);
     world_render(&player.camera, cbuf, pass, WORLD_FLAGS_TRANSPARENT | WORLD_FLAGS_LIGHT);
     SDL_PopGPUDebugGroup(cbuf);

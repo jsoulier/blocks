@@ -3,7 +3,42 @@
 
 using namespace metal;
 
-fragment void main0()
+struct Block
 {
+    uint IsSprite;
+    uint HasOcclusion;
+    uint HasShadow;
+    uint IsFullbright;
+    uint Indices[6];
+};
+
+struct type_StructuredBuffer_Block
+{
+    Block _m0[1];
+};
+
+struct main0_in
+{
+    float2 in_var_TEXCOORD0 [[user(locn0)]];
+    uint in_var_TEXCOORD1 [[user(locn1)]];
+};
+
+fragment void main0(main0_in in [[stage_in]], const device type_StructuredBuffer_Block& blockBuffer [[buffer(0)]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]])
+{
+    uint _41 = (in.in_var_TEXCOORD1 >> 3u) & 31u;
+    uint _50;
+    if (blockBuffer._m0[_41].IsSprite != 0u)
+    {
+        _50 = 0u;
+    }
+    else
+    {
+        _50 = (in.in_var_TEXCOORD1 >> 0u) & 7u;
+    }
+    float3 _56 = float3(in.in_var_TEXCOORD0, float(blockBuffer._m0[_41].Indices[_50]));
+    if (atlasTexture.sample(atlasSampler, _56.xy, uint(rint(_56.z))).w < 0.001000000047497451305389404296875)
+    {
+        discard_fragment();
+    }
 }
 

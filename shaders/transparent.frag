@@ -3,7 +3,7 @@
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
 Texture2D<float> shadowTexture : register(t1, space2);
-SamplerState shadowSampler : register(s1, space2);
+SamplerComparisonState shadowSampler : register(s1, space2);
 Texture2D<float4> positionTexture : register(t2, space2);
 SamplerState positionSampler : register(s2, space2);
 StructuredBuffer<Block> blockBuffer : register(t3, space2);
@@ -22,6 +22,11 @@ cbuffer UniformBuffer : register(b1, space3)
 cbuffer UniformBuffer : register(b2, space3)
 {
     float3 PlayerPosition : packoffset(c0);
+};
+
+cbuffer UniformBuffer : register(b3, space3)
+{
+    float3 SunDirection : packoffset(c0);
 };
 
 struct Input
@@ -45,7 +50,7 @@ float4 main(Input input) : SV_Target0
     float4 position = input.WorldPosition;
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, normal);
     float3 ambient = GetAmbientLight();
-    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, position.xyz, normal, block);
+    float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, SunDirection, position.xyz, normal, block);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     if (GetIndex(input.Voxel, block) == kWater)

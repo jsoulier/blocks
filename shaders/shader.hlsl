@@ -153,39 +153,36 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
     return finalColor * kLight;
 }
 
-float GetSunLight(Texture2D<float> texture, SamplerState state, float4x4 transform, float3 position, float3 normal, Block block)
+float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4x4 transform, float3 sunDirection, float3 position, float3 normal, Block block)
 {
-    static const float kBias = 0.001f;
     static const float kBase = 0.0f;
     static const float kShadow = 0.4f;
+    float ratio = block.HasOcclusion ? saturate(-dot(normal, sunDirection)) : 0.707f;
+    if (ratio <= 0.0f)
+    {
+        return kBase;
+    }
     float4 shadowPosition = mul(transform, float4(position, 1.0f));
     shadowPosition.xyz /= shadowPosition.w;
     float2 uv = shadowPosition.xy * 0.5f + 0.5f;
     uv.y = 1.0f - uv.y;
-    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f)
+    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f || shadowPosition.z > 1.0f)
     {
-        return kBase + kShadow;
+        return kBase + kShadow * ratio;
     }
-    float3 direction = normalize(float3(transform[2].xyz));
-    float ratio = -0.707f;
-    if (block.HasOcclusion)
+    uint width;
+    uint height;
+    texture.GetDimensions(width, height);
+    float2 texelSize = 1.0f / float2(width, height);
+    float bias = 0.0003f + 0.001f * (1.0f - ratio);
+    float visibility = 0.0f;
+    for (int x = -1; x <= 1; x++)
+    for (int y = -1; y <= 1; y++)
     {
-        ratio = dot(normal, direction);
-        if (ratio > 0.0f)
-        {
-            return 0.0f;
-        }
+        visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
     }
-    float depth = shadowPosition.z;
-    float closestDepth = texture.SampleLevel(state, uv, 0);
-    if (depth < closestDepth + kBias)
-    {
-        return kBase - kShadow * ratio;
-    }
-    else
-    {
-        return 0.0f;
-    }
+    visibility /= 9.0f;
+    return kBase + kShadow * ratio * visibility;
 }
 
 float3 GetAmbientLight()
