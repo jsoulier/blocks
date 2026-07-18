@@ -107,7 +107,7 @@ struct main0_in
     float4 in_var_TEXCOORD0 [[user(locn0)]];
     float2 in_var_TEXCOORD1 [[user(locn1)]];
     uint in_var_TEXCOORD2 [[user(locn2)]];
-    float2 in_var_TEXCOORD3 [[user(locn3)]];
+    float2 in_var_TEXCOORD3 [[user(locn3), center_no_perspective]];
 };
 
 fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], constant type_UniformBuffer_3& UniformBuffer_3 [[buffer(3)]], const device type_StructuredBuffer_Block& blockBuffer [[buffer(4)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(5)]], texture2d_array<float> atlasTexture [[texture(0)]], depth2d<float> shadowTexture [[texture(1)]], texture2d<float> positionTexture [[texture(2)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]], sampler positionSampler [[sampler(2)]])

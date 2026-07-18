@@ -37,7 +37,7 @@ struct Input
     float4 WorldPosition : TEXCOORD0;
     float2 Texcoord : TEXCOORD1;
     nointerpolation uint Voxel : TEXCOORD2;
-    float2 Fragment : TEXCOORD3;
+    noperspective float2 Fragment : TEXCOORD3;
 };
 
 static const uint kWater = 16;
@@ -58,7 +58,6 @@ float4 main(Input input) : SV_Target0
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     if (GetIndex(input.Voxel, block) == kWater)
     {
-        // TODO: Causes bug where alpha is 0 or 1 as camera approaches water
         float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
         alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
     }

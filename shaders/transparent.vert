@@ -26,7 +26,7 @@ struct Output
     float4 WorldPosition : TEXCOORD0;
     float2 Texcoord : TEXCOORD1;
     nointerpolation uint Voxel : TEXCOORD2;
-    float2 Fragment : TEXCOORD3;
+    noperspective float2 Fragment : TEXCOORD3;
 };
 
 Output main(Input input)
