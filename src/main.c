@@ -20,6 +20,8 @@ static const int SHADOW_RESOLUTION = 4096.0f;
 static const float SHADOW_Y = 30.0f;
 static const float SHADOW_ORTHO = 300.0f;
 static const float SHADOW_FAR = 300.0f;
+static const float SHADOW_ANGLE_STEP = SDL_PI_F / 360.0f;
+static const float SHADOW_PITCH_BIAS = SDL_PI_F / 3600.0f;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -40,7 +42,7 @@ static SDL_GPUTexture* composite_texture;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* shadow_sampler;
-static camera_t shadow_camera;
+static camera_t shadow_camera; // TODO: move into sky
 static sky_t sky;
 static player_t player;
 static Uint64 ticks1;
@@ -593,6 +595,8 @@ static bool resize(int width, int height)
     return true;
 }
 
+// TODO: shadow clamp with update shadow every N frames
+// TODO: move into sky
 static void update_shadow_camera()
 {
     camera_init(&shadow_camera, CAMERA_TYPE_ORTHO);
@@ -602,7 +606,10 @@ static void update_shadow_camera()
     shadow_camera.y = SHADOW_Y;
     shadow_camera.z = player.camera.z;
     shadow_camera.pitch = SDL_asinf(SDL_clamp(sky.render.sun[1], -1.0f, 1.0f));
+    shadow_camera.pitch = SDL_roundf(shadow_camera.pitch / SHADOW_ANGLE_STEP) * SHADOW_ANGLE_STEP;
+    shadow_camera.pitch = SDL_clamp(shadow_camera.pitch, -SDL_PI_F * 0.5f + SHADOW_PITCH_BIAS, SDL_PI_F * 0.5f - SHADOW_PITCH_BIAS);
     shadow_camera.yaw = SDL_atan2f(sky.render.sun[0], -sky.render.sun[2]);
+    shadow_camera.yaw = SDL_roundf(shadow_camera.yaw / SHADOW_ANGLE_STEP) * SHADOW_ANGLE_STEP;
     camera_update(&shadow_camera);
     float texel_size = SHADOW_ORTHO * 2.0f / SHADOW_RESOLUTION;
     float light_x = shadow_camera.view[0][0] * shadow_camera.x + shadow_camera.view[1][0] * shadow_camera.y + shadow_camera.view[2][0] * shadow_camera.z;

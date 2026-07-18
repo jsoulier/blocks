@@ -185,6 +185,8 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
         visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
     }
     visibility /= 9.0f;
+    float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
+    visibility = lerp(1.0f, visibility, shadowFade);
     return kBase + kShadow * sunIntensity * ratio * visibility;
 }
 

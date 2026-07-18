@@ -238,16 +238,6 @@ static const BLOCKS[BLOCK_COUNT] =
         .indices = {24, 24, 24, 24, 24, 24},
         .light = {0, 0, 0, 0},
     },
-    [BLOCK_GLASS] =
-    {
-        .is_opaque = false,
-        .is_sprite = false,
-        .is_solid = true,
-        .has_occlusion = false,
-        .has_shadow = false,
-        .indices = {25, 25, 25, 25, 25, 25},
-        .light = {0, 0, 0, 0},
-    },
 };
 
 static cpu_buffer_t cpu_blocks;

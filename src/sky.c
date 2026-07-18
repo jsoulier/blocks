@@ -7,7 +7,7 @@ static const float SUNRISE_LENGTH = 30.0f;
 static const float DAY_LENGTH = 60.0f;
 static const float SUNSET_LENGTH = 30.0f;
 static const float NIGHT_LENGTH = 60.0f;
-static const float SPEED = 1.0f;
+static const float SPEED = 0.1f;
 static const float AMBIENT_SCALE = 0.5f;
 
 static const float NIGHT_SKY_TOP[3] = {0.02f, 0.02f, 0.1f};
