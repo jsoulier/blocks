@@ -44,17 +44,17 @@ static const uint kWater = 16;
 
 float4 main(Input input) : SV_Target0
 {
-    Block block = blockBuffer[GetBlock(input.Voxel)];
+    Block block = blockBuffer[GetBlockIndex(input.Voxel)];
     float3 normal = GetNormal(input.Voxel, block);
-    uint index = GetIndex(input.Voxel, block);
+    uint index = GetAtlasIndex(input.Voxel, block);
     float3 texcoord = float3(input.Texcoord, index);
-    float4 color = atlasTexture.Sample(atlasSampler, texcoord);
-    float3 albedo = color.rgb;
-    float alpha = color.a;
+    float4 texel = atlasTexture.Sample(atlasSampler, texcoord);
+    float3 albedo = texel.rgb;
+    float alpha = texel.a;
     float4 position = input.WorldPosition;
-    float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, normal);
+    float3 pointLight = GetPointLight(lightBuffer, LightCount, position.xyz, normal);
     float3 ambient = Ambient.xyz;
-    float sun = GetSunLight(
+    float sunlight = GetSunLight(
         shadowTexture,
         shadowSampler,
         ShadowTransform,
@@ -64,11 +64,12 @@ float4 main(Input input) : SV_Target0
         normal,
         block);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
-    float fog = GetFog(distance(position.xz, PlayerPosition.xz));
+    float fog = GetFogAmount(distance(position.xz, PlayerPosition.xz));
     if (index == kWater)
     {
         float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
         alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
     }
-    return float4(lerp(albedo * (diffuse + ambient + sun), sky, fog), alpha);
+    float3 litColor = albedo * (pointLight + ambient + sunlight);
+    return float4(lerp(litColor, sky, fog), alpha);
 }

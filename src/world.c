@@ -121,14 +121,13 @@ static Chunk* GetChunk(int cx, int cz)
 
 static void GetNeighborhood(int cx, int cz, Chunk* neighborhood[3][3])
 {
-    for (int i = -1; i <= 1; i++)
+    for (int offset_x = -1; offset_x <= 1; offset_x++)
     {
-        for (int j = -1; j <= 1; j++)
+        for (int offset_z = -1; offset_z <= 1; offset_z++)
         {
-            int x = cx + i;
-            int z = cz + j;
-            neighborhood[i + 1][j + 1] = GetChunk(x, z);
-            SDL_assert(neighborhood[i + 1][j + 1]);
+            Chunk* chunk = GetChunk(cx + offset_x, cz + offset_z);
+            neighborhood[offset_x + 1][offset_z + 1] = chunk;
+            SDL_assert(chunk);
         }
     }
 }
@@ -143,9 +142,9 @@ static Chunk* CreateChunk()
     SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_REQUESTED);
     SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_COMPLETED);
     SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_COMPLETED);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        GPUBuffer_Init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
+        GPUBuffer_Init(&chunk->gpu_voxels[mesh_index], device, SDL_GPU_BUFFERUSAGE_VERTEX);
     }
     GPUBuffer_Init(&chunk->gpu_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     return chunk;
@@ -154,9 +153,9 @@ static Chunk* CreateChunk()
 static void FreeChunk(Chunk* chunk)
 {
     GPUBuffer_Free(&chunk->gpu_lights);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        GPUBuffer_Free(&chunk->gpu_voxels[i]);
+        GPUBuffer_Free(&chunk->gpu_voxels[mesh_index]);
     }
     SDL_free(chunk->lights);
     SDL_free(chunk);
@@ -174,12 +173,12 @@ static Block SetChunkBlock(Chunk* chunk, int bx, int by, int bz, Block block)
     }
     SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_REQUESTED);
     int light_index = -1;
-    for (int i = 0; i < chunk->light_size; i++)
+    for (int index = 0; index < chunk->light_size; index++)
     {
-        Light* light = &chunk->lights[i];
+        Light* light = &chunk->lights[index];
         if (light->x == chunk->x + bx && light->y == by && light->z == chunk->z + bz)
         {
-            light_index = i;
+            light_index = index;
             break;
         }
     }
@@ -287,10 +286,10 @@ static void UploadVoxels(Chunk* chunk, CPUBuffer voxels[MESH_TYPE_COUNT])
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == JOB_STATE_COMPLETED);
     SDL_assert(SDL_GetAtomicInt(&chunk->voxel_state) == JOB_STATE_RUNNING);
     bool has_voxels = false;
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        GPUBuffer_Clear(&chunk->gpu_voxels[i]);
-        has_voxels |= voxels[i].size > 0;
+        GPUBuffer_Clear(&chunk->gpu_voxels[mesh_index]);
+        has_voxels |= voxels[mesh_index].size > 0;
     }
     if (!has_voxels)
     {
@@ -300,9 +299,9 @@ static void UploadVoxels(Chunk* chunk, CPUBuffer voxels[MESH_TYPE_COUNT])
     {
         return;
     }
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        GPUBuffer_Upload(&chunk->gpu_voxels[i], &voxels[i]);
+        GPUBuffer_Upload(&chunk->gpu_voxels[mesh_index], &voxels[mesh_index]);
     }
     GPUBuffer_EndUpload();
 }
@@ -345,39 +344,45 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
 {
     int position[3];
     Voxel_GetCubePosition(direction, vertex, position);
-    int side1[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
-    int side2[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
+    int first_side[3] = {
+        DIRECTIONS[direction][0],
+        DIRECTIONS[direction][1],
+        DIRECTIONS[direction][2]};
+    int second_side[3] = {
+        DIRECTIONS[direction][0],
+        DIRECTIONS[direction][1],
+        DIRECTIONS[direction][2]};
     int corner[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
-    int side = 0;
-    for (int i = 0; i < 3; i++)
+    int side_count = 0;
+    for (int axis = 0; axis < 3; axis++)
     {
-        if (DIRECTIONS[direction][i])
+        if (DIRECTIONS[direction][axis])
         {
             continue;
         }
-        int offset = position[i] ? 1 : -1;
-        if (side++ == 0)
+        int offset = position[axis] ? 1 : -1;
+        if (side_count++ == 0)
         {
-            side1[i] = offset;
+            first_side[axis] = offset;
         }
         else
         {
-            side2[i] = offset;
+            second_side[axis] = offset;
         }
-        corner[i] = offset;
+        corner[axis] = offset;
     }
-    SDL_assert(side == 2);
-    bool has_side1 =
-        Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
-    bool has_side2 =
-        Block_HasOcclusion(GetNeighborhoodBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
+    SDL_assert(side_count == 2);
+    bool has_first_side = Block_HasOcclusion(
+        GetNeighborhoodBlock(chunks, bx, by, bz, first_side[0], first_side[1], first_side[2]));
+    bool has_second_side = Block_HasOcclusion(
+        GetNeighborhoodBlock(chunks, bx, by, bz, second_side[0], second_side[1], second_side[2]));
     bool has_corner = Block_HasOcclusion(
         GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
-    if (has_side1 && has_side2)
+    if (has_first_side && has_second_side)
     {
         return 0;
     }
-    return AO_LEVEL_CLEAR - has_side1 - has_side2 - has_corner;
+    return AO_LEVEL_CLEAR - has_first_side - has_second_side - has_corner;
 }
 
 static void GenerateChunkBlocks(Chunk* chunk)
@@ -415,45 +420,54 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                 }
                 if (Block_IsSprite(block))
                 {
-                    for (int j = 0; j < 4; j++)
+                    for (Direction direction = 0; direction < 4; direction++)
                     {
-                        for (int k = 0; k < 4; k++)
+                        for (int vertex = 0; vertex < 4; vertex++)
                         {
-                            Voxel voxel = Voxel_PackSprite(block, bx, by, bz, j, k);
+                            Voxel voxel = Voxel_PackSprite(block, bx, by, bz, direction, vertex);
                             CPUBuffer_Append(&voxels[MESH_TYPE_OPAQUE], &voxel);
                         }
                     }
                     continue;
                 }
-                MeshType mesh = Block_IsOpaque(block) ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
-                for (int j = 0; j < 6; j++)
+                MeshType mesh_type =
+                    Block_IsOpaque(block) ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
+                for (Direction direction = 0; direction < DIRECTION_COUNT; direction++)
                 {
-                    int dx = DIRECTIONS[j][0];
-                    int dy = DIRECTIONS[j][1];
-                    int dz = DIRECTIONS[j][2];
+                    int dx = DIRECTIONS[direction][0];
+                    int dy = DIRECTIONS[direction][1];
+                    int dz = DIRECTIONS[direction][2];
                     Block neighbor = GetNeighborhoodBlock(chunks, bx, by, bz, dx, dy, dz);
                     if (!IsVisible(block, neighbor))
                     {
                         continue;
                     }
-                    int ao[4];
-                    int order[] = {0, 1, 2, 3};
-                    for (int k = 0; k < 4; k++)
+                    int ambient_occlusion[4];
+                    int vertex_order[] = {0, 1, 2, 3};
+                    for (int vertex = 0; vertex < 4; vertex++)
                     {
-                        ao[k] = GetAO(chunks, bx, by, bz, j, k);
+                        ambient_occlusion[vertex] = GetAO(chunks, bx, by, bz, direction, vertex);
                     }
-                    if (ao[0] + ao[3] > ao[1] + ao[2])
+                    if (ambient_occlusion[0] + ambient_occlusion[3] >
+                        ambient_occlusion[1] + ambient_occlusion[2])
                     {
-                        order[0] = 1;
-                        order[1] = 3;
-                        order[2] = 0;
-                        order[3] = 2;
+                        vertex_order[0] = 1;
+                        vertex_order[1] = 3;
+                        vertex_order[2] = 0;
+                        vertex_order[3] = 2;
                     }
-                    for (int k = 0; k < 4; k++)
+                    for (int vertex_index = 0; vertex_index < 4; vertex_index++)
                     {
-                        int vertex = order[k];
-                        Voxel voxel = Voxel_PackCube(block, bx, by, bz, j, vertex, ao[vertex]);
-                        CPUBuffer_Append(&voxels[mesh], &voxel);
+                        int vertex = vertex_order[vertex_index];
+                        Voxel voxel = Voxel_PackCube(
+                            block,
+                            bx,
+                            by,
+                            bz,
+                            direction,
+                            vertex,
+                            ambient_occlusion[vertex]);
+                        CPUBuffer_Append(&voxels[mesh_type], &voxel);
                     }
                 }
             }
@@ -477,15 +491,15 @@ static void GenerateChunkLights(Chunk* chunks[3][3], CPUBuffer* lights)
     Chunk* chunk = chunks[1][1];
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == JOB_STATE_COMPLETED);
     SDL_assert(SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_RUNNING);
-    for (int i = 0; i < 3; i++)
+    for (int x = 0; x < 3; x++)
     {
-        for (int j = 0; j < 3; j++)
+        for (int z = 0; z < 3; z++)
         {
-            const Chunk* neighbor = chunks[i][j];
+            const Chunk* neighbor = chunks[x][z];
             SDL_assert(neighbor);
-            for (int k = 0; k < neighbor->light_size; k++)
+            for (int light_index = 0; light_index < neighbor->light_size; light_index++)
             {
-                CPUBuffer_Append(lights, &neighbor->lights[k]);
+                CPUBuffer_Append(lights, &neighbor->lights[light_index]);
             }
         }
     }
@@ -519,11 +533,11 @@ static void GenerateIndices()
         return;
     }
     static const int INDICES[] = {0, 1, 2, 3, 2, 1};
-    for (Uint32 i = 0; i < INDEX_COUNT / 6; i++)
+    for (Uint32 quad_index = 0; quad_index < INDEX_COUNT / 6; quad_index++)
     {
-        for (Uint32 j = 0; j < 6; j++)
+        for (Uint32 index_index = 0; index_index < 6; index_index++)
         {
-            Uint32 index = i * 4 + INDICES[j];
+            Uint32 index = quad_index * 4 + INDICES[index_index];
             CPUBuffer_Append(&indices, &index);
         }
     }
@@ -583,7 +597,7 @@ static int WorkerFunction(void* args)
     return 0;
 }
 
-static bool IsJobRunning(const Worker* worker)
+static bool IsWorkerBusy(const Worker* worker)
 {
     SDL_LockMutex(worker->mutex);
     bool running = worker->job.type != JOB_TYPE_NONE;
@@ -602,9 +616,9 @@ static void DispatchJob(Worker* worker, const Job* job)
 
 static void StartWorker(Worker* worker)
 {
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        CPUBuffer_Init(&worker->voxels[i], device, sizeof(Voxel));
+        CPUBuffer_Init(&worker->voxels[mesh_index], device, sizeof(Voxel));
     }
     CPUBuffer_Init(&worker->lights, device, sizeof(Light));
     worker->mutex = SDL_CreateMutex();
@@ -641,45 +655,47 @@ static void StopWorker(Worker* worker)
     worker->thread = NULL;
     worker->mutex = NULL;
     worker->condition = NULL;
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        CPUBuffer_Free(&worker->voxels[i]);
+        CPUBuffer_Free(&worker->voxels[mesh_index]);
     }
     CPUBuffer_Free(&worker->lights);
 }
 
 static int SortFunction(void* userdata, const void* lhs, const void* rhs)
 {
-    int w = WORLD_WIDTH / 2;
-    const int* l = lhs;
-    const int* r = rhs;
-    int a = (l[0] - w) * (l[0] - w) + (l[1] - w) * (l[1] - w);
-    int b = (r[0] - w) * (r[0] - w) + (r[1] - w) * (r[1] - w);
-    if (a < b)
+    int center = WORLD_WIDTH / 2;
+    const int* left = lhs;
+    const int* right = rhs;
+    int left_distance =
+        (left[0] - center) * (left[0] - center) + (left[1] - center) * (left[1] - center);
+    int right_distance =
+        (right[0] - center) * (right[0] - center) + (right[1] - center) * (right[1] - center);
+    if (left_distance < right_distance)
     {
         return -1;
     }
-    else if (a > b)
+    if (left_distance > right_distance)
     {
         return 1;
     }
     return 0;
 }
 
-void World_Init(SDL_GPUDevice* handle)
+void World_Init(SDL_GPUDevice* gpu_device)
 {
-    device = handle;
+    device = gpu_device;
     world_x = SDL_MAX_SINT32;
     world_z = SDL_MAX_SINT32;
     GPUBuffer_Init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);
     GPUBuffer_Init(&gpu_empty_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        CPUBuffer_Init(&cpu_voxels[i], device, sizeof(Voxel));
+        CPUBuffer_Init(&cpu_voxels[mesh_index], device, sizeof(Voxel));
     }
-    for (int i = 0; i < WORKERS; i++)
+    for (int worker_index = 0; worker_index < WORKERS; worker_index++)
     {
-        StartWorker(&workers[i]);
+        StartWorker(&workers[worker_index]);
     }
     for (int x = 0; x < WORLD_WIDTH; x++)
     {
@@ -697,9 +713,9 @@ void World_Init(SDL_GPUDevice* handle)
 
 void World_Free()
 {
-    for (int i = 0; i < WORKERS; i++)
+    for (int worker_index = 0; worker_index < WORKERS; worker_index++)
     {
-        StopWorker(&workers[i]);
+        StopWorker(&workers[worker_index]);
     }
     for (int x = 0; x < WORLD_WIDTH; x++)
     {
@@ -710,59 +726,59 @@ void World_Free()
     }
     GPUBuffer_Free(&gpu_indices);
     GPUBuffer_Free(&gpu_empty_lights);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
     {
-        CPUBuffer_Free(&cpu_voxels[i]);
+        CPUBuffer_Free(&cpu_voxels[mesh_index]);
     }
 }
 
-static int GetWorkers(Worker* local_workers[WORKERS])
+static int GetIdleWorkers(Worker* idle_workers[WORKERS])
 {
-    int num_workers = 0;
-    for (int i = 0; i < WORKERS; i++)
+    int idle_count = 0;
+    for (int worker_index = 0; worker_index < WORKERS; worker_index++)
     {
-        if (!IsJobRunning(&workers[i]))
+        if (!IsWorkerBusy(&workers[worker_index]))
         {
-            local_workers[num_workers++] = &workers[i];
+            idle_workers[idle_count++] = &workers[worker_index];
         }
     }
-    return num_workers;
+    return idle_count;
 }
 
 static void Shuffle(int offset_x, int offset_z)
 {
     world_x += offset_x;
     world_z += offset_z;
-    Chunk* in[WORLD_WIDTH][WORLD_WIDTH] = {0};
-    Chunk* out[WORLD_WIDTH * WORLD_WIDTH] = {0};
-    int size = 0;
+    Chunk* retained_chunks[WORLD_WIDTH][WORLD_WIDTH] = {0};
+    Chunk* recycled_chunks[WORLD_WIDTH * WORLD_WIDTH] = {0};
+    int recycled_count = 0;
     for (int x = 0; x < WORLD_WIDTH; x++)
     {
         for (int z = 0; z < WORLD_WIDTH; z++)
         {
             SDL_assert(chunks[x][z]);
-            const int a = x - offset_x;
-            const int b = z - offset_z;
-            if (IsChunkLocal(a, b))
+            int new_x = x - offset_x;
+            int new_z = z - offset_z;
+            if (IsChunkLocal(new_x, new_z))
             {
-                in[a][b] = chunks[x][z];
+                retained_chunks[new_x][new_z] = chunks[x][z];
             }
             else
             {
-                out[size++] = chunks[x][z];
+                recycled_chunks[recycled_count++] = chunks[x][z];
             }
             chunks[x][z] = NULL;
         }
     }
-    SDL_memcpy(chunks, in, sizeof(in));
+    SDL_memcpy(chunks, retained_chunks, sizeof(retained_chunks));
     for (int x = 0; x < WORLD_WIDTH; x++)
     {
         for (int z = 0; z < WORLD_WIDTH; z++)
         {
             if (!chunks[x][z])
             {
-                SDL_assert(size > 0);
-                Chunk* chunk = out[--size];
+                SDL_assert(recycled_count > 0);
+                Chunk* chunk = recycled_chunks[--recycled_count];
                 SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_REQUESTED);
                 SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_REQUESTED);
                 SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_REQUESTED);
@@ -773,7 +789,7 @@ static void Shuffle(int offset_x, int offset_z)
             chunk->z = (world_z + z) * CHUNK_WIDTH;
         }
     }
-    SDL_assert(!size);
+    SDL_assert(!recycled_count);
 }
 
 static bool MoveChunks(const Camera* camera)
@@ -784,8 +800,8 @@ static bool MoveChunks(const Camera* camera)
     {
         return false;
     }
-    Worker* local_workers[WORKERS];
-    if (GetWorkers(local_workers) != WORKERS)
+    Worker* idle_workers[WORKERS];
+    if (GetIdleWorkers(idle_workers) != WORKERS)
     {
         return true;
     }
@@ -815,31 +831,32 @@ static bool TryUpdateVoxelsOrLights(int x, int z, Worker* worker)
     {
         return false;
     }
-    bool do_voxel = SDL_GetAtomicInt(&chunk->voxel_state) == JOB_STATE_REQUESTED;
-    bool do_light = SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_REQUESTED;
-    if (!do_voxel && !do_light)
+    bool needs_voxels = SDL_GetAtomicInt(&chunk->voxel_state) == JOB_STATE_REQUESTED;
+    bool needs_lights = SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_REQUESTED;
+    if (!needs_voxels && !needs_lights)
     {
         return false;
     }
     Chunk* neighborhood[3][3];
     GetNeighborhood(x, z, neighborhood);
-    for (int i = 0; i < 3; i++)
+    for (int neighbor_x = 0; neighbor_x < 3; neighbor_x++)
     {
-        for (int j = 0; j < 3; j++)
+        for (int neighbor_z = 0; neighbor_z < 3; neighbor_z++)
         {
-            if (SDL_GetAtomicInt(&neighborhood[i][j]->block_state) != JOB_STATE_COMPLETED)
+            if (SDL_GetAtomicInt(&neighborhood[neighbor_x][neighbor_z]->block_state) !=
+                JOB_STATE_COMPLETED)
             {
                 return false;
             }
         }
     }
     Job job;
-    if (do_voxel)
+    if (needs_voxels)
     {
         job = (Job){JOB_TYPE_VOXELS, x, z};
         SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_RUNNING);
     }
-    else if (do_light)
+    else if (needs_lights)
     {
         job = (Job){JOB_TYPE_LIGHTS, x, z};
         SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_RUNNING);
@@ -858,26 +875,26 @@ void World_Update(const Camera* camera)
     {
         return;
     }
-    Worker* local_workers[WORKERS] = {0};
-    int num_workers = GetWorkers(local_workers);
+    Worker* idle_workers[WORKERS] = {0};
+    int idle_count = GetIdleWorkers(idle_workers);
     for (int x = 0; x < WORLD_WIDTH; x++)
     {
         for (int z = 0; z < WORLD_WIDTH; z++)
         {
-            if (num_workers == 0)
+            if (idle_count == 0)
             {
                 return;
             }
-            int a = sorted_chunks[x][z][0];
-            int b = sorted_chunks[x][z][1];
-            Worker* worker = local_workers[num_workers - 1];
-            if (TryUpdateBlocks(a, b, worker))
+            int chunk_x = sorted_chunks[x][z][0];
+            int chunk_z = sorted_chunks[x][z][1];
+            Worker* worker = idle_workers[idle_count - 1];
+            if (TryUpdateBlocks(chunk_x, chunk_z, worker))
             {
-                num_workers--;
+                idle_count--;
             }
-            else if (TryUpdateVoxelsOrLights(a, b, worker))
+            else if (TryUpdateVoxelsOrLights(chunk_x, chunk_z, worker))
             {
-                num_workers--;
+                idle_count--;
             }
         }
     }
@@ -885,8 +902,8 @@ void World_Update(const Camera* camera)
 
 static void Render(
     Chunk* chunk,
-    SDL_GPUCommandBuffer* cbuf,
-    SDL_GPURenderPass* pass,
+    SDL_GPUCommandBuffer* command_buffer,
+    SDL_GPURenderPass* render_pass,
     WorldFlags flags)
 {
     MeshType mesh = flags & WORLD_FLAGS_OPAQUE ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
@@ -913,46 +930,51 @@ static void Render(
             light_binding = gpu_empty_lights.buffer;
             light_count = 0;
         }
-        SDL_PushGPUFragmentUniformData(cbuf, 0, &light_count, 4);
-        SDL_BindGPUFragmentStorageBuffers(pass, 1, &light_binding, 1);
+        SDL_PushGPUFragmentUniformData(command_buffer, 0, &light_count, sizeof(light_count));
+        SDL_BindGPUFragmentStorageBuffers(render_pass, 1, &light_binding, 1);
     }
-    SDL_PushGPUVertexUniformData(cbuf, 2, chunk->position, 8);
-    SDL_BindGPUVertexBuffers(pass, 0, &voxel_binding, 1);
-    SDL_BindGPUIndexBuffer(pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
-    SDL_DrawGPUIndexedPrimitives(pass, gpu_voxels->size * 1.5, 1, 0, 0, 0);
+    SDL_PushGPUVertexUniformData(command_buffer, 2, chunk->position, sizeof(chunk->position));
+    SDL_BindGPUVertexBuffers(render_pass, 0, &voxel_binding, 1);
+    SDL_BindGPUIndexBuffer(render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+    Uint32 index_count = gpu_voxels->size / 4 * 6;
+    SDL_DrawGPUIndexedPrimitives(render_pass, index_count, 1, 0, 0, 0);
 }
 
 void World_Render(
     const Camera* camera,
-    SDL_GPUCommandBuffer* cbuf,
-    SDL_GPURenderPass* pass,
+    SDL_GPUCommandBuffer* command_buffer,
+    SDL_GPURenderPass* render_pass,
     WorldFlags flags)
 {
-    SDL_PushGPUVertexUniformData(cbuf, 0, camera->proj, 64);
-    SDL_PushGPUVertexUniformData(cbuf, 1, camera->view, 64);
+    SDL_PushGPUVertexUniformData(command_buffer, 0, camera->proj, sizeof(camera->proj));
+    SDL_PushGPUVertexUniformData(command_buffer, 1, camera->view, sizeof(camera->view));
     for (int x = 0; x < WORLD_WIDTH; x++)
     {
-        for (int y = 0; y < WORLD_WIDTH; y++)
+        for (int z = 0; z < WORLD_WIDTH; z++)
         {
-            int a = sorted_chunks[x][y][0];
-            int b = sorted_chunks[x][y][1];
-            if (IsChunkOnBorder(a, b))
+            int chunk_x = sorted_chunks[x][z][0];
+            int chunk_z = sorted_chunks[x][z][1];
+            if (IsChunkOnBorder(chunk_x, chunk_z))
             {
                 continue;
             }
-            Chunk* chunk = chunks[a][b];
+            Chunk* chunk = chunks[chunk_x][chunk_z];
             if (SDL_GetAtomicInt(&chunk->voxel_state) != JOB_STATE_COMPLETED)
             {
                 continue;
             }
-            float sx = CHUNK_WIDTH;
-            float sy = CHUNK_HEIGHT;
-            float sz = CHUNK_WIDTH;
-            if (!Camera_GetVisibility(camera, chunk->x, 0.0f, chunk->z, sx, sy, sz))
+            if (!Camera_GetVisibility(
+                    camera,
+                    chunk->x,
+                    0.0f,
+                    chunk->z,
+                    CHUNK_WIDTH,
+                    CHUNK_HEIGHT,
+                    CHUNK_WIDTH))
             {
                 continue;
             }
-            Render(chunk, cbuf, pass, flags);
+            Render(chunk, command_buffer, render_pass, flags);
         }
     }
 }
@@ -1028,49 +1050,53 @@ void World_SetBlock(const int position[3], Block block)
     GetNeighborhood(chunk_x, chunk_z, neighborhood);
     if (Block_IsLight(block) || Block_IsLight(old_block))
     {
-        for (int i = 0; i < 3; i++)
+        for (int neighbor_x = 0; neighbor_x < 3; neighbor_x++)
         {
-            for (int j = 0; j < 3; j++)
+            for (int neighbor_z = 0; neighbor_z < 3; neighbor_z++)
             {
-                SDL_SetAtomicInt(&neighborhood[i][j]->light_state, JOB_STATE_REQUESTED);
+                SDL_SetAtomicInt(
+                    &neighborhood[neighbor_x][neighbor_z]->light_state,
+                    JOB_STATE_REQUESTED);
             }
         }
     }
 }
 
-WorldQuery World_Raycast(const Camera* camera, float length)
+WorldQuery World_Raycast(const Camera* camera, float max_distance)
 {
     WorldQuery query = {0};
     float direction[3] = {0};
-    float distances[3] = {0};
+    float next_distances[3] = {0};
     int steps[3] = {0};
-    float deltas[3] = {0};
+    float step_distances[3] = {0};
     Camera_GetVector(camera, &direction[0], &direction[1], &direction[2]);
-    for (int i = 0; i < 3; i++)
+    for (int axis = 0; axis < 3; axis++)
     {
-        query.current[i] = SDL_floorf(camera->position[i]);
-        query.previous[i] = query.current[i];
-        if (SDL_fabsf(direction[i]) > SDL_FLT_EPSILON)
+        query.current[axis] = SDL_floorf(camera->position[axis]);
+        query.previous[axis] = query.current[axis];
+        if (SDL_fabsf(direction[axis]) > SDL_FLT_EPSILON)
         {
-            deltas[i] = SDL_fabsf(1.0f / direction[i]);
+            step_distances[axis] = SDL_fabsf(1.0f / direction[axis]);
         }
         else
         {
-            deltas[i] = 1e6;
+            step_distances[axis] = 1e6f;
         }
-        if (direction[i] < 0.0f)
+        if (direction[axis] < 0.0f)
         {
-            steps[i] = -1;
-            distances[i] = (camera->position[i] - query.current[i]) * deltas[i];
+            steps[axis] = -1;
+            next_distances[axis] =
+                (camera->position[axis] - query.current[axis]) * step_distances[axis];
         }
         else
         {
-            steps[i] = 1;
-            distances[i] = (query.current[i] + 1.0f - camera->position[i]) * deltas[i];
+            steps[axis] = 1;
+            next_distances[axis] =
+                (query.current[axis] + 1.0f - camera->position[axis]) * step_distances[axis];
         }
     }
-    float traveled = 0.0f;
-    while (traveled <= length)
+    float distance = 0.0f;
+    while (distance <= max_distance)
     {
         query.block = World_GetBlock(query.current);
         if (Block_IsSolid(query.block))
@@ -1079,11 +1105,11 @@ WorldQuery World_Raycast(const Camera* camera, float length)
         }
         SDL_memcpy(query.previous, query.current, sizeof(query.current));
         int axis;
-        if (distances[0] < distances[1] && distances[0] < distances[2])
+        if (next_distances[0] < next_distances[1] && next_distances[0] < next_distances[2])
         {
             axis = 0;
         }
-        else if (distances[1] < distances[2])
+        else if (next_distances[1] < next_distances[2])
         {
             axis = 1;
         }
@@ -1091,8 +1117,8 @@ WorldQuery World_Raycast(const Camera* camera, float length)
         {
             axis = 2;
         }
-        traveled = distances[axis];
-        distances[axis] += deltas[axis];
+        distance = next_distances[axis];
+        next_distances[axis] += step_distances[axis];
         query.current[axis] += steps[axis];
     }
     query.block = BLOCK_EMPTY;

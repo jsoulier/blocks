@@ -59,7 +59,7 @@ static const uint kCubeIndices[36] = {
     4, 5, 1, 4, 1, 0, // -Y
 };
 
-float GetAO(uint voxel)
+float GetAmbientOcclusion(uint voxel)
 {
     static const float kAO[4] = {0.4f, 0.6f, 0.8f, 1.0f};
     return kAO[(voxel >> AO_OFFSET) & AO_MASK];
@@ -70,7 +70,7 @@ uint GetDirection(uint voxel)
     return (voxel >> DIRECTION_OFFSET) & DIRECTION_MASK;
 }
 
-uint GetBlock(uint voxel)
+uint GetBlockIndex(uint voxel)
 {
     return (voxel >> BLOCK_OFFSET) & BLOCK_MASK;
 }
@@ -83,7 +83,7 @@ float3 GetPosition(uint voxel)
         (voxel >> Z_OFFSET) & Z_MASK);
 }
 
-uint GetIndex(uint voxel, Block block)
+uint GetAtlasIndex(uint voxel, Block block)
 {
     uint direction = block.IsSprite ? 0 : GetDirection(voxel);
     return block.Indices[direction];
@@ -119,46 +119,46 @@ struct Light
     int Z;
 };
 
-float3 GetDiffuseLight(
+float3 GetPointLight(
     StructuredBuffer<Light> lights,
     uint lightCount,
-    float4 position,
+    float3 position,
     float3 normal)
 {
     static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
-    float3 finalColor = float3(0.0f, 0.0f, 0.0f);
-    for (uint i = 0; i < lightCount; i++)
+    float3 accumulatedLight = float3(0.0f, 0.0f, 0.0f);
+    for (uint lightIndex = 0; lightIndex < lightCount; lightIndex++)
     {
-        Light light = lights[i];
+        Light light = lights[lightIndex];
         float radius = (light.Color & 0xFF000000) >> 24;
         float3 lightPosition = float3(light.X, light.Y, light.Z) + 0.5f + kOffset;
-        float3 offset = lightPosition - position.xyz;
+        float3 offset = lightPosition - position;
         float distance = length(offset);
         if (distance >= radius)
         {
             continue;
         }
         float3 lightDirection = offset / distance;
-        float NdotL = saturate(dot(normal, lightDirection));
-        if (NdotL <= 0.0f)
+        float lightAngle = saturate(dot(normal, lightDirection));
+        if (lightAngle <= 0.0f)
         {
             continue;
         }
         float normalizedDistance = saturate(distance / radius);
         float attenuation = 1.0f - smoothstep(0.0f, 1.0f, normalizedDistance);
-        float3 color;
-        color.r = ((light.Color & 0x000000FF) >> 0) / 255.0f;
-        color.g = ((light.Color & 0x0000FF00) >> 8) / 255.0f;
-        color.b = ((light.Color & 0x00FF0000) >> 16) / 255.0f;
-        finalColor += color * NdotL * attenuation;
+        float3 lightColor;
+        lightColor.r = ((light.Color & 0x000000FF) >> 0) / 255.0f;
+        lightColor.g = ((light.Color & 0x0000FF00) >> 8) / 255.0f;
+        lightColor.b = ((light.Color & 0x00FF0000) >> 16) / 255.0f;
+        accumulatedLight += lightColor * lightAngle * attenuation;
     }
-    return finalColor;
+    return accumulatedLight;
 }
 
 float GetSunLight(
-    Texture2D<float> texture,
-    SamplerComparisonState state,
-    float4x4 transform,
+    Texture2D<float> shadowTexture,
+    SamplerComparisonState shadowSampler,
+    float4x4 shadowTransform,
     float3 sunDirection,
     float sunIntensity,
     float3 position,
@@ -169,57 +169,58 @@ float GetSunLight(
     {
         return 0.0f;
     }
-    float ratio = block.HasOcclusion ? saturate(-dot(normal, sunDirection)) : 0.707f;
-    if (ratio <= 0.0f)
+    float sunlight = block.blockSunIntensity * sunIntensity;
+    if (!block.CanBeInShadow)
+    {
+        return sunlight;
+    }
+    float lightAngle = block.HasOcclusion ? saturate(-dot(normal, sunDirection)) : 0.707f;
+    if (lightAngle <= 0.0f)
     {
         return 0.0f;
     }
-    if (!block.CanBeInShadow)
-    {
-        return block.blockSunIntensity * sunIntensity;
-    }
-    float4 shadowPosition = mul(transform, float4(position, 1.0f));
+    float4 shadowPosition = mul(shadowTransform, float4(position, 1.0f));
     shadowPosition.xyz /= shadowPosition.w;
     float2 uv = shadowPosition.xy * 0.5f + 0.5f;
     uv.y = 1.0f - uv.y;
     if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f ||
         shadowPosition.z > 1.0f)
     {
-        return block.blockSunIntensity * sunIntensity * ratio;
+        return sunlight * lightAngle;
     }
     uint width;
     uint height;
-    texture.GetDimensions(width, height);
+    shadowTexture.GetDimensions(width, height);
     float2 texelSize = 1.0f / float2(width, height);
-    float bias = 0.0003f + 0.001f * (1.0f - ratio);
-    float visibility = 0.0f;
+    float bias = 0.0003f + 0.001f * (1.0f - lightAngle);
+    float shadowVisibility = 0.0f;
     for (int x = -1; x <= 1; x++)
     {
         for (int y = -1; y <= 1; y++)
         {
-            visibility += texture.SampleCmpLevelZero(
-                state,
+            shadowVisibility += shadowTexture.SampleCmpLevelZero(
+                shadowSampler,
                 uv + float2(x, y) * texelSize,
                 shadowPosition.z - bias);
         }
     }
-    visibility /= 9.0f;
+    shadowVisibility /= 9.0f;
     float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
-    visibility = lerp(1.0f, visibility, shadowFade);
-    return block.blockSunIntensity * sunIntensity * ratio * visibility;
+    shadowVisibility = lerp(1.0f, shadowVisibility, shadowFade);
+    return sunlight * lightAngle * shadowVisibility;
 }
 
-float GetFog(float x)
+float GetFogAmount(float distance)
 {
-    return min(pow(x / 250.0f, 2.5f), 1.0f);
+    return min(pow(distance / 250.0f, 2.5f), 1.0f);
 }
 
 float3 GetSkyColor(float3 position, float3 top, float3 horizon)
 {
-    float dy = position.y;
-    float dx = length(float2(position.x, position.z));
-    float alpha = (atan2(dy, dx) + kPi / 2.0f) / kPi;
-    return lerp(horizon, top, alpha);
+    float vertical = position.y;
+    float horizontal = length(position.xz);
+    float blend = (atan2(vertical, horizontal) + kPi / 2.0f) / kPi;
+    return lerp(horizon, top, blend);
 }
 
 #endif

@@ -5,24 +5,24 @@
 #define DEGREES(rad) ((rad) * 180.0f / SDL_PI_F)
 #define RADIANS(deg) ((deg) * SDL_PI_F / 180.0f)
 
-static void Multiply(float matrix[4][4], float a[4][4], float b[4][4])
+static void MultiplyMatrices(float output[4][4], float left[4][4], float right[4][4])
 {
-    float c[4][4] = {0};
-    for (int i = 0; i < 4; i++)
+    float result[4][4] = {0};
+    for (int row = 0; row < 4; row++)
     {
-        for (int j = 0; j < 4; j++)
+        for (int column = 0; column < 4; column++)
         {
-            c[i][j] += a[0][j] * b[i][0];
-            c[i][j] += a[1][j] * b[i][1];
-            c[i][j] += a[2][j] * b[i][2];
-            c[i][j] += a[3][j] * b[i][3];
+            result[row][column] += left[0][column] * right[row][0];
+            result[row][column] += left[1][column] * right[row][1];
+            result[row][column] += left[2][column] * right[row][2];
+            result[row][column] += left[3][column] * right[row][3];
         }
     }
-    for (int i = 0; i < 4; i++)
+    for (int row = 0; row < 4; row++)
     {
-        for (int j = 0; j < 4; j++)
+        for (int column = 0; column < 4; column++)
         {
-            matrix[i][j] = c[i][j];
+            output[row][column] = result[row][column];
         }
     }
 }
@@ -92,66 +92,66 @@ static void Translate(float matrix[4][4], float x, float y, float z)
     matrix[3][3] = 1.0f;
 }
 
-static void Frustum(float planes[6][4], float a[4][4])
+static void CalculateFrustum(float planes[6][4], float matrix[4][4])
 {
-    planes[0][0] = a[0][3] + a[0][0];
-    planes[0][1] = a[1][3] + a[1][0];
-    planes[0][2] = a[2][3] + a[2][0];
-    planes[0][3] = a[3][3] + a[3][0];
-    planes[1][0] = a[0][3] - a[0][0];
-    planes[1][1] = a[1][3] - a[1][0];
-    planes[1][2] = a[2][3] - a[2][0];
-    planes[1][3] = a[3][3] - a[3][0];
-    planes[2][0] = a[0][3] + a[0][1];
-    planes[2][1] = a[1][3] + a[1][1];
-    planes[2][2] = a[2][3] + a[2][1];
-    planes[2][3] = a[3][3] + a[3][1];
-    planes[3][0] = a[0][3] - a[0][1];
-    planes[3][1] = a[1][3] - a[1][1];
-    planes[3][2] = a[2][3] - a[2][1];
-    planes[3][3] = a[3][3] - a[3][1];
-    planes[4][0] = a[0][2];
-    planes[4][1] = a[1][2];
-    planes[4][2] = a[2][2];
-    planes[4][3] = a[3][2];
-    planes[5][0] = a[0][3] - a[0][2];
-    planes[5][1] = a[1][3] - a[1][2];
-    planes[5][2] = a[2][3] - a[2][2];
-    planes[5][3] = a[3][3] - a[3][2];
-    for (int i = 0; i < 6; ++i)
+    planes[0][0] = matrix[0][3] + matrix[0][0];
+    planes[0][1] = matrix[1][3] + matrix[1][0];
+    planes[0][2] = matrix[2][3] + matrix[2][0];
+    planes[0][3] = matrix[3][3] + matrix[3][0];
+    planes[1][0] = matrix[0][3] - matrix[0][0];
+    planes[1][1] = matrix[1][3] - matrix[1][0];
+    planes[1][2] = matrix[2][3] - matrix[2][0];
+    planes[1][3] = matrix[3][3] - matrix[3][0];
+    planes[2][0] = matrix[0][3] + matrix[0][1];
+    planes[2][1] = matrix[1][3] + matrix[1][1];
+    planes[2][2] = matrix[2][3] + matrix[2][1];
+    planes[2][3] = matrix[3][3] + matrix[3][1];
+    planes[3][0] = matrix[0][3] - matrix[0][1];
+    planes[3][1] = matrix[1][3] - matrix[1][1];
+    planes[3][2] = matrix[2][3] - matrix[2][1];
+    planes[3][3] = matrix[3][3] - matrix[3][1];
+    planes[4][0] = matrix[0][2];
+    planes[4][1] = matrix[1][2];
+    planes[4][2] = matrix[2][2];
+    planes[4][3] = matrix[3][2];
+    planes[5][0] = matrix[0][3] - matrix[0][2];
+    planes[5][1] = matrix[1][3] - matrix[1][2];
+    planes[5][2] = matrix[2][3] - matrix[2][2];
+    planes[5][3] = matrix[3][3] - matrix[3][2];
+    for (int plane_index = 0; plane_index < 6; ++plane_index)
     {
         float length = 0.0f;
-        length += planes[i][0] * planes[i][0];
-        length += planes[i][1] * planes[i][1];
-        length += planes[i][2] * planes[i][2];
+        length += planes[plane_index][0] * planes[plane_index][0];
+        length += planes[plane_index][1] * planes[plane_index][1];
+        length += planes[plane_index][2] * planes[plane_index][2];
         length = SDL_sqrtf(length);
         if (length < SDL_FLT_EPSILON)
         {
             continue;
         }
-        planes[i][0] /= length;
-        planes[i][1] /= length;
-        planes[i][2] /= length;
-        planes[i][3] /= length;
+        planes[plane_index][0] /= length;
+        planes[plane_index][1] /= length;
+        planes[plane_index][2] /= length;
+        planes[plane_index][3] /= length;
     }
 }
 
-static void Rotate(float matrix[4][4], float x, float y, float z, float angle)
+static void Rotate(float matrix[4][4], float axis_x, float axis_y, float axis_z, float angle)
 {
-    float s = SDL_sinf(angle);
-    float c = SDL_cosf(angle);
-    float i = 1.0f - c;
-    matrix[0][0] = i * x * x + c;
-    matrix[0][1] = i * x * y - z * s;
-    matrix[0][2] = i * z * x + y * s;
+    float sine = SDL_sinf(angle);
+    float cosine = SDL_cosf(angle);
+    float inverse_cosine = 1.0f - cosine;
+    matrix[0][0] = inverse_cosine * axis_x * axis_x + cosine;
+    matrix[0][1] = inverse_cosine * axis_x * axis_y - axis_z * sine;
+    matrix[0][2] = inverse_cosine * axis_z * axis_x + axis_y * sine;
     matrix[0][3] = 0.0f;
-    matrix[1][0] = i * x * y + z * s;
-    matrix[1][1] = i * y * y + c;
-    matrix[1][2] = i * y * z - x * s;
+    matrix[1][0] = inverse_cosine * axis_x * axis_y + axis_z * sine;
+    matrix[1][1] = inverse_cosine * axis_y * axis_y + cosine;
+    matrix[1][2] = inverse_cosine * axis_y * axis_z - axis_x * sine;
     matrix[1][3] = 0.0f;
-    matrix[2][0] = i * z * x - y * s;
-    matrix[2][1] = i * y * z + x * s;
-    matrix[2][2] = i * z * z + c;
+    matrix[2][0] = inverse_cosine * axis_z * axis_x - axis_y * sine;
+    matrix[2][1] = inverse_cosine * axis_y * axis_z + axis_x * sine;
+    matrix[2][2] = inverse_cosine * axis_z * axis_z + cosine;
     matrix[2][3] = 0.0f;
     matrix[3][0] = 0.0f;
     matrix[3][1] = 0.0f;
@@ -177,13 +177,14 @@ void Camera_Init(Camera* camera, CameraType type)
 
 void Camera_Update(Camera* camera)
 {
-    float s = SDL_sinf(camera->yaw);
-    float c = SDL_cosf(camera->yaw);
+    float sin_yaw = SDL_sinf(camera->yaw);
+    float cos_yaw = SDL_cosf(camera->yaw);
+    float rotation[4][4];
     Translate(camera->view, -camera->x, -camera->y, -camera->z);
-    Rotate(camera->proj, c, 0.0f, s, camera->pitch);
-    Multiply(camera->view, camera->proj, camera->view);
-    Rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
-    Multiply(camera->view, camera->proj, camera->view);
+    Rotate(rotation, cos_yaw, 0.0f, sin_yaw, camera->pitch);
+    MultiplyMatrices(camera->view, rotation, camera->view);
+    Rotate(rotation, 0.0f, 1.0f, 0.0f, -camera->yaw);
+    MultiplyMatrices(camera->view, rotation, camera->view);
     float aspect = (float)camera->width / camera->height;
     if (camera->type == CAMERA_TYPE_PERSPECTIVE)
     {
@@ -195,19 +196,19 @@ void Camera_Update(Camera* camera)
         float oy = camera->ortho;
         Ortho(camera->proj, -ox, ox, -oy, oy, -camera->far, camera->far);
     }
-    Multiply(camera->matrix, camera->proj, camera->view);
-    Frustum(camera->planes, camera->matrix);
+    MultiplyMatrices(camera->matrix, camera->proj, camera->view);
+    CalculateFrustum(camera->planes, camera->matrix);
 }
 
-void Camera_Move(Camera* camera, float x, float y, float z)
+void Camera_Move(Camera* camera, float right, float up, float forward)
 {
-    float sy = SDL_sinf(camera->yaw);
-    float cy = SDL_cosf(camera->yaw);
-    float sp = SDL_sinf(camera->pitch);
-    float cp = SDL_cosf(camera->pitch);
-    camera->x += cp * (sy * z) + cy * x;
-    camera->y += y + z * sp;
-    camera->z -= cp * (cy * z) - sy * x;
+    float sin_yaw = SDL_sinf(camera->yaw);
+    float cos_yaw = SDL_cosf(camera->yaw);
+    float sin_pitch = SDL_sinf(camera->pitch);
+    float cos_pitch = SDL_cosf(camera->pitch);
+    camera->x += cos_pitch * sin_yaw * forward + cos_yaw * right;
+    camera->y += up + forward * sin_pitch;
+    camera->z -= cos_pitch * cos_yaw * forward - sin_yaw * right;
     camera->y = SDL_clamp(camera->y, -camera->far, camera->far);
 }
 
@@ -229,10 +230,10 @@ void Camera_Rotate(Camera* camera, float pitch, float yaw)
 
 void Camera_GetVector(const Camera* camera, float* x, float* y, float* z)
 {
-    float c = SDL_cosf(camera->pitch);
-    *x = SDL_cosf(camera->yaw - RADIANS(90.0f)) * c;
+    float cos_pitch = SDL_cosf(camera->pitch);
+    *x = SDL_cosf(camera->yaw - RADIANS(90.0f)) * cos_pitch;
     *y = SDL_sinf(camera->pitch);
-    *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * c;
+    *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * cos_pitch;
 }
 
 bool Camera_GetVisibility(
@@ -240,20 +241,20 @@ bool Camera_GetVisibility(
     float x,
     float y,
     float z,
-    float sx,
-    float sy,
-    float sz)
+    float width,
+    float height,
+    float depth)
 {
-    float x2 = x + sx;
-    float y2 = y + sy;
-    float z2 = z + sz;
-    for (int i = 0; i < 6; ++i)
+    float max_x = x + width;
+    float max_y = y + height;
+    float max_z = z + depth;
+    for (int plane_index = 0; plane_index < 6; ++plane_index)
     {
-        const float* plane = camera->planes[i];
-        float a = plane[0] >= 0.0f ? x2 : x;
-        float b = plane[1] >= 0.0f ? y2 : y;
-        float c = plane[2] >= 0.0f ? z2 : z;
-        if (plane[0] * a + plane[1] * b + plane[2] * c + plane[3] < 0.0f)
+        const float* plane = camera->planes[plane_index];
+        float test_x = plane[0] >= 0.0f ? max_x : x;
+        float test_y = plane[1] >= 0.0f ? max_y : y;
+        float test_z = plane[2] >= 0.0f ? max_z : z;
+        if (plane[0] * test_x + plane[1] * test_y + plane[2] * test_z + plane[3] < 0.0f)
         {
             return false;
         }

@@ -35,7 +35,7 @@ struct Input
     float4 WorldPosition : TEXCOORD0;
     float2 Texcoord : TEXCOORD1;
     nointerpolation uint Voxel : TEXCOORD2;
-    float AO : TEXCOORD3;
+    float AmbientOcclusion : TEXCOORD3;
 };
 
 struct Output
@@ -47,20 +47,20 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    Block block = blockBuffer[GetBlock(input.Voxel)];
-    float3 texcoord = float3(input.Texcoord, GetIndex(input.Voxel, block));
-    float4 color = atlasTexture.Sample(atlasSampler, texcoord);
+    Block block = blockBuffer[GetBlockIndex(input.Voxel)];
+    float3 texcoord = float3(input.Texcoord, GetAtlasIndex(input.Voxel, block));
+    float4 texel = atlasTexture.Sample(atlasSampler, texcoord);
     output.Position = input.WorldPosition;
-    if (color.a < kEpsilon)
+    if (texel.a < kEpsilon)
     {
         discard;
         return output;
     }
-    float3 albedo = color.rgb;
+    float3 albedo = texel.rgb;
     float3 normal = GetNormal(input.Voxel, block);
-    float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, normal);
+    float3 pointLight = GetPointLight(lightBuffer, LightCount, input.WorldPosition.xyz, normal);
     float3 ambient = Ambient.xyz;
-    float sun = GetSunLight(
+    float sunlight = GetSunLight(
         shadowTexture,
         shadowSampler,
         ShadowTransform,
@@ -69,9 +69,9 @@ Output main(Input input)
         input.WorldPosition.xyz,
         normal,
         block);
-    float3 finalColor = albedo * (diffuse + ambient * input.AO + sun);
+    float3 litColor = albedo * (pointLight + ambient * input.AmbientOcclusion + sunlight);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
-    float fog = GetFog(distance(input.WorldPosition.xz, PlayerPosition.xz));
-    output.Color = float4(lerp(finalColor, sky, fog), 1.0f);
+    float fog = GetFogAmount(distance(input.WorldPosition.xz, PlayerPosition.xz));
+    output.Color = float4(lerp(litColor, sky, fog), 1.0f);
     return output;
 }

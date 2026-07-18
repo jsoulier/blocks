@@ -8,60 +8,68 @@ static const float SUNRISE_END = 30.0f / 180.0f;
 static const float DAY_END = 90.0f / 180.0f;
 static const float SUNSET_END = 120.0f / 180.0f;
 static const float SPEED = 0.1f;
-static const float AMBIENT_SCALE = 0.5f;
+static const float AMBIENT_SCALE = 0.35f;
 static const float SHADOW_Y = 30.0f;
 static const float SHADOW_ORTHO = 300.0f;
 static const float SHADOW_FAR = 300.0f;
 static const int SHADOW_UPDATE_FRAMES = 300;
 
-static const float NIGHT_SKY_TOP[3] = {0.02f, 0.02f, 0.1f};
-static const float NIGHT_SKY_HORIZON[3] = {0.05f, 0.05f, 0.2f};
-static const float TWILIGHT_SKY_TOP[3] = {0.5f, 0.2f, 0.1f};
-static const float TWILIGHT_SKY_HORIZON[3] = {1.0f, 0.5f, 0.2f};
-static const float DAY_SKY_TOP[3] = {0.5f, 0.7f, 1.0f};
-static const float DAY_SKY_HORIZON[3] = {0.8f, 0.9f, 1.0f};
-static const float NIGHT_AMBIENT[3] = {0.05f, 0.05f, 0.1f};
-static const float DAY_AMBIENT[3] = {1.0f, 1.0f, 1.0f};
+static const float NIGHT_SKY_TOP[3] = {0.01f, 0.02f, 0.06f};
+static const float NIGHT_SKY_HORIZON[3] = {0.06f, 0.08f, 0.18f};
+static const float TWILIGHT_SKY_TOP[3] = {0.24f, 0.16f, 0.32f};
+static const float TWILIGHT_SKY_HORIZON[3] = {0.95f, 0.45f, 0.28f};
+static const float DAY_SKY_TOP[3] = {0.32f, 0.58f, 0.92f};
+static const float DAY_SKY_HORIZON[3] = {0.72f, 0.84f, 0.98f};
+static const float NIGHT_AMBIENT[3] = {0.12f, 0.16f, 0.28f};
+static const float DAY_AMBIENT[3] = {0.85f, 0.9f, 1.0f};
 
-static void LerpColor(float output[4], const float a[3], const float b[3], float t)
+static void LerpColor(float output[4], const float start[3], const float end[3], float amount)
 {
-    output[0] = a[0] + (b[0] - a[0]) * t;
-    output[1] = a[1] + (b[1] - a[1]) * t;
-    output[2] = a[2] + (b[2] - a[2]) * t;
+    output[0] = start[0] + (end[0] - start[0]) * amount;
+    output[1] = start[1] + (end[1] - start[1]) * amount;
+    output[2] = start[2] + (end[2] - start[2]) * amount;
+    output[3] = 0.0f;
+}
+
+static void CopyColor(float output[4], const float color[3])
+{
+    output[0] = color[0];
+    output[1] = color[1];
+    output[2] = color[2];
     output[3] = 0.0f;
 }
 
 static void UpdateRender(Sky* sky)
 {
     float ambient[4];
-    float t;
+    float progress;
     if (sky->time_of_day < SUNRISE_END)
     {
-        t = sky->time_of_day / SUNRISE_END;
-        LerpColor(sky->render.top, NIGHT_SKY_TOP, TWILIGHT_SKY_TOP, t);
-        LerpColor(sky->render.horizon, NIGHT_SKY_HORIZON, TWILIGHT_SKY_HORIZON, t);
-        LerpColor(ambient, NIGHT_AMBIENT, DAY_AMBIENT, t);
+        progress = sky->time_of_day / SUNRISE_END;
+        LerpColor(sky->render.top, NIGHT_SKY_TOP, TWILIGHT_SKY_TOP, progress);
+        LerpColor(sky->render.horizon, NIGHT_SKY_HORIZON, TWILIGHT_SKY_HORIZON, progress);
+        LerpColor(ambient, NIGHT_AMBIENT, DAY_AMBIENT, progress);
     }
     else if (sky->time_of_day < DAY_END)
     {
-        t = (sky->time_of_day - SUNRISE_END) / (DAY_END - SUNRISE_END);
-        LerpColor(sky->render.top, TWILIGHT_SKY_TOP, DAY_SKY_TOP, t);
-        LerpColor(sky->render.horizon, TWILIGHT_SKY_HORIZON, DAY_SKY_HORIZON, t);
-        LerpColor(ambient, DAY_AMBIENT, DAY_AMBIENT, t);
+        progress = (sky->time_of_day - SUNRISE_END) / (DAY_END - SUNRISE_END);
+        LerpColor(sky->render.top, TWILIGHT_SKY_TOP, DAY_SKY_TOP, progress);
+        LerpColor(sky->render.horizon, TWILIGHT_SKY_HORIZON, DAY_SKY_HORIZON, progress);
+        CopyColor(ambient, DAY_AMBIENT);
     }
     else if (sky->time_of_day < SUNSET_END)
     {
-        t = (sky->time_of_day - DAY_END) / (SUNSET_END - DAY_END);
-        LerpColor(sky->render.top, DAY_SKY_TOP, TWILIGHT_SKY_TOP, t);
-        LerpColor(sky->render.horizon, DAY_SKY_HORIZON, TWILIGHT_SKY_HORIZON, t);
-        LerpColor(ambient, DAY_AMBIENT, NIGHT_AMBIENT, t);
+        progress = (sky->time_of_day - DAY_END) / (SUNSET_END - DAY_END);
+        LerpColor(sky->render.top, DAY_SKY_TOP, TWILIGHT_SKY_TOP, progress);
+        LerpColor(sky->render.horizon, DAY_SKY_HORIZON, TWILIGHT_SKY_HORIZON, progress);
+        LerpColor(ambient, DAY_AMBIENT, NIGHT_AMBIENT, progress);
     }
     else
     {
-        t = (sky->time_of_day - SUNSET_END) / (1.0f - SUNSET_END);
-        LerpColor(sky->render.top, TWILIGHT_SKY_TOP, NIGHT_SKY_TOP, t);
-        LerpColor(sky->render.horizon, TWILIGHT_SKY_HORIZON, NIGHT_SKY_HORIZON, t);
-        LerpColor(ambient, NIGHT_AMBIENT, NIGHT_AMBIENT, t);
+        progress = (sky->time_of_day - SUNSET_END) / (1.0f - SUNSET_END);
+        LerpColor(sky->render.top, TWILIGHT_SKY_TOP, NIGHT_SKY_TOP, progress);
+        LerpColor(sky->render.horizon, TWILIGHT_SKY_HORIZON, NIGHT_SKY_HORIZON, progress);
+        CopyColor(ambient, NIGHT_AMBIENT);
     }
     float angle = sky->time_of_day * 2.0f * SDL_PI_F;
     float sun_height = -SDL_cosf(angle);

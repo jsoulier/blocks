@@ -39,23 +39,27 @@ static const AABB PLAYER_AABB = {{-0.3f, -1.62f, -0.3f}, {0.3f, 1.8f - 1.62f, 0.
 
 static bool IsColliding(const float position[3])
 {
-    int min[3];
-    int max[3];
-    for (int i = 0; i < 3; i++)
+    int min_block[3];
+    int max_block[3];
+    for (int axis = 0; axis < 3; axis++)
     {
-        min[i] = SDL_floorf(position[i] + PLAYER_AABB.min[i] + PHYSICS_EPSILON);
-        max[i] = SDL_floorf(position[i] + PLAYER_AABB.max[i] - PHYSICS_EPSILON);
+        min_block[axis] = SDL_floorf(position[axis] + PLAYER_AABB.min[axis] + PHYSICS_EPSILON);
+        max_block[axis] = SDL_floorf(position[axis] + PLAYER_AABB.max[axis] - PHYSICS_EPSILON);
     }
-    for (int bx = min[0]; bx <= max[0]; bx++)
-        for (int by = min[1]; by <= max[1]; by++)
-            for (int bz = min[2]; bz <= max[2]; bz++)
+    for (int bx = min_block[0]; bx <= max_block[0]; bx++)
+    {
+        for (int by = min_block[1]; by <= max_block[1]; by++)
+        {
+            for (int bz = min_block[2]; bz <= max_block[2]; bz++)
             {
-                int position[3] = {bx, by, bz};
-                if (Block_IsSolid(World_GetBlock(position)))
+                int block_position[3] = {bx, by, bz};
+                if (Block_IsSolid(World_GetBlock(block_position)))
                 {
                     return true;
                 }
             }
+        }
+    }
     return false;
 }
 
@@ -64,18 +68,18 @@ static void Bisect(float position[3], int axis, float step)
     float start[3] = {position[0], position[1], position[2]};
     float lower = 0.0f;
     float upper = 1.0f;
-    for (int i = 0; i < 8; i++)
+    for (int iteration = 0; iteration < 8; iteration++)
     {
-        float t = (lower + upper) * 0.5f;
+        float fraction = (lower + upper) * 0.5f;
         float location[3] = {start[0], start[1], start[2]};
-        location[axis] += step * t;
+        location[axis] += step * fraction;
         if (IsColliding(location))
         {
-            upper = t;
+            upper = fraction;
         }
         else
         {
-            lower = t;
+            lower = fraction;
         }
     }
     position[axis] = start[axis] + step * lower;
@@ -87,10 +91,9 @@ static bool Move(float position[3], int axis, float delta)
     {
         return false;
     }
-    int steps = SDL_ceilf(SDL_fabsf(delta) / COLLISION_STEP);
-    steps = SDL_max(steps, 1);
-    float step = delta / steps;
-    for (int i = 0; i < steps; i++)
+    int step_count = SDL_max(SDL_ceilf(SDL_fabsf(delta) / COLLISION_STEP), 1);
+    float step = delta / step_count;
+    for (int step_index = 0; step_index < step_count; step_index++)
     {
         float location[3] = {position[0], position[1], position[2]};
         location[axis] += step;
@@ -99,42 +102,42 @@ static bool Move(float position[3], int axis, float delta)
             Bisect(position, axis, step);
             return true;
         }
-        SDL_memcpy(position, location, 12);
+        SDL_memcpy(position, location, sizeof(location));
     }
     return false;
 }
 
 void Player_Load(Player* player)
 {
-    PlayerSave data;
+    PlayerSave saved_player;
     Camera_Init(&player->camera, CAMERA_TYPE_PERSPECTIVE);
     player->camera.x = -200.0f;
     player->camera.y = 50.0f;
     player->camera.z = 0.0f;
     player->controller = PLAYER_CONTROLLER_WALK;
     player->block = BLOCK_YELLOW_TORCH;
-    if (Save_GetPlayer(&data, sizeof(data)))
+    if (Save_GetPlayer(&saved_player, sizeof(saved_player)))
     {
-        player->block = data.block;
-        player->camera.x = data.x;
-        player->camera.y = data.y;
-        player->camera.z = data.z;
-        player->camera.pitch = data.pitch;
-        player->camera.yaw = data.yaw;
+        player->block = saved_player.block;
+        player->camera.x = saved_player.x;
+        player->camera.y = saved_player.y;
+        player->camera.z = saved_player.z;
+        player->camera.pitch = saved_player.pitch;
+        player->camera.yaw = saved_player.yaw;
     }
     player->query = World_Raycast(&player->camera, REACH);
 }
 
 void Player_Save(const Player* player)
 {
-    PlayerSave data;
-    data.x = player->camera.x;
-    data.y = player->camera.y;
-    data.z = player->camera.z;
-    data.pitch = player->camera.pitch;
-    data.yaw = player->camera.yaw;
-    data.block = player->block;
-    Save_SetPlayer(&data, sizeof(data));
+    PlayerSave saved_player;
+    saved_player.x = player->camera.x;
+    saved_player.y = player->camera.y;
+    saved_player.z = player->camera.z;
+    saved_player.pitch = player->camera.pitch;
+    saved_player.yaw = player->camera.yaw;
+    saved_player.block = player->block;
+    Save_SetPlayer(&saved_player, sizeof(saved_player));
 }
 
 void Player_ToggleController(Player* player)
@@ -157,17 +160,17 @@ void Player_Move(Player* player, float dt)
         dt = SDL_min(dt * 0.001f, 0.05f);
         float input_x = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
         float input_z = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
-        float length = SDL_sqrtf(input_x * input_x + input_z * input_z);
-        if (length > SDL_FLT_EPSILON)
+        float input_length = SDL_sqrtf(input_x * input_x + input_z * input_z);
+        if (input_length > SDL_FLT_EPSILON)
         {
-            input_x /= length;
-            input_z /= length;
+            input_x /= input_length;
+            input_z /= input_length;
         }
         float speed = keys[SDL_SCANCODE_LCTRL] ? SPRINT_SPEED : WALK_SPEED;
-        float sy = SDL_sinf(player->camera.yaw);
-        float cy = SDL_cosf(player->camera.yaw);
-        float target_x = (cy * input_x + sy * input_z) * speed;
-        float target_z = (sy * input_x - cy * input_z) * speed;
+        float sin_yaw = SDL_sinf(player->camera.yaw);
+        float cos_yaw = SDL_cosf(player->camera.yaw);
+        float target_x = (cos_yaw * input_x + sin_yaw * input_z) * speed;
+        float target_z = (sin_yaw * input_x - cos_yaw * input_z) * speed;
         if (player->is_on_ground)
         {
             player->velocity[0] = target_x;
@@ -189,20 +192,20 @@ void Player_Move(Player* player, float dt)
             return;
         }
         player->velocity[1] -= GRAVITY * dt;
-        bool hits[3];
-        for (int i = 0; i < 3; i++)
+        bool collisions[3];
+        for (int axis = 0; axis < 3; axis++)
         {
-            hits[i] = Move(player->camera.position, i, player->velocity[i] * dt);
+            collisions[axis] = Move(player->camera.position, axis, player->velocity[axis] * dt);
         }
-        if (hits[0])
+        if (collisions[0])
         {
             player->velocity[0] = 0.0f;
         }
-        if (hits[2])
+        if (collisions[2])
         {
             player->velocity[2] = 0.0f;
         }
-        if (hits[1])
+        if (collisions[1])
         {
             if (player->velocity[1] < 0.0f)
             {
@@ -238,11 +241,12 @@ void Player_PlaceBlock(const Player* player)
         World_SetBlock(player->query.previous, player->block);
         return;
     }
-    for (int i = 0; i < 3; i++)
+    for (int axis = 0; axis < 3; axis++)
     {
-        float min = player->camera.position[i] + PLAYER_AABB.min[i] + PHYSICS_EPSILON;
-        float max = player->camera.position[i] + PLAYER_AABB.max[i] - PHYSICS_EPSILON;
-        if (max <= player->query.previous[i] || min >= player->query.previous[i] + 1.0f)
+        float player_min = player->camera.position[axis] + PLAYER_AABB.min[axis] + PHYSICS_EPSILON;
+        float player_max = player->camera.position[axis] + PLAYER_AABB.max[axis] - PHYSICS_EPSILON;
+        if (player_max <= player->query.previous[axis] ||
+            player_min >= player->query.previous[axis] + 1.0f)
         {
             World_SetBlock(player->query.previous, player->block);
             break;

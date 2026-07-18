@@ -28,7 +28,7 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    int3 chunkPosition = int3(ChunkPosition.x, 0, ChunkPosition.y);
     float3 position = GetPosition(input.Voxel) + chunkPosition;
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
     return output;

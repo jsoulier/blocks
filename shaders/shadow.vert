@@ -31,9 +31,9 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    int3 chunkPosition = int3(ChunkPosition.x, 0, ChunkPosition.y);
     float3 position = GetPosition(input.Voxel) + chunkPosition;
-    Block block = blockBuffer[GetBlock(input.Voxel)];
+    Block block = blockBuffer[GetBlockIndex(input.Voxel)];
     output.Position = mul(Proj, mul(View, float4(position, 1.0f)));
     output.ClipDistance = block.HasShadow ? 1.0f : -1.0f;
     return output;

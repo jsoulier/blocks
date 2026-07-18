@@ -32,15 +32,14 @@ struct Output
 Output main(Input input)
 {
     Output output;
-    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    int3 chunkPosition = int3(ChunkPosition.x, 0, ChunkPosition.y);
     output.WorldPosition.xyz = GetPosition(input.Voxel) + chunkPosition;
     output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
     output.WorldPosition.w = output.Position.z;
     output.Position = mul(Proj, output.Position);
     output.Texcoord = GetTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
-    output.Fragment = output.Position.xy / output.Position.w;
-    output.Fragment = output.Fragment * 0.5f + 0.5f;
+    output.Fragment = output.Position.xy / output.Position.w * 0.5f + 0.5f;
     output.Fragment.y = 1.0f - output.Fragment.y;
     return output;
 }

@@ -12,9 +12,9 @@ typedef struct CPUBuffer
     Uint32 stride;
 } CPUBuffer;
 
-void CPUBuffer_Init(CPUBuffer* cpu, SDL_GPUDevice* device, Uint32 stride);
-void CPUBuffer_Free(CPUBuffer* cpu);
-void CPUBuffer_Append(CPUBuffer* cpu, const void* item);
+void CPUBuffer_Init(CPUBuffer* buffer, SDL_GPUDevice* device, Uint32 stride);
+void CPUBuffer_Free(CPUBuffer* buffer);
+void CPUBuffer_Append(CPUBuffer* buffer, const void* item);
 
 typedef struct GPUBuffer
 {
@@ -25,9 +25,9 @@ typedef struct GPUBuffer
     Uint32 capacity;
 } GPUBuffer;
 
-void GPUBuffer_Init(GPUBuffer* gpu, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
-void GPUBuffer_Free(GPUBuffer* gpu);
-void GPUBuffer_Upload(GPUBuffer* gpu, CPUBuffer* cpu);
-void GPUBuffer_Clear(GPUBuffer* gpu);
-bool GPUBuffer_BeginUpload(GPUBuffer* gpu);
+void GPUBuffer_Init(GPUBuffer* buffer, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
+void GPUBuffer_Free(GPUBuffer* buffer);
+void GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source);
+void GPUBuffer_Clear(GPUBuffer* buffer);
+bool GPUBuffer_BeginUpload(GPUBuffer* buffer);
 void GPUBuffer_EndUpload();
