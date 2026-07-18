@@ -1,5 +1,5 @@
-#ifndef INC
-#define INC
+#ifndef VOXEL_INC
+#define VOXEL_INC
 
 #define AO_BITS 2
 #define DIRECTION_BITS 3
@@ -25,6 +25,5 @@
 #define Z_MASK ((1 << Z_BITS) - 1)
 #define U_MASK ((1 << U_BITS) - 1)
 #define V_MASK ((1 << V_BITS) - 1)
-#define MATERIAL_MASK ((1 << (DIRECTION_BITS + BLOCK_BITS)) - 1)
 
 #endif

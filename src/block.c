@@ -257,7 +257,7 @@ bool block_init(SDL_GPUDevice* device)
 {
     SDL_COMPILE_TIME_ASSERT("", sizeof(block_gpu_t) == sizeof(Uint32) * 10);
     cpu_buffer_init(&cpu_blocks, device, sizeof(block_gpu_t));
-    gpu_buffer_init(&gpu_blocks, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ | SDL_GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ);
+    gpu_buffer_init(&gpu_blocks, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     if (!gpu_buffer_begin_upload(&gpu_blocks))
     {
         return false;

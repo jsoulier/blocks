@@ -111,11 +111,6 @@ float3 GetCubeNormal(uint vertexID)
     return kCubeNormals[vertexID / 6];
 }
 
-bool IsSky(uint voxel)
-{
-    return voxel == 0;
-}
-
 struct Light
 {
     uint Color;

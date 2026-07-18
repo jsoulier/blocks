@@ -63,10 +63,8 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 ### Passes
 
 1. Render opaques to depth texture (for shadows)
-2. Render sky to G-buffer
-3. Render opaques to G-buffer
-4. Composite G-buffer with CPU-baked vertex AO
-5. Render transparents to depth teture (for predepth)
-6. Render transparents and composite
-7. Render raycast
-8. Render UI
+2. Render sky and opaques with CPU-baked vertex AO
+3. Render transparents to depth texture (for predepth)
+4. Render transparents and composite
+5. Render raycast
+6. Render UI
