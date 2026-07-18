@@ -22,6 +22,7 @@ static const float SHADOW_ORTHO = 300.0f;
 static const float SHADOW_FAR = 300.0f;
 static const float SHADOW_ANGLE_STEP = SDL_PI_F / 360.0f;
 static const float SHADOW_PITCH_BIAS = SDL_PI_F / 3600.0f;
+static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -39,6 +40,8 @@ static SDL_GPUTexture* atlas_texture;
 static SDL_GPUTexture* depth_texture;
 static SDL_GPUTexture* position_texture;
 static SDL_GPUTexture* composite_texture;
+static SDL_GPUTexture* multisample_color_texture;
+static SDL_GPUTexture* multisample_position_texture;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* shadow_sampler;
@@ -211,6 +214,7 @@ static bool create_opaque_pipeline()
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
     info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
     info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+    info.multisample_state.sample_count = SAMPLE_COUNT;
     if (info.vertex_shader && info.fragment_shader)
     {
         opaque_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
@@ -240,6 +244,7 @@ static bool create_depth_pipeline()
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
     info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
     info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+    info.multisample_state.sample_count = SAMPLE_COUNT;
     if (info.vertex_shader && info.fragment_shader)
     {
         depth_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
@@ -279,6 +284,7 @@ static bool create_transparent_pipeline()
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
     info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
     info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+    info.multisample_state.sample_count = SAMPLE_COUNT;
     if (info.vertex_shader && info.fragment_shader)
     {
         transparent_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
@@ -332,6 +338,7 @@ static bool create_sky_pipeline()
     info.target_info.color_target_descriptions = color_targets;
     info.target_info.has_depth_stencil_target = true;
     info.target_info.depth_stencil_format = depth_format;
+    info.multisample_state.sample_count = SAMPLE_COUNT;
     if (info.vertex_shader && info.fragment_shader)
     {
         sky_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
@@ -361,6 +368,7 @@ static bool create_raycast_pipeline()
     info.target_info.depth_stencil_format = depth_format;
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+    info.multisample_state.sample_count = SAMPLE_COUNT;
     if (info.vertex_shader && info.fragment_shader)
     {
         raycast_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
@@ -535,6 +543,8 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     SDL_ReleaseGPUSampler(device, nearest_sampler);
     SDL_ReleaseGPUSampler(device, shadow_sampler);
     SDL_ReleaseGPUTexture(device, shadow_texture);
+    SDL_ReleaseGPUTexture(device, multisample_position_texture);
+    SDL_ReleaseGPUTexture(device, multisample_color_texture);
     SDL_ReleaseGPUTexture(device, composite_texture);
     SDL_ReleaseGPUTexture(device, position_texture);
     SDL_ReleaseGPUTexture(device, depth_texture);
@@ -558,9 +568,13 @@ static bool resize(int width, int height)
     SDL_ReleaseGPUTexture(device, depth_texture);
     SDL_ReleaseGPUTexture(device, position_texture);
     SDL_ReleaseGPUTexture(device, composite_texture);
+    SDL_ReleaseGPUTexture(device, multisample_color_texture);
+    SDL_ReleaseGPUTexture(device, multisample_position_texture);
     depth_texture = NULL;
     position_texture = NULL;
     composite_texture = NULL;
+    multisample_color_texture = NULL;
+    multisample_position_texture = NULL;
     SDL_GPUTextureCreateInfo info = {0};
     info.type = SDL_GPU_TEXTURETYPE_2D;
     info.format = depth_format;
@@ -569,12 +583,14 @@ static bool resize(int width, int height)
     info.height = height;
     info.layer_count_or_depth = 1;
     info.num_levels = 1;
+    info.sample_count = SAMPLE_COUNT;
     depth_texture = SDL_CreateGPUTexture(device, &info);
     if (!depth_texture)
     {
         SDL_Log("Failed to create depth texture: %s", SDL_GetError());
         return false;
     }
+    info.sample_count = SDL_GPU_SAMPLECOUNT_1;
     info.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
     info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     position_texture = SDL_CreateGPUTexture(device, &info);
@@ -589,6 +605,21 @@ static bool resize(int width, int height)
     if (!composite_texture)
     {
         SDL_Log("Failed to create composite texture: %s", SDL_GetError());
+        return false;
+    }
+    info.sample_count = SAMPLE_COUNT;
+    info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+    multisample_color_texture = SDL_CreateGPUTexture(device, &info);
+    if (!multisample_color_texture)
+    {
+        SDL_Log("Failed to create multisample color texture: %s", SDL_GetError());
+        return false;
+    }
+    info.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
+    multisample_position_texture = SDL_CreateGPUTexture(device, &info);
+    if (!multisample_position_texture)
+    {
+        SDL_Log("Failed to create multisample position texture: %s", SDL_GetError());
         return false;
     }
     camera_resize(&player.camera, width, height);
@@ -682,13 +713,15 @@ static void render_opaque_forward(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUColorTargetInfo color_info[2] = {0};
     color_info[0].load_op = SDL_GPU_LOADOP_CLEAR;
-    color_info[0].texture = composite_texture;
+    color_info[0].texture = multisample_color_texture;
     color_info[0].cycle = true;
     color_info[0].store_op = SDL_GPU_STOREOP_STORE;
     color_info[1].load_op = SDL_GPU_LOADOP_CLEAR;
-    color_info[1].texture = position_texture;
+    color_info[1].texture = multisample_position_texture;
     color_info[1].cycle = true;
-    color_info[1].store_op = SDL_GPU_STOREOP_STORE;
+    color_info[1].store_op = SDL_GPU_STOREOP_RESOLVE;
+    color_info[1].resolve_texture = position_texture;
+    color_info[1].cycle_resolve_texture = true;
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
     depth_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
@@ -763,8 +796,10 @@ static void render_forward(SDL_GPUCommandBuffer* cbuf)
 {
     SDL_GPUColorTargetInfo color_info = {0};
     color_info.load_op = SDL_GPU_LOADOP_LOAD;
-    color_info.texture = composite_texture;
-    color_info.store_op = SDL_GPU_STOREOP_STORE;
+    color_info.texture = multisample_color_texture;
+    color_info.store_op = SDL_GPU_STOREOP_RESOLVE;
+    color_info.resolve_texture = composite_texture;
+    color_info.cycle_resolve_texture = true;
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_LOAD;
     depth_info.store_op = SDL_GPU_STOREOP_STORE;
