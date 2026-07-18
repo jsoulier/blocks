@@ -44,8 +44,7 @@ typedef struct Light
     Sint32 x;
     Sint32 y;
     Sint32 z;
-}
-Light;
+} Light;
 
 SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device);
 

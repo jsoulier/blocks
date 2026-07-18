@@ -10,8 +10,7 @@ typedef struct CPUBuffer
     Uint32 size;
     Uint32 capacity;
     Uint32 stride;
-}
-CPUBuffer;
+} CPUBuffer;
 
 void CPUBuffer_Init(CPUBuffer* cpu, SDL_GPUDevice* device, Uint32 stride);
 void CPUBuffer_Free(CPUBuffer* cpu);
@@ -24,8 +23,7 @@ typedef struct GPUBuffer
     SDL_GPUBuffer* buffer;
     Uint32 size;
     Uint32 capacity;
-}
-GPUBuffer;
+} GPUBuffer;
 
 void GPUBuffer_Init(GPUBuffer* gpu, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
 void GPUBuffer_Free(GPUBuffer* gpu);

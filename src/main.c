@@ -809,8 +809,7 @@ static void RenderUI(SDL_GPUCommandBuffer* cbuf, SDL_GPUTexture* swapchain_textu
     {
         int viewport[2];
         Uint32 index;
-    }
-    uniform;
+    } uniform;
     uniform.viewport[0] = player.camera.width;
     uniform.viewport[1] = player.camera.height;
     uniform.index = Block_GetIndex(player.block, DIRECTION_NORTH);

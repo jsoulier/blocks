@@ -10,8 +10,7 @@ typedef struct BlockGPU
     Uint32 has_occlusion;
     Uint32 is_fullbright;
     Uint32 indices[DIRECTION_COUNT];
-}
-BlockGPU;
+} BlockGPU;
 
 struct
 {
@@ -22,8 +21,7 @@ struct
     bool is_fullbright;
     int indices[6];
     Light light;
-}
-static const BLOCKS[BLOCK_COUNT] =
+} static const BLOCKS[BLOCK_COUNT] =
 {
     [BLOCK_GRASS] =
     {

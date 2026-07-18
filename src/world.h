@@ -12,19 +12,17 @@ typedef struct Camera Camera;
 
 typedef enum WorldFlags
 {
-    WORLD_FLAGS_OPAQUE      = 0x01,
+    WORLD_FLAGS_OPAQUE = 0x01,
     WORLD_FLAGS_TRANSPARENT = 0x02,
-    WORLD_FLAGS_LIGHT       = 0x04,
-}
-WorldFlags;
+    WORLD_FLAGS_LIGHT = 0x04,
+} WorldFlags;
 
 typedef struct WorldQuery
 {
     Block block;
     int current[3];
     int previous[3];
-}
-WorldQuery;
+} WorldQuery;
 
 void World_Init(SDL_GPUDevice* device);
 void World_Free();

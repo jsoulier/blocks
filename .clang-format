@@ -1,0 +1,10 @@
+BasedOnStyle: Microsoft
+BreakBeforeBraces: Allman
+ColumnLimit: 0
+IndentWidth: 4
+MaxEmptyLinesToKeep: 1
+PointerAlignment: Left
+SortIncludes: Never
+UseTab: Never
+BracedInitializerIndentWidth: 4
+ContinuationIndentWidth: 0

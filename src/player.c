@@ -10,8 +10,7 @@ typedef struct AABB
 {
     float min[3];
     float max[3];
-}
-AABB;
+} AABB;
 
 typedef struct PlayerSave
 {
@@ -21,8 +20,7 @@ typedef struct PlayerSave
     float pitch;
     float yaw;
     Block block;
-}
-PlayerSave;
+} PlayerSave;
 
 static const float PHYSICS_EPSILON = 0.001f;
 static const float WALK_SPEED = 5.0f;
@@ -49,15 +47,15 @@ static bool IsColliding(const float position[3])
         max[i] = SDL_floorf(position[i] + PLAYER_AABB.max[i] - PHYSICS_EPSILON);
     }
     for (int bx = min[0]; bx <= max[0]; bx++)
-    for (int by = min[1]; by <= max[1]; by++)
-    for (int bz = min[2]; bz <= max[2]; bz++)
-    {
-        int position[3] = {bx, by, bz};
-        if (Block_IsSolid(World_GetBlock(position)))
-        {
-            return true;
-        }
-    }
+        for (int by = min[1]; by <= max[1]; by++)
+            for (int bz = min[2]; bz <= max[2]; bz++)
+            {
+                int position[3] = {bx, by, bz};
+                if (Block_IsSolid(World_GetBlock(position)))
+                {
+                    return true;
+                }
+            }
     return false;
 }
 

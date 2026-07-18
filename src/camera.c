@@ -9,17 +9,21 @@ static void Multiply(float matrix[4][4], float a[4][4], float b[4][4])
 {
     float c[4][4] = {0};
     for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++)
     {
-        c[i][j] += a[0][j] * b[i][0];
-        c[i][j] += a[1][j] * b[i][1];
-        c[i][j] += a[2][j] * b[i][2];
-        c[i][j] += a[3][j] * b[i][3];
+        for (int j = 0; j < 4; j++)
+        {
+            c[i][j] += a[0][j] * b[i][0];
+            c[i][j] += a[1][j] * b[i][1];
+            c[i][j] += a[2][j] * b[i][2];
+            c[i][j] += a[3][j] * b[i][3];
+        }
     }
     for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++)
     {
-        matrix[i][j] = c[i][j];
+        for (int j = 0; j < 4; j++)
+        {
+            matrix[i][j] = c[i][j];
+        }
     }
 }
 
@@ -173,7 +177,7 @@ void Camera_Update(Camera* camera)
     Multiply(camera->view, camera->proj, camera->view);
     Rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
     Multiply(camera->view, camera->proj, camera->view);
-    float aspect = (float) camera->width / camera->height;
+    float aspect = (float)camera->width / camera->height;
     if (camera->type == CAMERA_TYPE_PERSPECTIVE)
     {
         Perspective(camera->proj, aspect, camera->fov, camera->near, camera->far);
@@ -231,7 +235,7 @@ bool Camera_GetVisibility(const Camera* camera, float x, float y, float z, float
     float z2 = z + sz;
     for (int i = 0; i < 6; ++i)
     {
-        const float *plane = camera->planes[i];
+        const float* plane = camera->planes[i];
         float a = plane[0] >= 0.0f ? x2 : x;
         float b = plane[1] >= 0.0f ? y2 : y;
         float c = plane[2] >= 0.0f ? z2 : z;

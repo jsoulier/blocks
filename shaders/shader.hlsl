@@ -17,38 +17,38 @@ struct Block
 
 static const float3 kNormals[10] =
 {
-    float3( 0.0f, 0.0f, 1.0f ),
-    float3( 0.0f, 0.0f,-1.0f ),
-    float3( 1.0f, 0.0f, 0.0f ),
-    float3(-1.0f, 0.0f, 0.0f ),
-    float3( 0.0f, 1.0f, 0.0f ),
-    float3( 0.0f,-1.0f, 0.0f ),
-    float3( 0.0f, 1.0f, 0.0f ),
-    float3( 0.0f, 1.0f, 0.0f ),
-    float3( 0.0f, 1.0f, 0.0f ),
-    float3( 0.0f, 1.0f, 0.0f ),
+    float3(0.0f, 0.0f, 1.0f),
+    float3(0.0f, 0.0f, -1.0f),
+    float3(1.0f, 0.0f, 0.0f),
+    float3(-1.0f, 0.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, -1.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
 };
 
 static const float3 kCubePositions[8] =
 {
-    float3(-0.5f,-0.5f,-0.5f ),
-    float3( 0.5f,-0.5f,-0.5f ),
-    float3( 0.5f, 0.5f,-0.5f ),
-    float3(-0.5f, 0.5f,-0.5f ),
-    float3(-0.5f,-0.5f, 0.5f ),
-    float3( 0.5f,-0.5f, 0.5f ),
-    float3( 0.5f, 0.5f, 0.5f ),
-    float3(-0.5f, 0.5f, 0.5f ),
+    float3(-0.5f, -0.5f, -0.5f),
+    float3(0.5f, -0.5f, -0.5f),
+    float3(0.5f, 0.5f, -0.5f),
+    float3(-0.5f, 0.5f, -0.5f),
+    float3(-0.5f, -0.5f, 0.5f),
+    float3(0.5f, -0.5f, 0.5f),
+    float3(0.5f, 0.5f, 0.5f),
+    float3(-0.5f, 0.5f, 0.5f),
 };
 
 static const float3 kCubeNormals[6] =
 {
-    float3( 0.0f, 0.0f,-1.0f ),
-    float3( 0.0f, 0.0f, 1.0f ),
-    float3(-1.0f, 0.0f, 0.0f ),
-    float3( 1.0f, 0.0f, 0.0f ),
-    float3( 0.0f, 1.0f, 0.0f ),
-    float3( 0.0f,-1.0f, 0.0f ),
+    float3(0.0f, 0.0f, -1.0f),
+    float3(0.0f, 0.0f, 1.0f),
+    float3(-1.0f, 0.0f, 0.0f),
+    float3(1.0f, 0.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, -1.0f, 0.0f),
 };
 
 static const uint kCubeIndices[36] =
@@ -58,8 +58,7 @@ static const uint kCubeIndices[36] =
     4, 0, 3, 4, 3, 7,
     1, 5, 6, 1, 6, 2,
     3, 2, 6, 3, 6, 7,
-    4, 5, 1, 4, 1, 0
-};
+    4, 5, 1, 4, 1, 0};
 
 float GetAO(uint voxel)
 {
@@ -177,9 +176,11 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     float bias = 0.0003f + 0.001f * (1.0f - ratio);
     float visibility = 0.0f;
     for (int x = -1; x <= 1; x++)
-    for (int y = -1; y <= 1; y++)
     {
-        visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
+        for (int y = -1; y <= 1; y++)
+        {
+            visibility += texture.SampleCmpLevelZero(state, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
+        }
     }
     visibility /= 9.0f;
     float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);

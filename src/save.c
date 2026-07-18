@@ -4,25 +4,25 @@
 #include "save.h"
 
 static const char* PLAYER_TABLE =
-    "CREATE TABLE IF NOT EXISTS players ("
-    "    id INT PRIMARY KEY NOT NULL,"
-    "    data BLOB NOT NULL"
-    ");";
+"CREATE TABLE IF NOT EXISTS players ("
+"    id INT PRIMARY KEY NOT NULL,"
+"    data BLOB NOT NULL"
+");";
 static const char* BLOCK_TABLE =
-    "CREATE TABLE IF NOT EXISTS blocks ("
-    "    cx INTEGER NOT NULL,"
-    "    cz INTEGER NOT NULL,"
-    "    bx INTEGER NOT NULL,"
-    "    by INTEGER NOT NULL,"
-    "    bz INTEGER NOT NULL,"
-    "    block INTEGER NOT NULL,"
-    "    PRIMARY KEY (cx, cz, bx, by, bz)"
-    ");";
+"CREATE TABLE IF NOT EXISTS blocks ("
+"    cx INTEGER NOT NULL,"
+"    cz INTEGER NOT NULL,"
+"    bx INTEGER NOT NULL,"
+"    by INTEGER NOT NULL,"
+"    bz INTEGER NOT NULL,"
+"    block INTEGER NOT NULL,"
+"    PRIMARY KEY (cx, cz, bx, by, bz)"
+");";
 static const char* SKY_TABLE =
-    "CREATE TABLE IF NOT EXISTS sky ("
-    "    id INTEGER PRIMARY KEY NOT NULL,"
-    "    time_of_day REAL NOT NULL"
-    ");";
+"CREATE TABLE IF NOT EXISTS sky ("
+"    id INTEGER PRIMARY KEY NOT NULL,"
+"    time_of_day REAL NOT NULL"
+");";
 static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUES (0, ?);";
 static const char* GET_PLAYER = "SELECT data FROM players WHERE id = 0;";
 static const char* SET_SKY = "INSERT OR REPLACE INTO sky (id, time_of_day) VALUES (0, ?);";
@@ -189,7 +189,7 @@ bool Save_GetSky(float* time_of_day)
     bool has_sky = sqlite3_step(get_sky) == SQLITE_ROW;
     if (has_sky)
     {
-        *time_of_day = (float) sqlite3_column_double(get_sky, 0);
+        *time_of_day = (float)sqlite3_column_double(get_sky, 0);
     }
     sqlite3_reset(get_sky);
     SDL_UnlockMutex(mutex);

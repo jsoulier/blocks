@@ -6,8 +6,7 @@ typedef enum CameraType
 {
     CAMERA_TYPE_ORTHO,
     CAMERA_TYPE_PERSPECTIVE,
-}
-CameraType;
+} CameraType;
 
 typedef struct Camera
 {
@@ -34,8 +33,7 @@ typedef struct Camera
     float near;
     float far;
     float ortho;
-}
-Camera;
+} Camera;
 
 void Camera_Init(Camera* camera, CameraType type);
 void Camera_Update(Camera* camera);

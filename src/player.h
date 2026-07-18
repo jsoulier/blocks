@@ -11,8 +11,7 @@ typedef enum PlayerController
     PLAYER_CONTROLLER_WALK,
     PLAYER_CONTROLLER_FLY,
     PLAYER_CONTROLLER_COUNT,
-}
-PlayerController;
+} PlayerController;
 
 typedef struct Player
 {
@@ -22,8 +21,7 @@ typedef struct Player
     bool is_on_ground;
     WorldQuery query;
     Block block;
-}
-Player;
+} Player;
 
 void Player_Load(Player* player);
 void Player_Save(const Player* player);

@@ -10,8 +10,7 @@ typedef struct SkyRender
     float top[4];
     float horizon[4];
     float ambient[4];
-}
-SkyRender;
+} SkyRender;
 
 typedef struct Sky
 {
@@ -20,8 +19,7 @@ typedef struct Sky
     SkyRender render;
     Camera shadow_camera;
     int shadow_frame;
-}
-Sky;
+} Sky;
 
 void Sky_Load(Sky* sky);
 void Sky_Reset(Sky* sky);
