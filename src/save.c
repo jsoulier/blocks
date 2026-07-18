@@ -23,8 +23,8 @@ static const char* SKY_TABLE =
     "    id INTEGER PRIMARY KEY NOT NULL,"
     "    time_of_day REAL NOT NULL"
     ");";
-static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUES (?, ?);";
-static const char* GET_PLAYER = "SELECT data FROM players WHERE id = ?;";
+static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUES (0, ?);";
+static const char* GET_PLAYER = "SELECT data FROM players WHERE id = 0;";
 static const char* SET_SKY = "INSERT OR REPLACE INTO sky (id, time_of_day) VALUES (0, ?);";
 static const char* GET_SKY = "SELECT time_of_day FROM sky WHERE id = 0;";
 static const char* SET_BLOCK = "INSERT OR REPLACE INTO blocks (cx, cz, bx, by, bz, block) VALUES (?, ?, ?, ?, ?, ?);";
@@ -111,15 +111,14 @@ void Save_Free()
     mutex = NULL;
 }
 
-void Save_SetPlayer(int id, const void* data, int size)
+void Save_SetPlayer(const void* data, int size)
 {
     if (!handle)
     {
         return;
     }
     SDL_LockMutex(mutex);
-    sqlite3_bind_int(set_player, 1, id);
-    sqlite3_bind_blob(set_player, 2, data, size, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(set_player, 1, data, size, SQLITE_TRANSIENT);
     if (sqlite3_step(set_player) != SQLITE_DONE)
     {
         SDL_Log("Failed to set player: %s", sqlite3_errmsg(handle));
@@ -128,14 +127,13 @@ void Save_SetPlayer(int id, const void* data, int size)
     SDL_UnlockMutex(mutex);
 }
 
-bool Save_GetPlayer(int id, void* data, int size)
+bool Save_GetPlayer(void* data, int size)
 {
     if (!handle)
     {
         return false;
     }
     SDL_LockMutex(mutex);
-    sqlite3_bind_int(get_player, 1, id);
     bool has_player = sqlite3_step(get_player) == SQLITE_ROW;
     if (has_player)
     {

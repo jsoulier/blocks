@@ -3,10 +3,10 @@
 #include "save.h"
 #include "sky.h"
 
-static const float SUNRISE_LENGTH = 30.0f;
-static const float DAY_LENGTH = 60.0f;
-static const float SUNSET_LENGTH = 30.0f;
-static const float NIGHT_LENGTH = 60.0f;
+static const float TOTAL_LENGTH = 180.0f;
+static const float SUNRISE_END = 30.0f / 180.0f;
+static const float DAY_END = 90.0f / 180.0f;
+static const float SUNSET_END = 120.0f / 180.0f;
 static const float SPEED = 0.1f;
 static const float AMBIENT_SCALE = 0.5f;
 static const float SHADOW_Y = 30.0f;
@@ -16,12 +16,10 @@ static const int SHADOW_UPDATE_FRAMES = 300;
 
 static const float NIGHT_SKY_TOP[3] = {0.02f, 0.02f, 0.1f};
 static const float NIGHT_SKY_HORIZON[3] = {0.05f, 0.05f, 0.2f};
-static const float SUNRISE_SKY_TOP[3] = {0.5f, 0.2f, 0.1f};
-static const float SUNRISE_SKY_HORIZON[3] = {1.0f, 0.5f, 0.2f};
+static const float TWILIGHT_SKY_TOP[3] = {0.5f, 0.2f, 0.1f};
+static const float TWILIGHT_SKY_HORIZON[3] = {1.0f, 0.5f, 0.2f};
 static const float DAY_SKY_TOP[3] = {0.5f, 0.7f, 1.0f};
 static const float DAY_SKY_HORIZON[3] = {0.8f, 0.9f, 1.0f};
-static const float SUNSET_SKY_TOP[3] = {0.5f, 0.2f, 0.1f};
-static const float SUNSET_SKY_HORIZON[3] = {1.0f, 0.5f, 0.2f};
 static const float NIGHT_AMBIENT[3] = {0.05f, 0.05f, 0.1f};
 static const float DAY_AMBIENT[3] = {1.0f, 1.0f, 1.0f};
 
@@ -35,38 +33,34 @@ static void LerpColor(float output[4], const float a[3], const float b[3], float
 
 static void UpdateRender(Sky* sky)
 {
-    float total_length = SUNRISE_LENGTH + DAY_LENGTH + SUNSET_LENGTH + NIGHT_LENGTH;
-    float sunrise_end = SUNRISE_LENGTH / total_length;
-    float day_end = sunrise_end + DAY_LENGTH / total_length;
-    float sunset_end = day_end + SUNSET_LENGTH / total_length;
     float ambient[4];
     float t;
-    if (sky->time_of_day < sunrise_end)
+    if (sky->time_of_day < SUNRISE_END)
     {
-        t = sky->time_of_day / sunrise_end;
-        LerpColor(sky->render.top, NIGHT_SKY_TOP, SUNRISE_SKY_TOP, t);
-        LerpColor(sky->render.horizon, NIGHT_SKY_HORIZON, SUNRISE_SKY_HORIZON, t);
+        t = sky->time_of_day / SUNRISE_END;
+        LerpColor(sky->render.top, NIGHT_SKY_TOP, TWILIGHT_SKY_TOP, t);
+        LerpColor(sky->render.horizon, NIGHT_SKY_HORIZON, TWILIGHT_SKY_HORIZON, t);
         LerpColor(ambient, NIGHT_AMBIENT, DAY_AMBIENT, t);
     }
-    else if (sky->time_of_day < day_end)
+    else if (sky->time_of_day < DAY_END)
     {
-        t = (sky->time_of_day - sunrise_end) / (day_end - sunrise_end);
-        LerpColor(sky->render.top, SUNRISE_SKY_TOP, DAY_SKY_TOP, t);
-        LerpColor(sky->render.horizon, SUNRISE_SKY_HORIZON, DAY_SKY_HORIZON, t);
+        t = (sky->time_of_day - SUNRISE_END) / (DAY_END - SUNRISE_END);
+        LerpColor(sky->render.top, TWILIGHT_SKY_TOP, DAY_SKY_TOP, t);
+        LerpColor(sky->render.horizon, TWILIGHT_SKY_HORIZON, DAY_SKY_HORIZON, t);
         LerpColor(ambient, DAY_AMBIENT, DAY_AMBIENT, t);
     }
-    else if (sky->time_of_day < sunset_end)
+    else if (sky->time_of_day < SUNSET_END)
     {
-        t = (sky->time_of_day - day_end) / (sunset_end - day_end);
-        LerpColor(sky->render.top, DAY_SKY_TOP, SUNSET_SKY_TOP, t);
-        LerpColor(sky->render.horizon, DAY_SKY_HORIZON, SUNSET_SKY_HORIZON, t);
+        t = (sky->time_of_day - DAY_END) / (SUNSET_END - DAY_END);
+        LerpColor(sky->render.top, DAY_SKY_TOP, TWILIGHT_SKY_TOP, t);
+        LerpColor(sky->render.horizon, DAY_SKY_HORIZON, TWILIGHT_SKY_HORIZON, t);
         LerpColor(ambient, DAY_AMBIENT, NIGHT_AMBIENT, t);
     }
     else
     {
-        t = (sky->time_of_day - sunset_end) / (1.0f - sunset_end);
-        LerpColor(sky->render.top, SUNSET_SKY_TOP, NIGHT_SKY_TOP, t);
-        LerpColor(sky->render.horizon, SUNSET_SKY_HORIZON, NIGHT_SKY_HORIZON, t);
+        t = (sky->time_of_day - SUNSET_END) / (1.0f - SUNSET_END);
+        LerpColor(sky->render.top, TWILIGHT_SKY_TOP, NIGHT_SKY_TOP, t);
+        LerpColor(sky->render.horizon, TWILIGHT_SKY_HORIZON, NIGHT_SKY_HORIZON, t);
         LerpColor(ambient, NIGHT_AMBIENT, NIGHT_AMBIENT, t);
     }
     float angle = sky->time_of_day * 2.0f * SDL_PI_F;
@@ -92,10 +86,7 @@ void Sky_Load(Sky* sky)
     sky->shadow_camera.ortho = SHADOW_ORTHO;
     sky->shadow_camera.far = SHADOW_FAR;
     sky->shadow_frame = 0;
-    float total_length = SUNRISE_LENGTH + DAY_LENGTH + SUNSET_LENGTH + NIGHT_LENGTH;
-    float sunrise_end = SUNRISE_LENGTH / total_length;
-    float day_end = sunrise_end + DAY_LENGTH / total_length;
-    sky->time_of_day = sunrise_end + (day_end - sunrise_end) / 2.0f;
+    sky->time_of_day = SUNRISE_END + (DAY_END - SUNRISE_END) / 2.0f;
     float saved_time;
     if (Save_GetSky(&saved_time) && saved_time >= 0.0f && saved_time < 1.0f)
     {
@@ -113,8 +104,7 @@ void Sky_Reset(Sky* sky)
 
 void Sky_Update(Sky* sky, float dt)
 {
-    float total_length = SUNRISE_LENGTH + DAY_LENGTH + SUNSET_LENGTH + NIGHT_LENGTH;
-    sky->time_of_day += dt * SPEED / total_length;
+    sky->time_of_day += dt * SPEED / TOTAL_LENGTH;
     sky->time_of_day = SDL_fmodf(sky->time_of_day, 1.0f);
     UpdateRender(sky);
 }

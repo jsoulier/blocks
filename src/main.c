@@ -11,11 +11,10 @@
 #include "world.h"
 
 static const char* SAVE_PATH = "blocks.sqlite3";
-static const int PLAYER_ID = 0;
 static const float ATLAS_WIDTH = 512.0f;
 static const int ATLAS_MIP_LEVELS = 4;
 static const float BLOCK_WIDTH = 16.0f;
-static const int SHADOW_RESOLUTION = 2048.0f;
+static const int SHADOW_RESOLUTION = 2048;
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
 
 static SDL_Window* window;
@@ -544,7 +543,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     Save_Init(SAVE_PATH);
     Sky_Load(&sky);
     World_Init(device);
-    Player_Load(&player, PLAYER_ID);
+    Player_Load(&player);
     World_Update(&player.camera);
     ticks2 = SDL_GetTicks();
     ticks1 = ticks2;
@@ -555,7 +554,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
     SDL_HideWindow(window);
     World_Free();
-    Player_Save(&player, PLAYER_ID);
+    Player_Save(&player);
     Sky_Save(&sky);
     Save_Free();
     SDL_ReleaseGPUSampler(device, nearest_sampler);
@@ -875,7 +874,6 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     if (SDL_GetWindowRelativeMouseMode(window))
     {
         Player_Move(&player, dt);
-        Player_Save(&player, PLAYER_ID);
     }
     Sky_UpdateShadow(&sky, &player.camera, SHADOW_RESOLUTION);
     World_Update(&player.camera);
@@ -911,16 +909,9 @@ SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
         }
         else if (event->key.scancode == SDL_SCANCODE_F11)
         {
-            if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
-            {
-                SDL_SetWindowFullscreen(window, false);
-                SDL_SetWindowRelativeMouseMode(window, false);
-            }
-            else
-            {
-                SDL_SetWindowFullscreen(window, true);
-                SDL_SetWindowRelativeMouseMode(window, true);
-            }
+            bool fullscreen = !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
+            SDL_SetWindowFullscreen(window, fullscreen);
+            SDL_SetWindowRelativeMouseMode(window, fullscreen);
         }
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:

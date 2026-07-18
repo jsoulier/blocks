@@ -152,33 +152,9 @@ static void GetNeighborhood(int cx, int cz, Chunk* neighborhood[3][3])
     }
 }
 
-static MeshType GetMeshForFlags(WorldFlags flags)
-{
-    if (flags & WORLD_FLAGS_OPAQUE)
-    {
-        return MESH_TYPE_OPAQUE;
-    }
-    else
-    {
-        return MESH_TYPE_TRANSPARENT;
-    }
-}
-
-static MeshType GetMeshForBlock(Block block)
-{
-    if (Block_IsOpaque(block))
-    {
-        return MESH_TYPE_OPAQUE;
-    }
-    else
-    {
-        return MESH_TYPE_TRANSPARENT;
-    }
-}
-
 static Chunk* CreateChunk()
 {
-    Chunk* chunk = SDL_malloc(sizeof(Chunk));
+    Chunk* chunk = SDL_calloc(1, sizeof(Chunk));
     if (!chunk)
     {
         SDL_Log("Failed to allocate chunk");
@@ -186,11 +162,6 @@ static Chunk* CreateChunk()
     SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_REQUESTED);
     SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_COMPLETED);
     SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_COMPLETED);
-    chunk->x = 0;
-    chunk->z = 0;
-    chunk->lights = NULL;
-    chunk->light_size = 0;
-    chunk->light_capacity = 0;
     for (int i = 0; i < MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
@@ -206,7 +177,6 @@ static void FreeChunk(Chunk* chunk)
     {
         GPUBuffer_Free(&chunk->gpu_voxels[i]);
     }
-    SDL_memset(chunk->blocks, 0, sizeof(chunk->blocks));
     SDL_free(chunk->lights);
     SDL_free(chunk);
 }
@@ -458,6 +428,7 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
             }
             continue;
         }
+        MeshType mesh = Block_IsOpaque(block) ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
         for (int j = 0; j < 6; j++)
         {
             int dx = DIRECTIONS[j][0];
@@ -485,7 +456,7 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
             {
                 int vertex = order[k];
                 Voxel voxel = Voxel_PackCube(block, bx, by, bz, j, vertex, ao[vertex]);
-                CPUBuffer_Append(&voxels[GetMeshForBlock(block)], &voxel);
+                CPUBuffer_Append(&voxels[mesh], &voxel);
             }
         }
     }
@@ -554,16 +525,6 @@ static void GenerateIndices()
     CPUBuffer_Free(&indices);
 }
 
-static void WaitForJobFinish(const Worker* worker)
-{
-    SDL_LockMutex(worker->mutex);
-    while (worker->job.type != JOB_TYPE_NONE)
-    {
-        SDL_WaitCondition(worker->condition, worker->mutex);
-    }
-    SDL_UnlockMutex(worker->mutex);
-}
-
 static int WorkerFunction(void* args)
 {
     Worker* worker = args;
@@ -623,33 +584,8 @@ static bool IsJobRunning(const Worker* worker)
     return running;
 }
 
-static SDL_AtomicInt* GetJobState(Chunk* chunk, JobType type)
-{
-    switch (type)
-    {
-    case JOB_TYPE_BLOCKS:
-        return &chunk->block_state;
-    case JOB_TYPE_VOXELS:
-        return &chunk->voxel_state;
-    case JOB_TYPE_LIGHTS:
-        return &chunk->light_state;
-    default:
-        return NULL;
-    }
-}
-
 static void DispatchJob(Worker* worker, const Job* job)
 {
-    if (job->type != JOB_TYPE_QUIT)
-    {
-        SDL_assert(!IsJobRunning(worker));
-        Chunk* chunk = GetChunk(job->x, job->z);
-        SDL_SetAtomicInt(GetJobState(chunk, job->type), JOB_STATE_RUNNING);
-    }
-    else
-    {
-        WaitForJobFinish(worker);
-    }
     SDL_LockMutex(worker->mutex);
     SDL_assert(worker->job.type == JOB_TYPE_NONE);
     worker->job = *job;
@@ -683,6 +619,12 @@ static void StartWorker(Worker* worker)
 
 static void StopWorker(Worker* worker)
 {
+    SDL_LockMutex(worker->mutex);
+    while (worker->job.type != JOB_TYPE_NONE)
+    {
+        SDL_WaitCondition(worker->condition, worker->mutex);
+    }
+    SDL_UnlockMutex(worker->mutex);
     Job job = {0};
     job.type = JOB_TYPE_QUIT;
     DispatchJob(worker, &job);
@@ -847,6 +789,7 @@ static bool TryUpdateBlocks(int x, int z, Worker* worker)
         return false;
     }
     Job job = {JOB_TYPE_BLOCKS, x, z};
+    SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_RUNNING);
     DispatchJob(worker, &job);
     return true;
 }
@@ -879,10 +822,12 @@ static bool TryUpdateVoxelsOrLights(int x, int z, Worker* worker)
     if (do_voxel)
     {
         job = (Job) {JOB_TYPE_VOXELS, x, z};
+        SDL_SetAtomicInt(&chunk->voxel_state, JOB_STATE_RUNNING);
     }
     else if (do_light)
     {
         job = (Job) {JOB_TYPE_LIGHTS, x, z};
+        SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_RUNNING);
     }
     else
     {
@@ -923,7 +868,8 @@ void World_Update(const Camera* camera)
 
 static void Render(Chunk* chunk, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass, WorldFlags flags)
 {
-    GPUBuffer* gpu_voxels = &chunk->gpu_voxels[GetMeshForFlags(flags)];
+    MeshType mesh = flags & WORLD_FLAGS_OPAQUE ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
+    GPUBuffer* gpu_voxels = &chunk->gpu_voxels[mesh];
     if (gpu_voxels->size == 0)
     {
         return;
@@ -949,7 +895,7 @@ static void Render(Chunk* chunk, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* 
         SDL_PushGPUFragmentUniformData(cbuf, 0, &light_count, 4);
         SDL_BindGPUFragmentStorageBuffers(pass, 1, &light_binding, 1);
     }
-    SDL_PushGPUVertexUniformData(cbuf, 2, chunk->position, 12);
+    SDL_PushGPUVertexUniformData(cbuf, 2, chunk->position, 8);
     SDL_BindGPUVertexBuffers(pass, 0, &voxel_binding, 1);
     SDL_BindGPUIndexBuffer(pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
     SDL_DrawGPUIndexedPrimitives(pass, gpu_voxels->size * 1.5, 1, 0, 0, 0);
