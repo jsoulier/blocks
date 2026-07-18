@@ -27,7 +27,7 @@ typedef struct GPUBuffer
 
 void GPUBuffer_Init(GPUBuffer* buffer, SDL_GPUDevice* device, SDL_GPUBufferUsageFlags usage);
 void GPUBuffer_Free(GPUBuffer* buffer);
-void GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source);
+bool GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source);
 void GPUBuffer_Clear(GPUBuffer* buffer);
 bool GPUBuffer_BeginUpload(GPUBuffer* buffer);
 void GPUBuffer_EndUpload();

@@ -8,7 +8,7 @@ struct Block
     uint IsOpaque;
     uint IsSolid;
     uint IsSprite;
-    uint CanBeOccluded;
+    uint IsOccluded;
     uint CanCreateShadow;
     uint CanBeInShadow;
     float SunIntensity;

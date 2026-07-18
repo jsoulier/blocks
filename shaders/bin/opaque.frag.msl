@@ -49,7 +49,7 @@ struct Block
     uint IsOpaque;
     uint IsSolid;
     uint IsSprite;
-    uint CanBeOccluded;
+    uint IsOccluded;
     uint CanCreateShadow;
     uint CanBeInShadow;
     float SunIntensity;
@@ -165,7 +165,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& 
             break;
         }
         float _237;
-        if (blockBuffer._m0[_126].CanBeOccluded != 0u)
+        if (blockBuffer._m0[_126].IsOccluded != 0u)
         {
             _237 = fast::clamp(-dot(_108[_133], UniformBuffer_3.Sun.xyz), 0.0, 1.0);
         }

@@ -360,10 +360,10 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
     }
     SDL_assert(side_count == 2);
     bool has_first_side =
-        Block_CanBeOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, first_side[0], first_side[1], first_side[2]));
+        Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, first_side[0], first_side[1], first_side[2]));
     bool has_second_side =
-        Block_CanBeOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, second_side[0], second_side[1], second_side[2]));
-    bool has_corner = Block_CanBeOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
+        Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, second_side[0], second_side[1], second_side[2]));
+    bool has_corner = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
     if (has_first_side && has_second_side)
     {
         return 0;

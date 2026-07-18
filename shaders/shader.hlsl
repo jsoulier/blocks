@@ -12,7 +12,7 @@ struct Block
     uint IsOpaque;
     uint IsSolid;
     uint IsSprite;
-    uint CanBeOccluded;
+    uint IsOccluded;
     uint CanCreateShadow;
     uint CanBeInShadow;
     float SunIntensity;
@@ -170,7 +170,7 @@ float GetSunlight(
     {
         return sunlight;
     }
-    float lightAngle = block.CanBeOccluded ? saturate(-dot(normal, sunDirection)) : 0.707f;
+    float lightAngle = block.IsOccluded ? saturate(-dot(normal, sunDirection)) : 0.707f;
     if (lightAngle <= 0.0f)
     {
         return 0.0f;

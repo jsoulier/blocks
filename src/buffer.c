@@ -92,7 +92,7 @@ void GPUBuffer_Free(GPUBuffer* buffer)
     buffer->size = 0;
 }
 
-void GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
+bool GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
 {
     SDL_assert(upload_command_buffer);
     SDL_assert(upload_pass);
@@ -104,7 +104,7 @@ void GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
     }
     if (!source->size)
     {
-        return;
+        return true;
     }
     Uint32 size = source->size;
     source->size = 0;
@@ -120,7 +120,7 @@ void GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
         if (!destination->buffer)
         {
             SDL_Log("Failed to create buffer: %s", SDL_GetError());
-            return;
+            return false;
         }
         destination->capacity = source->capacity;
     }
@@ -131,6 +131,7 @@ void GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
     region.size = size * source->stride;
     SDL_UploadToGPUBuffer(upload_pass, &location, &region, true);
     destination->size = size;
+    return true;
 }
 
 void GPUBuffer_Clear(GPUBuffer* buffer)
