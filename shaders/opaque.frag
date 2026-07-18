@@ -59,7 +59,7 @@ Output main(Input input)
     float3 albedo = color.rgb;
     float3 normal = GetNormal(input.Voxel, block);
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, input.WorldPosition, normal);
-    float3 ambient = GetAmbientLight(Ambient.xyz);
+    float3 ambient = Ambient.xyz;
     float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, input.WorldPosition.xyz, normal, block);
     float3 finalColor;
     if (block.IsFullbright)

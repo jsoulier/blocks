@@ -86,7 +86,6 @@ static int world_x;
 static int world_z;
 static Worker workers[WORKERS];
 static GPUBuffer gpu_indices;
-static CPUBuffer cpu_empty_lights;
 static GPUBuffer gpu_empty_lights;
 static CPUBuffer cpu_voxels[MESH_TYPE_COUNT];
 static Chunk* chunks[WORLD_WIDTH][WORLD_WIDTH];
@@ -106,13 +105,6 @@ static void WorldToChunk(const Chunk* chunk, int* bx, int* by, int* bz)
     SDL_assert(IsBlockLocal(*bx, *by, *bz));
 }
 
-static void ChunkToWorld(const Chunk* chunk, int* bx, int* by, int* bz)
-{
-    SDL_assert(*by >= 0 && *by < CHUNK_HEIGHT);
-    *bx += chunk->x;
-    *bz += chunk->z;
-}
-
 static bool IsChunkLocal(int cx, int cz)
 {
     return cx >= 0 && cz >= 0 && cx < WORLD_WIDTH && cz < WORLD_WIDTH;
@@ -130,14 +122,7 @@ static int FloorChunkIndex(float index)
 
 static Chunk* GetChunk(int cx, int cz)
 {
-    if (IsChunkLocal(cx, cz))
-    {
-        return chunks[cx][cz];
-    }
-    else
-    {
-        return NULL;
-    }
+    return IsChunkLocal(cx, cz) ? chunks[cx][cz] : NULL;
 }
 
 static void GetNeighborhood(int cx, int cz, Chunk* neighborhood[3][3])
@@ -268,7 +253,9 @@ static Block GetNeighborhoodBlock(Chunk* chunks[3][3], int bx, int by, int bz, i
     {
         return chunk->blocks[bx][by][bz];
     }
-    ChunkToWorld(chunk, &bx, &by, &bz);
+    SDL_assert(by >= 0 && by < CHUNK_HEIGHT);
+    bx += chunk->x;
+    bz += chunk->z;
     int cx = 1;
     int cz = 1;
     if (bx < chunk->x)
@@ -314,7 +301,7 @@ static void UploadVoxels(Chunk* chunk, CPUBuffer voxels[MESH_TYPE_COUNT])
     {
         GPUBuffer_Upload(&chunk->gpu_voxels[i], &voxels[i]);
     }
-    GPUBuffer_EndUpload(&chunk->gpu_voxels[0]);
+    GPUBuffer_EndUpload();
 }
 
 static void UploadLights(Chunk* chunk, CPUBuffer* lights)
@@ -331,7 +318,7 @@ static void UploadLights(Chunk* chunk, CPUBuffer* lights)
         return;
     }
     GPUBuffer_Upload(&chunk->gpu_lights, lights);
-    GPUBuffer_EndUpload(&chunk->gpu_lights);
+    GPUBuffer_EndUpload();
 }
 
 static bool IsVisible(Block block, Block neighbor)
@@ -494,14 +481,18 @@ static void GenerateChunkLights(Chunk* chunks[3][3], CPUBuffer* lights)
 
 static void GenerateLights()
 {
+    CPUBuffer lights;
+    CPUBuffer_Init(&lights, device, sizeof(Light));
     if (!GPUBuffer_BeginUpload(&gpu_empty_lights))
     {
+        CPUBuffer_Free(&lights);
         return;
     }
     Light light = {0};
-    CPUBuffer_Append(&cpu_empty_lights, &light);
-    GPUBuffer_Upload(&gpu_empty_lights, &cpu_empty_lights);
-    GPUBuffer_EndUpload(&gpu_empty_lights);
+    CPUBuffer_Append(&lights, &light);
+    GPUBuffer_Upload(&gpu_empty_lights, &lights);
+    GPUBuffer_EndUpload();
+    CPUBuffer_Free(&lights);
 }
 
 static void GenerateIndices()
@@ -521,7 +512,7 @@ static void GenerateIndices()
         CPUBuffer_Append(&indices, &index);
     }
     GPUBuffer_Upload(&gpu_indices, &indices);
-    GPUBuffer_EndUpload(&gpu_indices);
+    GPUBuffer_EndUpload();
     CPUBuffer_Free(&indices);
 }
 
@@ -665,7 +656,6 @@ void World_Init(SDL_GPUDevice* handle)
     world_x = SDL_MAX_SINT32;
     world_z = SDL_MAX_SINT32;
     GPUBuffer_Init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);
-    CPUBuffer_Init(&cpu_empty_lights, device, sizeof(Light));
     GPUBuffer_Init(&gpu_empty_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     for (int i = 0; i < MESH_TYPE_COUNT; i++)
     {
@@ -699,7 +689,6 @@ void World_Free()
         FreeChunk(chunks[x][z]);
     }
     GPUBuffer_Free(&gpu_indices);
-    CPUBuffer_Free(&cpu_empty_lights);
     GPUBuffer_Free(&gpu_empty_lights);
     for (int i = 0; i < MESH_TYPE_COUNT; i++)
     {
@@ -1046,40 +1035,23 @@ WorldQuery World_Raycast(const Camera* camera, float length)
         {
             return query;
         }
-        for (int i = 0; i < 3; i++)
+        SDL_memcpy(query.previous, query.current, sizeof(query.current));
+        int axis;
+        if (distances[0] < distances[1] && distances[0] < distances[2])
         {
-            query.previous[i] = query.current[i];
+            axis = 0;
         }
-        if (distances[0] < distances[1])
+        else if (distances[1] < distances[2])
         {
-            if (distances[0] < distances[2])
-            {
-                traveled = distances[0];
-                distances[0] += deltas[0];
-                query.current[0] += steps[0];
-            }
-            else
-            {
-                traveled = distances[2];
-                distances[2] += deltas[2];
-                query.current[2] += steps[2];
-            }
+            axis = 1;
         }
         else
         {
-            if (distances[1] < distances[2])
-            {
-                traveled = distances[1];
-                distances[1] += deltas[1];
-                query.current[1] += steps[1];
-            }
-            else
-            {
-                traveled = distances[2];
-                distances[2] += deltas[2];
-                query.current[2] += steps[2];
-            }
+            axis = 2;
         }
+        traveled = distances[axis];
+        distances[axis] += deltas[axis];
+        query.current[axis] += steps[axis];
     }
     query.block = BLOCK_EMPTY;
     return query;

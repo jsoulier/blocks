@@ -27,7 +27,7 @@ void CPUBuffer_Free(CPUBuffer* cpu)
     cpu->stride = 0;
 }
 
-void CPUBuffer_Append(CPUBuffer* cpu, void* item)
+void CPUBuffer_Append(CPUBuffer* cpu, const void* item)
 {
     if (!cpu->data && cpu->buffer)
     {
@@ -104,7 +104,6 @@ void GPUBuffer_Upload(GPUBuffer* gpu, CPUBuffer* cpu)
     }
     if (!cpu->size)
     {
-        gpu->size = 0;
         return;
     }
     Uint32 size = cpu->size;
@@ -160,7 +159,7 @@ bool GPUBuffer_BeginUpload(GPUBuffer* gpu)
     return true;
 }
 
-void GPUBuffer_EndUpload(GPUBuffer* gpu)
+void GPUBuffer_EndUpload()
 {
     SDL_assert(pass);
     SDL_assert(cbuf);

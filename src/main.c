@@ -40,8 +40,7 @@ static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* shadow_sampler;
 static Sky sky;
 static Player player;
-static Uint64 ticks1;
-static Uint64 ticks2;
+static Uint64 previous_ticks;
 
 static bool CreateAtlas()
 {
@@ -149,7 +148,7 @@ static bool CreateAtlas()
     return true;
 }
 
-static void SetWindowIcon(Block block)
+static void SetWindowIcon()
 {
     if (!atlas_surface)
     {
@@ -162,7 +161,7 @@ static void SetWindowIcon(Block block)
         return;
     }
     SDL_Rect src;
-    src.x = Block_GetIndex(block, DIRECTION_NORTH) * BLOCK_WIDTH;
+    src.x = Block_GetIndex(BLOCK_GRASS, DIRECTION_NORTH) * BLOCK_WIDTH;
     src.y = 0;
     src.w = BLOCK_WIDTH;
     src.h = BLOCK_WIDTH;
@@ -274,8 +273,6 @@ static bool CreateTransparentPipeline()
     info.vertex_input_state.vertex_buffer_descriptions = vertex_buffers;
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
-    info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
-    info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
     info.multisample_state.sample_count = SAMPLE_COUNT;
     if (info.vertex_shader && info.fragment_shader)
     {
@@ -399,8 +396,6 @@ static bool CreateUIPipeline()
 static bool CreateSamplers()
 {
     SDL_GPUSamplerCreateInfo info = {0};
-    info.min_filter = SDL_GPU_FILTER_LINEAR;
-    info.mag_filter = SDL_GPU_FILTER_LINEAR;
     info.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
     info.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
     info.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
@@ -539,14 +534,13 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_ShowWindow(window);
     SDL_SetWindowResizable(window, true);
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
-    SetWindowIcon(BLOCK_GRASS);
+    SetWindowIcon();
     Save_Init(SAVE_PATH);
     Sky_Load(&sky);
     World_Init(device);
     Player_Load(&player);
     World_Update(&player.camera);
-    ticks2 = SDL_GetTicks();
-    ticks1 = ticks2;
+    previous_ticks = SDL_GetTicks();
     return SDL_APP_CONTINUE;
 }
 
@@ -867,9 +861,9 @@ static void Render()
 
 SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 {
-    ticks2 = SDL_GetTicks();
-    float dt = ticks2 - ticks1;
-    ticks1 = ticks2;
+    Uint64 ticks = SDL_GetTicks();
+    float dt = ticks - previous_ticks;
+    previous_ticks = ticks;
     Sky_Update(&sky, dt / 1000.0f);
     if (SDL_GetWindowRelativeMouseMode(window))
     {

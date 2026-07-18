@@ -121,7 +121,6 @@ struct Light
 float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 position, float3 normal)
 {
     static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
-    static const float kLight = 1.0f;
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < lightCount; i++)
     {
@@ -130,7 +129,7 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
         float3 lightPosition = float3(light.X, light.Y, light.Z) + 0.5f + kOffset;
         float3 offset = lightPosition - position.xyz;
         float distance = length(offset);
-        if (distance >= radius || radius <= 0.0f)
+        if (distance >= radius)
         {
             continue;
         }
@@ -148,21 +147,20 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
         color.b = ((light.Color & 0x00FF0000) >> 16) / 255.0f;
         finalColor += color * NdotL * attenuation;
     }
-    return finalColor * kLight;
+    return finalColor;
 }
 
 float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4x4 transform, float3 sunDirection, float sunIntensity, float3 position, float3 normal, Block block)
 {
-    static const float kBase = 0.0f;
     static const float kShadow = 0.4f;
     if (sunIntensity <= 0.0f)
     {
-        return kBase;
+        return 0.0f;
     }
     float ratio = block.HasOcclusion ? saturate(-dot(normal, sunDirection)) : 0.707f;
     if (ratio <= 0.0f)
     {
-        return kBase;
+        return 0.0f;
     }
     float4 shadowPosition = mul(transform, float4(position, 1.0f));
     shadowPosition.xyz /= shadowPosition.w;
@@ -170,7 +168,7 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     uv.y = 1.0f - uv.y;
     if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f || shadowPosition.z > 1.0f)
     {
-        return kBase + kShadow * sunIntensity * ratio;
+        return kShadow * sunIntensity * ratio;
     }
     uint width;
     uint height;
@@ -186,12 +184,7 @@ float GetSunLight(Texture2D<float> texture, SamplerComparisonState state, float4
     visibility /= 9.0f;
     float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
     visibility = lerp(1.0f, visibility, shadowFade);
-    return kBase + kShadow * sunIntensity * ratio * visibility;
-}
-
-float3 GetAmbientLight(float3 color)
-{
-    return color;
+    return kShadow * sunIntensity * ratio * visibility;
 }
 
 float GetFog(float x)

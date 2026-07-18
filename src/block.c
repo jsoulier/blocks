@@ -199,7 +199,7 @@ SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device)
         CPUBuffer_Append(&cpu_blocks, &block);
     }
     GPUBuffer_Upload(&gpu_blocks, &cpu_blocks);
-    GPUBuffer_EndUpload(&gpu_blocks);
+    GPUBuffer_EndUpload();
     SDL_GPUBuffer* buffer = gpu_blocks.size == BLOCK_COUNT ? gpu_blocks.buffer : NULL;
     if (buffer)
     {

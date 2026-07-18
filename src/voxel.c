@@ -15,6 +15,16 @@ static const int CUBE_POSITIONS[][4][3] =
     {{0, 0, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 1}},
 };
 
+static const int TEXCOORDS[][4][2] =
+{
+    {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
+    {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
+    {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
+    {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
+    {{0, 0}, {1, 0}, {0, 1}, {1, 1}},
+    {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
+};
+
 static Voxel Pack(Block block, int x, int y, int z, int u, int v, Direction direction, int ao)
 {
     SDL_COMPILE_TIME_ASSERT("", AO_OFFSET + AO_BITS <= 32);
@@ -59,13 +69,6 @@ Voxel Voxel_PackSprite(Block block, int x, int y, int z, Direction direction, in
         {{0, 0, 1}, {1, 0, 0}, {0, 1, 1}, {1, 1, 0}},
         {{0, 0, 1}, {0, 1, 1}, {1, 0, 0}, {1, 1, 0}},
     };
-    static const int TEXCOORDS[][4][2] =
-    {
-        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
-        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
-        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
-        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
-    };
     int a = POSITIONS[direction][i][0] + x;
     int b = POSITIONS[direction][i][1] + y;
     int c = POSITIONS[direction][i][2] + z;
@@ -80,15 +83,6 @@ Voxel Voxel_PackCube(Block block, int x, int y, int z, Direction direction, int 
     SDL_assert(block < BLOCK_COUNT);
     SDL_assert(direction < 6);
     SDL_assert(i < 4);
-    static const int TEXCOORDS[][4][2] =
-    {
-        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
-        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
-        {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
-        {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
-        {{0, 0}, {1, 0}, {0, 1}, {1, 1}},
-        {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
-    };
     int a = CUBE_POSITIONS[direction][i][0] + x;
     int b = CUBE_POSITIONS[direction][i][1] + y;
     int c = CUBE_POSITIONS[direction][i][2] + z;

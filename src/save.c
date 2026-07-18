@@ -65,6 +65,16 @@ bool Save_Init(const char* path)
     if (sqlite3_open(path, &handle))
     {
         SDL_Log("Failed to open %s database: %s", path, sqlite3_errmsg(handle));
+        sqlite3_close(handle);
+        handle = NULL;
+        return false;
+    }
+    mutex = SDL_CreateMutex();
+    if (!mutex)
+    {
+        SDL_Log("Failed to create mutex: %s", SDL_GetError());
+        sqlite3_close(handle);
+        handle = NULL;
         return false;
     }
     if (!Execute(PLAYER_TABLE, "create player table") ||
@@ -78,12 +88,7 @@ bool Save_Init(const char* path)
         !Prepare(&set_block, SET_BLOCK, "set block") ||
         !Prepare(&get_blocks, GET_BLOCKS, "get blocks"))
     {
-        return false;
-    }
-    mutex = SDL_CreateMutex();
-    if (!mutex)
-    {
-        SDL_Log("Failed to create mutex: %s", SDL_GetError());
+        Save_Free();
         return false;
     }
     sqlite3_exec(handle, "BEGIN;", NULL, NULL, NULL);
@@ -92,6 +97,10 @@ bool Save_Init(const char* path)
 
 void Save_Free()
 {
+    if (!handle)
+    {
+        return;
+    }
     SDL_DestroyMutex(mutex);
     sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
     sqlite3_finalize(set_player);
@@ -146,6 +155,7 @@ bool Save_GetPlayer(void* data, int size)
         else
         {
             SDL_Log("Failed to get player: Out of date");
+            has_player = false;
         }
     }
     sqlite3_reset(get_player);

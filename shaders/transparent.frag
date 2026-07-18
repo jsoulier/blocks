@@ -46,17 +46,18 @@ float4 main(Input input) : SV_Target0
 {
     Block block = blockBuffer[GetBlock(input.Voxel)];
     float3 normal = GetNormal(input.Voxel, block);
-    float3 texcoord = float3(input.Texcoord, GetIndex(input.Voxel, block));
+    uint index = GetIndex(input.Voxel, block);
+    float3 texcoord = float3(input.Texcoord, index);
     float4 color = atlasTexture.Sample(atlasSampler, texcoord);
     float3 albedo = color.rgb;
     float alpha = color.a;
     float4 position = input.WorldPosition;
     float3 diffuse = GetDiffuseLight(lightBuffer, LightCount, position, normal);
-    float3 ambient = GetAmbientLight(Ambient.xyz);
+    float3 ambient = Ambient.xyz;
     float sun = GetSunLight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, position.xyz, normal, block);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
-    if (GetIndex(input.Voxel, block) == kWater)
+    if (index == kWater)
     {
         float3 groundPosition = positionTexture.Sample(positionSampler, input.Fragment).xyz;
         alpha += (input.WorldPosition.y - groundPosition.y) / 10.0f;
