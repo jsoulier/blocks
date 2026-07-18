@@ -122,7 +122,7 @@ struct Light
 float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 position, float3 normal)
 {
     static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
-    static const float kLight = 2.0f;
+    static const float kLight = 1.0f;
     float3 finalColor = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < lightCount; i++)
     {
@@ -141,9 +141,8 @@ float3 GetDiffuseLight(StructuredBuffer<Light> lights, uint lightCount, float4 p
         {
             continue;
         }
-        float attenuation = 1.0f - (distance / radius);
-        attenuation = saturate(attenuation);
-        attenuation *= attenuation;
+        float normalizedDistance = saturate(distance / radius);
+        float attenuation = 1.0f - smoothstep(0.0f, 1.0f, normalizedDistance);
         float3 color;
         color.r = ((light.Color & 0x000000FF) >> 0) / 255.0f;
         color.g = ((light.Color & 0x0000FF00) >> 8) / 255.0f;
