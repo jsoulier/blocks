@@ -2,12 +2,10 @@
 
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
-Texture2D<float> shadowTexture : register(t1, space2);
-SamplerComparisonState shadowSampler : register(s1, space2);
-Texture2D<float4> positionTexture : register(t2, space2);
-SamplerState positionSampler : register(s2, space2);
-StructuredBuffer<Block> blockBuffer : register(t3, space2);
-StructuredBuffer<Light> lightBuffer : register(t4, space2);
+Texture2D<float4> positionTexture : register(t1, space2);
+SamplerState positionSampler : register(s1, space2);
+StructuredBuffer<Block> blockBuffer : register(t2, space2);
+StructuredBuffer<Light> lightBuffer : register(t3, space2);
 
 cbuffer UniformBuffer : register(b0, space3)
 {
@@ -16,15 +14,10 @@ cbuffer UniformBuffer : register(b0, space3)
 
 cbuffer UniformBuffer : register(b1, space3)
 {
-    float4x4 ShadowTransform : packoffset(c0);
-};
-
-cbuffer UniformBuffer : register(b2, space3)
-{
     float3 PlayerPosition : packoffset(c0);
 };
 
-cbuffer UniformBuffer : register(b3, space3)
+cbuffer UniformBuffer : register(b2, space3)
 {
     float4 Sun : packoffset(c0);
     float4 SkyTop : packoffset(c1);
@@ -54,8 +47,7 @@ float4 main(Input input) : SV_Target0
     float4 position = input.WorldPosition;
     float3 pointLight = GetPointLight(lightBuffer, LightCount, position.xyz, normal);
     float3 ambient = Ambient.xyz;
-    float sunlight =
-        GetSunlight(shadowTexture, shadowSampler, ShadowTransform, Sun.xyz, Sun.w, position.xyz, normal, block);
+    float sunlight = GetSunlight(Sun.xyz, Sun.w, normal, block);
     float3 sky = GetSkyColor(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
     float fog = GetFogValue(distance(position.xz, PlayerPosition.xz));
     if (index == kWater)

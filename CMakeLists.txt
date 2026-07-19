@@ -28,6 +28,7 @@ add_executable(blocks WIN32
     src/save.c
     src/shader.c
     src/sky.c
+    src/sort.c
     src/voxel.c
     src/worker.c
     src/world.c
@@ -95,7 +96,6 @@ add_shader(opaque.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(opaque.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.vert shaders/shader.hlsl src/voxel.inc)
-add_shader(shadow.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(sky.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(sky.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(transparent.frag shaders/shader.hlsl src/voxel.inc)

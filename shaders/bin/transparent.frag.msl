@@ -50,8 +50,7 @@ struct Block
     uint IsSolid;
     uint IsSprite;
     uint IsOccluded;
-    uint CanCreateShadow;
-    uint CanBeInShadow;
+    uint UseSunNormal;
     float SunIntensity;
     uint LightColor;
     int LightX;
@@ -85,15 +84,10 @@ struct type_UniformBuffer
 
 struct type_UniformBuffer_1
 {
-    float4x4 ShadowTransform;
-};
-
-struct type_UniformBuffer_2
-{
     float3 PlayerPosition;
 };
 
-struct type_UniformBuffer_3
+struct type_UniformBuffer_2
 {
     float4 Sun;
     float4 SkyTop;
@@ -101,7 +95,7 @@ struct type_UniformBuffer_3
     float4 Ambient;
 };
 
-constant spvUnsafeArray<float3, 6> _109 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
+constant spvUnsafeArray<float3, 6> _92 = spvUnsafeArray<float3, 6>({ float3(0.0, 0.0, 1.0), float3(0.0, 0.0, -1.0), float3(1.0, 0.0, 0.0), float3(-1.0, 0.0, 0.0), float3(0.0, 1.0, 0.0), float3(0.0, -1.0, 0.0) });
 
 struct main0_out
 {
@@ -116,153 +110,76 @@ struct main0_in
     float2 in_var_TEXCOORD3 [[user(locn3), center_no_perspective]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], constant type_UniformBuffer_3& UniformBuffer_3 [[buffer(3)]], const device type_StructuredBuffer_Block& blockBuffer [[buffer(4)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(5)]], texture2d_array<float> atlasTexture [[texture(0)]], depth2d<float> shadowTexture [[texture(1)]], texture2d<float> positionTexture [[texture(2)]], sampler atlasSampler [[sampler(0)]], sampler shadowSampler [[sampler(1)]], sampler positionSampler [[sampler(2)]])
+fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], constant type_UniformBuffer_1& UniformBuffer_1 [[buffer(1)]], constant type_UniformBuffer_2& UniformBuffer_2 [[buffer(2)]], const device type_StructuredBuffer_Block& blockBuffer [[buffer(3)]], const device type_StructuredBuffer_Light& lightBuffer [[buffer(4)]], texture2d_array<float> atlasTexture [[texture(0)]], texture2d<float> positionTexture [[texture(1)]], sampler atlasSampler [[sampler(0)]], sampler positionSampler [[sampler(1)]])
 {
     main0_out out = {};
-    uint _128 = (in.in_var_TEXCOORD2 >> 3u) & 31u;
-    uint _135 = in.in_var_TEXCOORD2 & 7u;
-    float3 _143 = float3(in.in_var_TEXCOORD1, float(blockBuffer._m0[_128].Indices[_135]));
-    float4 _147 = atlasTexture.sample(atlasSampler, _143.xy, uint(rint(_143.z)));
-    float _149 = _147.w;
-    uint _152 = uint(UniformBuffer.LightCount);
-    float3 _155;
-    _155 = float3(0.0);
-    float3 _156;
-    for (uint _158 = 0u; _158 < _152; _155 = _156, _158++)
+    uint _111 = (in.in_var_TEXCOORD2 >> 3u) & 31u;
+    uint _118 = in.in_var_TEXCOORD2 & 7u;
+    float3 _126 = float3(in.in_var_TEXCOORD1, float(blockBuffer._m0[_111].Indices[_118]));
+    float4 _130 = atlasTexture.sample(atlasSampler, _126.xy, uint(rint(_126.z)));
+    float _132 = _130.w;
+    uint _135 = uint(UniformBuffer.LightCount);
+    float3 _138;
+    _138 = float3(0.0);
+    float3 _139;
+    for (uint _141 = 0u; _141 < _135; _138 = _139, _141++)
     {
-        float _171 = float((lightBuffer._m0[_158].Color & 4278190080u) >> 24u);
-        float3 _177 = (float3(float(lightBuffer._m0[_158].X), float(lightBuffer._m0[_158].Y), float(lightBuffer._m0[_158].Z)) + float3(0.5, 0.75, 0.5)) - in.in_var_TEXCOORD0.xyz;
-        float _178 = length(_177);
-        if (_178 >= _171)
+        float _154 = float((lightBuffer._m0[_141].Color & 4278190080u) >> 24u);
+        float3 _160 = (float3(float(lightBuffer._m0[_141].X), float(lightBuffer._m0[_141].Y), float(lightBuffer._m0[_141].Z)) + float3(0.5, 0.75, 0.5)) - in.in_var_TEXCOORD0.xyz;
+        float _161 = length(_160);
+        if (_161 >= _154)
         {
-            _156 = _155;
+            _139 = _138;
             continue;
         }
-        float _185 = fast::clamp(dot(_109[_135], _177 / float3(_178)), 0.0, 1.0);
-        if (_185 <= 0.0)
+        float _168 = fast::clamp(dot(_92[_118], _160 / float3(_161)), 0.0, 1.0);
+        if (_168 <= 0.0)
         {
-            _156 = _155;
+            _139 = _138;
             continue;
         }
-        _156 = _155 + ((float3(float(lightBuffer._m0[_158].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_158].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_158].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _185) * (1.0 - smoothstep(0.0, 1.0, fast::clamp(_178 / _171, 0.0, 1.0))));
+        _139 = _138 + ((float3(float(lightBuffer._m0[_141].Color & 255u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_141].Color & 65280u) >> 8u) * 0.0039215688593685626983642578125, float((lightBuffer._m0[_141].Color & 16711680u) >> 16u) * 0.0039215688593685626983642578125) * _168) * (1.0 - smoothstep(0.0, 1.0, fast::clamp(_161 / _154, 0.0, 1.0))));
     }
-    float _328;
+    float _218;
     do
     {
-        if (UniformBuffer_3.Sun.w <= 0.0)
+        if (UniformBuffer_2.Sun.w <= 0.0)
         {
-            _328 = 0.0;
+            _218 = 0.0;
             break;
         }
-        float _225 = blockBuffer._m0[_128].SunIntensity * UniformBuffer_3.Sun.w;
-        if (blockBuffer._m0[_128].CanBeInShadow == 0u)
+        float _215;
+        if (blockBuffer._m0[_111].UseSunNormal != 0u)
         {
-            _328 = _225;
-            break;
-        }
-        float _236;
-        if (blockBuffer._m0[_128].IsOccluded != 0u)
-        {
-            _236 = fast::clamp(-dot(_109[_135], UniformBuffer_3.Sun.xyz), 0.0, 1.0);
-        }
-        else
-        {
-            _236 = 0.7070000171661376953125;
-        }
-        if (_236 <= 0.0)
-        {
-            _328 = 0.0;
-            break;
-        }
-        float4 _244 = UniformBuffer_1.ShadowTransform * float4(in.in_var_TEXCOORD0.xyz, 1.0);
-        float3 _248 = _244.xyz / float3(_244.w);
-        float2 _251 = (_248.xy * 0.5) + float2(0.5);
-        float _253 = 1.0 - _251.y;
-        float2 _254 = _251;
-        _254.y = _253;
-        float _255 = _251.x;
-        bool _260;
-        if ((isunordered(_255, 0.0) || _255 >= 0.0))
-        {
-            _260 = _255 > 1.0;
-        }
-        else
-        {
-            _260 = true;
-        }
-        bool _265;
-        if (!_260)
-        {
-            _265 = _253 < 0.0;
-        }
-        else
-        {
-            _265 = true;
-        }
-        bool _270;
-        if (!_265)
-        {
-            _270 = _253 > 1.0;
-        }
-        else
-        {
-            _270 = true;
-        }
-        bool _276;
-        if (!_270)
-        {
-            _276 = _248.z < 0.0;
-        }
-        else
-        {
-            _276 = true;
-        }
-        bool _282;
-        if (!_276)
-        {
-            _282 = _248.z > 1.0;
-        }
-        else
-        {
-            _282 = true;
-        }
-        if (_282)
-        {
-            _328 = _225 * _236;
-            break;
-        }
-        uint2 _286 = uint2(shadowTexture.get_width(), shadowTexture.get_height());
-        float2 _292 = float2(1.0) / float2(float(_286.x), float(_286.y));
-        float _295 = 0.0003000000142492353916168212890625 + (0.001000000047497451305389404296875 * (1.0 - _236));
-        float _297;
-        int _300;
-        _297 = 0.0;
-        _300 = -1;
-        float _298;
-        for (; _300 <= 1; _297 = _298, _300++)
-        {
-            _298 = _297;
-            for (int _308 = -1; _308 <= 1; )
+            float _214;
+            if (blockBuffer._m0[_111].IsOccluded != 0u)
             {
-                _298 += shadowTexture.sample_compare(shadowSampler, (_254 + (float2(float(_300), float(_308)) * _292)), _248.z - _295, level(0.0));
-                _308++;
-                continue;
+                _214 = fast::clamp(-dot(_92[_118], UniformBuffer_2.Sun.xyz), 0.0, 1.0);
             }
+            else
+            {
+                _214 = 0.7070000171661376953125;
+            }
+            _215 = _214;
         }
-        _328 = (_225 * _236) * ((mix(1.0, _297 * 0.111111111938953399658203125, smoothstep(0.0500000007450580596923828125, 0.20000000298023223876953125, UniformBuffer_3.Sun.w)) * 0.100000001490116119384765625) + 0.7070000171661376953125);
+        else
+        {
+            _215 = 1.0;
+        }
+        _218 = (blockBuffer._m0[_111].SunIntensity * UniformBuffer_2.Sun.w) * _215;
         break;
     } while(false);
-    float3 _331 = in.in_var_TEXCOORD0.xyz - UniformBuffer_2.PlayerPosition;
-    float _365;
-    if (blockBuffer._m0[_128].Indices[_135] == 16u)
+    float3 _221 = in.in_var_TEXCOORD0.xyz - UniformBuffer_1.PlayerPosition;
+    float _255;
+    if (blockBuffer._m0[_111].Indices[_118] == 16u)
     {
-        _365 = _149 + ((in.in_var_TEXCOORD0.y - positionTexture.sample(positionSampler, in.in_var_TEXCOORD3).y) * 0.100000001490116119384765625);
+        _255 = _132 + ((in.in_var_TEXCOORD0.y - positionTexture.sample(positionSampler, in.in_var_TEXCOORD3).y) * 0.100000001490116119384765625);
     }
     else
     {
-        _365 = _149;
+        _255 = _132;
     }
-    out.out_var_SV_Target0 = float4(mix(_147.xyz * ((_155 + UniformBuffer_3.Ambient.xyz) + float3(_328)), mix(UniformBuffer_3.SkyHorizon.xyz, UniformBuffer_3.SkyTop.xyz, float3((precise::atan2(_331.y, length(_331.xz)) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_2.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _365);
+    out.out_var_SV_Target0 = float4(mix(_130.xyz * ((_138 + UniformBuffer_2.Ambient.xyz) + float3(_218)), mix(UniformBuffer_2.SkyHorizon.xyz, UniformBuffer_2.SkyTop.xyz, float3((precise::atan2(_221.y, length(_221.xz)) + 1.57079637050628662109375) * 0.3183098733425140380859375)), float3(precise::min(powr(distance(in.in_var_TEXCOORD0.xz, UniformBuffer_1.PlayerPosition.xz) * 0.0040000001899898052215576171875, 2.5), 1.0))), _255);
     return out;
 }
 

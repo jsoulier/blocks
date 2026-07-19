@@ -189,28 +189,6 @@ void Camera_Update(Camera* camera)
     Frustum(camera->planes, camera->matrix);
 }
 
-void Camera_Snap(Camera* camera, int resolution)
-{
-    SDL_assert(camera->type == CAMERA_TYPE_ORTHO);
-    SDL_assert(resolution > 0);
-    Camera_Update(camera);
-    float texel = camera->ortho * 2.0f / resolution;
-    float rx = camera->view[0][0];
-    float ry = camera->view[1][0];
-    float rz = camera->view[2][0];
-    float ux = camera->view[0][1];
-    float uy = camera->view[1][1];
-    float uz = camera->view[2][1];
-    float x = rx * camera->x + ry * camera->y + rz * camera->z;
-    float y = ux * camera->x + uy * camera->y + uz * camera->z;
-    float dx = SDL_roundf(x / texel) * texel - x;
-    float dy = SDL_roundf(y / texel) * texel - y;
-    camera->x += rx * dx + ux * dy;
-    camera->y += ry * dx + uy * dy;
-    camera->z += rz * dx + uz * dy;
-    Camera_Update(camera);
-}
-
 void Camera_Move(Camera* camera, float right, float up, float forward)
 {
     float sy = SDL_sinf(camera->yaw);

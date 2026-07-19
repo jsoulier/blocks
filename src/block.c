@@ -10,8 +10,7 @@ typedef struct BlockData
     Uint32 is_solid;
     Uint32 is_sprite;
     Uint32 is_occluded;
-    Uint32 can_create_shadow;
-    Uint32 can_be_in_shadow;
+    Uint32 use_sun_normal;
     float sun_intensity;
     Light light;
     Uint32 indices[DIRECTION_COUNT];
@@ -25,8 +24,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = false,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = false,
+        .use_sun_normal = false,
         .sun_intensity = 0.0f,
         .light = {0},
         .indices = {0},
@@ -37,8 +35,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {2, 2, 2, 2, 1, 3},
@@ -49,8 +46,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {3, 3, 3, 3, 3, 3},
@@ -61,8 +57,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {5, 5, 5, 5, 5, 5},
@@ -73,8 +68,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {6, 6, 6, 6, 6, 6},
@@ -85,8 +79,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {4, 4, 4, 4, 4, 4},
@@ -97,8 +90,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {8, 8, 8, 8, 7, 7},
@@ -109,8 +101,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {10, 10, 10, 10, 10, 10},
@@ -121,8 +112,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = false,
-        .can_be_in_shadow = false,
+        .use_sun_normal = false,
         .sun_intensity = 1.0f,
         .light = {0},
         .indices = {9, 9, 9, 9, 9, 9},
@@ -133,8 +123,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {15, 15, 15, 15, 15, 15},
@@ -145,8 +134,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {13, 13, 13, 13, 13, 13},
@@ -157,8 +145,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {12, 12, 12, 12, 12, 12},
@@ -169,8 +156,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {11, 11, 11, 11, 11, 11},
@@ -181,8 +167,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {14, 14, 14, 14, 14, 14},
@@ -193,8 +178,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = false,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {16, 16, 16, 16, 16, 16},
@@ -205,8 +189,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {236, 39, 63, 15},
         .indices = {17, 17, 17, 17, 17, 17},
@@ -217,8 +200,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {90, 181, 82, 15},
         .indices = {18, 18, 18, 18, 18, 18},
@@ -229,8 +211,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {51, 136, 222, 15},
         .indices = {19, 19, 19, 19, 19, 19},
@@ -241,8 +222,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {243, 168, 51, 15},
         .indices = {20, 20, 20, 20, 20, 20},
@@ -253,8 +233,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {54, 197, 244, 15},
         .indices = {21, 21, 21, 21, 21, 21},
@@ -265,8 +244,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {250, 110, 121, 15},
         .indices = {22, 22, 22, 22, 22, 22},
@@ -277,8 +255,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = false,
         .is_sprite = true,
         .is_occluded = false,
-        .can_create_shadow = false,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {255, 255, 255, 15},
         .indices = {23, 23, 23, 23, 23, 23},
@@ -289,8 +266,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
         .is_solid = true,
         .is_sprite = false,
         .is_occluded = true,
-        .can_create_shadow = true,
-        .can_be_in_shadow = true,
+        .use_sun_normal = true,
         .sun_intensity = 0.55f,
         .light = {0},
         .indices = {24, 24, 24, 24, 24, 24},
@@ -300,7 +276,7 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
 SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device)
 {
     SDL_COMPILE_TIME_ASSERT("", sizeof(Light) == sizeof(Uint32) * 4);
-    SDL_COMPILE_TIME_ASSERT("", sizeof(BlockData) == sizeof(Uint32) * 17);
+    SDL_COMPILE_TIME_ASSERT("", sizeof(BlockData) == sizeof(Uint32) * 16);
     CPUBuffer cpu_blocks;
     GPUBuffer gpu_blocks;
     CPUBuffer_Init(&cpu_blocks, device, sizeof(BlockData));
@@ -348,16 +324,6 @@ bool Block_IsSprite(Block block)
 bool Block_IsOccluded(Block block)
 {
     return BLOCKS[block].is_occluded;
-}
-
-bool Block_CanCreateShadow(Block block)
-{
-    return BLOCKS[block].can_create_shadow;
-}
-
-bool Block_CanBeInShadow(Block block)
-{
-    return BLOCKS[block].can_be_in_shadow;
 }
 
 int Block_GetIndex(Block block, Direction direction)

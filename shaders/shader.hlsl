@@ -13,8 +13,7 @@ struct Block
     uint IsSolid;
     uint IsSprite;
     uint IsOccluded;
-    uint CanCreateShadow;
-    uint CanBeInShadow;
+    uint UseSunNormal;
     float SunIntensity;
     uint LightColor;
     int LightX;
@@ -148,56 +147,18 @@ float3 GetPointLight(StructuredBuffer<Light> lights, uint lightCount, float3 pos
     return accumulatedLight;
 }
 
-float GetSunlight(
-    Texture2D<float> shadowTexture,
-    SamplerComparisonState shadowSampler,
-    float4x4 shadowTransform,
-    float3 sunDirection,
-    float sunIntensity,
-    float3 position,
-    float3 normal,
-    Block block)
+float GetSunlight(float3 sunDirection, float sunIntensity, float3 normal, Block block)
 {
     if (sunIntensity <= 0.0f)
     {
         return 0.0f;
     }
-    float sunlight = block.SunIntensity * sunIntensity;
-    if (!block.CanBeInShadow)
+    float lightAngle = 1.0f;
+    if (block.UseSunNormal)
     {
-        return sunlight;
+        lightAngle = block.IsOccluded ? saturate(-dot(normal, sunDirection)) : 0.707f;
     }
-    float lightAngle = block.IsOccluded ? saturate(-dot(normal, sunDirection)) : 0.707f;
-    if (lightAngle <= 0.0f)
-    {
-        return 0.0f;
-    }
-    float4 shadowPosition = mul(shadowTransform, float4(position, 1.0f));
-    shadowPosition.xyz /= shadowPosition.w;
-    float2 uv = shadowPosition.xy * 0.5f + 0.5f;
-    uv.y = 1.0f - uv.y;
-    if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || shadowPosition.z < 0.0f || shadowPosition.z > 1.0f)
-    {
-        return sunlight * lightAngle;
-    }
-    uint width;
-    uint height;
-    shadowTexture.GetDimensions(width, height);
-    float2 texelSize = 1.0f / float2(width, height);
-    float bias = 0.0003f + 0.001f * (1.0f - lightAngle);
-    float shadowVisibility = 0.0f;
-    for (int x = -1; x <= 1; x++)
-    {
-        for (int y = -1; y <= 1; y++)
-        {
-            shadowVisibility +=
-                shadowTexture.SampleCmpLevelZero(shadowSampler, uv + float2(x, y) * texelSize, shadowPosition.z - bias);
-        }
-    }
-    shadowVisibility /= 9.0f;
-    float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
-    shadowVisibility = lerp(1.0f, shadowVisibility, shadowFade) * 0.1 + 0.707f;
-    return sunlight * lightAngle * shadowVisibility;
+    return block.SunIntensity * sunIntensity * lightAngle;
 }
 
 float GetFogValue(float distance)

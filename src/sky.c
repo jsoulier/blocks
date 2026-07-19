@@ -10,10 +10,6 @@ static const float DAY_END = 90.0f / 180.0f;
 static const float SUNSET_END = 120.0f / 180.0f;
 static const float SPEED = 0.1f;
 static const float AMBIENT_SCALE = 0.35f;
-static const float SHADOW_Y = 30.0f;
-static const float SHADOW_ORTHO = 300.0f;
-static const float SHADOW_FAR = 300.0f;
-static const int SHADOW_UPDATE_FRAMES = 300;
 static const float NIGHT_SKY_TOP[3] = {0.01f, 0.02f, 0.06f};
 static const float NIGHT_SKY_HORIZON[3] = {0.06f, 0.08f, 0.18f};
 static const float TWILIGHT_SKY_TOP[3] = {0.24f, 0.16f, 0.32f};
@@ -52,10 +48,6 @@ void Sky_Save(const Sky* sky)
 void Sky_Load(Sky* sky)
 {
     SDL_COMPILE_TIME_ASSERT("", offsetof(Sky, time_of_day) == sizeof(float) * 16);
-    Camera_Init(&sky->camera, CAMERA_TYPE_ORTHO);
-    sky->camera.ortho = SHADOW_ORTHO;
-    sky->camera.far = SHADOW_FAR;
-    sky->frame = 0;
     sky->time_of_day = SUNRISE_END + (DAY_END - SUNRISE_END) / 2.0f;
     float time;
     if (Save_GetSky(&time) && time >= 0.0f && time < 1.0f)
@@ -64,7 +56,7 @@ void Sky_Load(Sky* sky)
     }
 }
 
-void Sky_Update(Sky* sky, const Camera* camera, int resolution, float dt)
+void Sky_Update(Sky* sky, float dt)
 {
     sky->time_of_day += dt * SPEED / TOTAL_LENGTH;
     sky->time_of_day = SDL_fmodf(sky->time_of_day, 1.0f);
@@ -105,20 +97,8 @@ void Sky_Update(Sky* sky, const Camera* camera, int resolution, float dt)
     sky->sun[1] = -intensity;
     sky->sun[2] = -c * SDL_sqrtf(0.5f);
     sky->sun[3] = intensity;
-    sky->is_shadow_on = intensity > 0.0f;
     float ambient = SDL_clamp(intensity, 0.1f, 1.0f) * AMBIENT_SCALE;
     sky->ambient[0] *= ambient;
     sky->ambient[1] *= ambient;
     sky->ambient[2] *= ambient;
-    Camera* shadow = &sky->camera;
-    if (sky->frame == 0)
-    {
-        shadow->pitch = SDL_asinf(sky->sun[1]);
-        shadow->yaw = SDL_atan2f(sky->sun[0], -sky->sun[2]);
-    }
-    sky->frame = (sky->frame + 1) % SHADOW_UPDATE_FRAMES;
-    shadow->x = camera->x;
-    shadow->y = SHADOW_Y;
-    shadow->z = camera->z;
-    Camera_Snap(shadow, resolution);
 }

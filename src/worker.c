@@ -2,7 +2,7 @@
 
 #include "worker.h"
 
-static int Run(void* args)
+static int WorkerFunction(void* args)
 {
     Worker* worker = args;
     while (true)
@@ -44,7 +44,7 @@ void Worker_Init(Worker* worker)
     {
         SDL_Log("Failed to create condition variable: %s", SDL_GetError());
     }
-    worker->thread = SDL_CreateThread(Run, "worker", worker);
+    worker->thread = SDL_CreateThread(WorkerFunction, "worker", worker);
     if (!worker->thread)
     {
         SDL_Log("Failed to create thread: %s", SDL_GetError());
