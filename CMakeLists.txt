@@ -28,6 +28,7 @@ add_executable(blocks WIN32
     src/shader.c
     src/sky.c
     src/voxel.c
+    src/worker.c
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)

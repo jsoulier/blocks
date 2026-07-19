@@ -251,7 +251,7 @@ void Camera_GetVector(const Camera* camera, float* x, float* y, float* z)
     *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * cp;
 }
 
-bool Camera_GetVisibility(const Camera* camera, float x, float y, float z, float width, float height, float depth)
+bool Camera_IsVisible(const Camera* camera, float x, float y, float z, float width, float height, float depth)
 {
     float max_x = x + width;
     float max_y = y + height;
