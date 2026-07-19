@@ -28,13 +28,6 @@ typedef enum TaskState
     TASK_STATE_COMPLETED,
 } TaskState;
 
-typedef enum MeshType
-{
-    MESH_TYPE_OPAQUE,
-    MESH_TYPE_TRANSPARENT,
-    MESH_TYPE_COUNT,
-} MeshType;
-
 typedef struct Task
 {
     TaskType type;
@@ -46,7 +39,7 @@ typedef struct WorldWorker
 {
     Worker worker;
     Task task;
-    CPUBuffer voxels[MESH_TYPE_COUNT];
+    CPUBuffer voxels[WORLD_MESH_TYPE_COUNT];
     CPUBuffer lights;
 } WorldWorker;
 
@@ -66,50 +59,50 @@ typedef struct Chunk
     };
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     Map lights;
-    GPUBuffer gpu_voxels[MESH_TYPE_COUNT];
+    GPUBuffer gpu_voxels[WORLD_MESH_TYPE_COUNT];
     GPUBuffer gpu_lights;
 } Chunk;
 
 static SDL_GPUDevice* device;
-static int world_x;
-static int world_z;
+static Chunk* chunks[WORLD_WIDTH][WORLD_WIDTH];
 static WorldWorker all_workers[WORKERS];
 static GPUBuffer gpu_indices;
 static GPUBuffer gpu_empty_lights;
-static CPUBuffer cpu_voxels[MESH_TYPE_COUNT];
-static Chunk* chunks[WORLD_WIDTH][WORLD_WIDTH];
+static CPUBuffer cpu_voxels[WORLD_MESH_TYPE_COUNT];
 static int sorted_chunks[WORLD_WIDTH * WORLD_WIDTH][2];
-
-static bool IsBlockLocal(int bx, int by, int bz)
-{
-    return bx >= 0 && bz >= 0 && bx < CHUNK_WIDTH && bz < CHUNK_WIDTH;
-}
-
-static bool IsChunkLocal(int cx, int cz)
-{
-    return cx >= 0 && cz >= 0 && cx < WORLD_WIDTH && cz < WORLD_WIDTH;
-}
-
-static bool IsChunkOnBorder(int cx, int cz)
-{
-    return cx == 0 || cz == 0 || cx == WORLD_WIDTH - 1 || cz == WORLD_WIDTH - 1;
-}
+static int world_x;
+static int world_z;
 
 static int FloorChunkIndex(float index)
 {
     return SDL_floorf(index / CHUNK_WIDTH);
 }
 
-static void WorldToChunk(const Chunk* chunk, int* bx, int* by, int* bz)
+static bool IsBlockInChunk(int bx, int by, int bz)
+{
+    return bx >= 0 && bz >= 0 && bx < CHUNK_WIDTH && bz < CHUNK_WIDTH;
+}
+
+static bool IsChunkInWorld(int cx, int cz)
+{
+    return cx >= 0 && cz >= 0 && cx < WORLD_WIDTH && cz < WORLD_WIDTH;
+}
+
+static bool IsChunkOnWorldBorder(int cx, int cz)
+{
+    return cx == 0 || cz == 0 || cx == WORLD_WIDTH - 1 || cz == WORLD_WIDTH - 1;
+}
+
+static void WorldBlockToChunkBlock(const Chunk* chunk, int* bx, int* by, int* bz)
 {
     *bx -= chunk->x;
     *bz -= chunk->z;
-    SDL_assert(IsBlockLocal(*bx, *by, *bz));
+    SDL_assert(IsBlockInChunk(*bx, *by, *bz));
 }
 
 static Chunk* GetChunk(int cx, int cz)
 {
-    if (IsChunkLocal(cx, cz))
+    if (IsChunkInWorld(cx, cz))
     {
         return chunks[cx][cz];
     }
@@ -119,29 +112,16 @@ static Chunk* GetChunk(int cx, int cz)
     }
 }
 
-static void GetNeighborhood(int cx, int cz, Chunk* neighborhood[3][3])
+static void GetGroup(int cx, int cz, Chunk* group[3][3])
 {
-    for (int i = -1; i <= 1; i++)
-    for (int j = -1; j <= 1; j++)
+    for (int dx = -1; dx <= 1; dx++)
+    for (int dz = -1; dz <= 1; dz++)
     {
-        int x = cx + i;
-        int z = cz + j;
-        neighborhood[i + 1][j + 1] = GetChunk(x, z);
-        SDL_assert(neighborhood[i + 1][j + 1]);
+        int x = cx + dx;
+        int z = cz + dz;
+        group[dx + 1][dz + 1] = GetChunk(x, z);
+        SDL_assert(group[dx + 1][dz + 1]);
     }
-}
-
-static bool IsNeighborhoodGenerated(Chunk* neighborhood[3][3])
-{
-    for (int x = 0; x < 3; x++)
-    for (int z = 0; z < 3; z++)
-    {
-        if (SDL_GetAtomicInt(&neighborhood[x][z]->block_state) != TASK_STATE_COMPLETED)
-        {
-            return false;
-        }
-    }
-    return true;
 }
 
 static Chunk* CreateChunk()
@@ -150,12 +130,13 @@ static Chunk* CreateChunk()
     if (!chunk)
     {
         SDL_Log("Failed to allocate chunk");
+        return NULL;
     }
     SDL_SetAtomicInt(&chunk->block_state, TASK_STATE_REQUESTED);
     SDL_SetAtomicInt(&chunk->voxel_state, TASK_STATE_COMPLETED);
     SDL_SetAtomicInt(&chunk->light_state, TASK_STATE_COMPLETED);
     Map_Init(&chunk->lights, 8);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
     }
@@ -166,7 +147,7 @@ static Chunk* CreateChunk()
 static void FreeChunk(Chunk* chunk)
 {
     GPUBuffer_Free(&chunk->gpu_lights);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Free(&chunk->gpu_voxels[i]);
     }
@@ -177,7 +158,7 @@ static void FreeChunk(Chunk* chunk)
 static Block SetChunkBlock(Chunk* chunk, int bx, int by, int bz, Block block)
 {
     SDL_SetAtomicInt(&chunk->voxel_state, TASK_STATE_REQUESTED);
-    WorldToChunk(chunk, &bx, &by, &bz);
+    WorldBlockToChunkBlock(chunk, &bx, &by, &bz);
     Block old_block = chunk->blocks[bx][by][bz];
     chunk->blocks[bx][by][bz] = block;
     if (!Block_IsLight(block) && !Block_IsLight(old_block))
@@ -206,11 +187,11 @@ static void SetChunkBlockFunction(void* userdata, int bx, int by, int bz, Block 
 static Block GetChunkBlock(Chunk* chunk, int bx, int by, int bz)
 {
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == TASK_STATE_COMPLETED);
-    WorldToChunk(chunk, &bx, &by, &bz);
+    WorldBlockToChunkBlock(chunk, &bx, &by, &bz);
     return chunk->blocks[bx][by][bz];
 }
 
-static Block GetNeighborhoodBlock(Chunk* chunks[3][3], int bx, int by, int bz, int dx, int dy, int dz)
+static Block GetGroupBlock(Chunk* chunks[3][3], int bx, int by, int bz, int dx, int dy, int dz)
 {
     SDL_assert(dx >= -1 && dx <= 1);
     SDL_assert(dy >= -1 && dy <= 1);
@@ -227,7 +208,7 @@ static Block GetNeighborhoodBlock(Chunk* chunks[3][3], int bx, int by, int bz, i
     {
         return BLOCK_GRASS;
     }
-    else if (IsBlockLocal(bx, by, bz))
+    else if (IsBlockInChunk(bx, by, bz))
     {
         return chunk->blocks[bx][by][bz];
     }
@@ -259,12 +240,12 @@ static Block GetNeighborhoodBlock(Chunk* chunks[3][3], int bx, int by, int bz, i
     return neighbor->blocks[bx][by][bz];
 }
 
-static void UploadVoxels(Chunk* chunk, CPUBuffer voxels[MESH_TYPE_COUNT])
+static void UploadVoxels(Chunk* chunk, CPUBuffer voxels[WORLD_MESH_TYPE_COUNT])
 {
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == TASK_STATE_COMPLETED);
     SDL_assert(SDL_GetAtomicInt(&chunk->voxel_state) == TASK_STATE_RUNNING);
     bool has_voxels = false;
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Clear(&chunk->gpu_voxels[i]);
         has_voxels |= voxels[i].size > 0;
@@ -273,7 +254,7 @@ static void UploadVoxels(Chunk* chunk, CPUBuffer voxels[MESH_TYPE_COUNT])
     {
         return;
     }
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Upload(&chunk->gpu_voxels[i], &voxels[i]);
     }
@@ -340,9 +321,9 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
         corner[i] = offset;
     }
     SDL_assert(sides == 2);
-    bool has_side1 = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
-    bool has_side2 = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
-    bool has_corner = Block_IsOccluded(GetNeighborhoodBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
+    bool has_side1 = Block_IsOccluded(GetGroupBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
+    bool has_side2 = Block_IsOccluded(GetGroupBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
+    bool has_corner = Block_IsOccluded(GetGroupBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
     if (!has_side1 || !has_side2)
     {
         return AO_MASK - has_side1 - has_side2 - has_corner;
@@ -366,7 +347,7 @@ static void GenerateChunkBlocks(Chunk* chunk)
     SDL_SetAtomicInt(&chunk->block_state, TASK_STATE_COMPLETED);
 }
 
-static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_COUNT])
+static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[WORLD_MESH_TYPE_COUNT])
 {
     Chunk* chunk = chunks[1][1];
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == TASK_STATE_COMPLETED);
@@ -386,17 +367,17 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
             for (int vertex = 0; vertex < 4; vertex++)
             {
                 Voxel voxel = Voxel_PackSprite(block, bx, by, bz, direction, vertex);
-                CPUBuffer_Append(&voxels[MESH_TYPE_OPAQUE], &voxel);
+                CPUBuffer_Append(&voxels[WORLD_MESH_TYPE_OPAQUE], &voxel);
             }
             continue;
         }
-        MeshType type = Block_IsOpaque(block) ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
+        WorldMeshType type = Block_IsOpaque(block) ? WORLD_MESH_TYPE_OPAQUE : WORLD_MESH_TYPE_TRANSPARENT;
         for (Direction direction = 0; direction < DIRECTION_COUNT; direction++)
         {
             int dx = DIRECTIONS[direction][0];
             int dy = DIRECTIONS[direction][1];
             int dz = DIRECTIONS[direction][2];
-            Block neighbor = GetNeighborhoodBlock(chunks, bx, by, bz, dx, dy, dz);
+            Block neighbor = GetGroupBlock(chunks, bx, by, bz, dx, dy, dz);
             if (!IsVisible(block, neighbor))
             {
                 continue;
@@ -418,15 +399,6 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
     }
     UploadVoxels(chunk, voxels);
     SDL_SetAtomicInt(&chunk->voxel_state, TASK_STATE_COMPLETED);
-}
-
-static void RegenerateChunkVoxels(int x, int z)
-{
-    SDL_assert(!IsChunkOnBorder(x, z));
-    Chunk* chunks[3][3] = {0};
-    GetNeighborhood(x, z, chunks);
-    SDL_SetAtomicInt(&chunks[1][1]->voxel_state, TASK_STATE_RUNNING);
-    GenerateChunkVoxels(chunks, cpu_voxels);
 }
 
 static void GenerateChunkLights(Chunk* chunks[3][3], CPUBuffer* lights)
@@ -497,9 +469,9 @@ static void GenerateIndexBuffer()
     CPUBuffer_Free(&indices);
 }
 
-static void RunTask(void* data)
+static void TaskFunction(void* args)
 {
-    WorldWorker* worker = data;
+    WorldWorker* worker = args;
     Task task = worker->task;
     Chunk* chunk = GetChunk(task.x, task.z);
     SDL_assert(chunk);
@@ -509,7 +481,7 @@ static void RunTask(void* data)
         return;
     }
     Chunk* chunks[3][3];
-    GetNeighborhood(task.x, task.z, chunks);
+    GetGroup(task.x, task.z, chunks);
     if (task.type == TASK_TYPE_VOXELS)
     {
         GenerateChunkVoxels(chunks, worker->voxels);
@@ -524,25 +496,21 @@ static void RunTask(void* data)
     }
 }
 
-static void DispatchTask(WorldWorker* worker, Task task)
-{
-    worker->task = task;
-    Worker_Dispatch(&worker->worker, RunTask, worker);
-}
-
 static bool TryDispatchTask(int x, int z, WorldWorker* worker)
 {
-    SDL_assert(IsChunkLocal(x, z));
+    SDL_assert(IsChunkInWorld(x, z));
+    SDL_assert(!Worker_IsBusy(&worker->worker));
     Chunk* chunk = chunks[x][z];
-    Task task = {.x = x, .z = z};
+    worker->task.x = x;
+    worker->task.z = z;
     if (SDL_GetAtomicInt(&chunk->block_state) == TASK_STATE_REQUESTED)
     {
-        task.type = TASK_TYPE_BLOCKS;
+        worker->task.type = TASK_TYPE_BLOCKS;
         SDL_SetAtomicInt(&chunk->block_state, TASK_STATE_RUNNING);
     }
     else
     {
-        if (IsChunkOnBorder(x, z))
+        if (IsChunkOnWorldBorder(x, z))
         {
             return false;
         }
@@ -552,27 +520,43 @@ static bool TryDispatchTask(int x, int z, WorldWorker* worker)
         {
             return false;
         }
-        Chunk* neighborhood[3][3];
-        GetNeighborhood(x, z, neighborhood);
-        if (!IsNeighborhoodGenerated(neighborhood))
+        Chunk* group[3][3];
+        GetGroup(x, z, group);
+        for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
         {
-            return false;
+            if (SDL_GetAtomicInt(&group[i][j]->block_state) != TASK_STATE_COMPLETED)
+            {
+                return false;
+            }
         }
         if (voxels)
         {
-            task.type = TASK_TYPE_VOXELS;
+            worker->task.type = TASK_TYPE_VOXELS;
             SDL_SetAtomicInt(&chunk->voxel_state, TASK_STATE_RUNNING);
         }
         else
         {
-            task.type = TASK_TYPE_LIGHTS;
+            worker->task.type = TASK_TYPE_LIGHTS;
             SDL_SetAtomicInt(&chunk->light_state, TASK_STATE_RUNNING);
         }
     }
-    DispatchTask(worker, task);
+    Worker_Dispatch(&worker->worker, TaskFunction, worker);
     return true;
 }
 
+static int GetWorkers(WorldWorker* workers[WORKERS])
+{
+    int count = 0;
+    for (int i = 0; i < WORKERS; i++)
+    {
+        if (!Worker_IsBusy(&all_workers[i].worker))
+        {
+            workers[count++] = &all_workers[i];
+        }
+    }
+    return count;
+}
 
 void World_Init(SDL_GPUDevice* gpu_device)
 {
@@ -581,14 +565,14 @@ void World_Init(SDL_GPUDevice* gpu_device)
     world_z = SDL_MAX_SINT32;
     GPUBuffer_Init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);
     GPUBuffer_Init(&gpu_empty_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         CPUBuffer_Init(&cpu_voxels[i], device, sizeof(Voxel));
     }
     for (int i = 0; i < WORKERS; i++)
     {
         WorldWorker* worker = &all_workers[i];
-        for (int j = 0; j < MESH_TYPE_COUNT; j++)
+        for (int j = 0; j < WORLD_MESH_TYPE_COUNT; j++)
         {
             CPUBuffer_Init(&worker->voxels[j], device, sizeof(Voxel));
         }
@@ -614,9 +598,9 @@ void World_Free()
     {
         WorldWorker* worker = &all_workers[i];
         Worker_Free(&worker->worker);
-        for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
+        for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
         {
-            CPUBuffer_Free(&worker->voxels[mesh_index]);
+            CPUBuffer_Free(&worker->voxels[i]);
         }
         CPUBuffer_Free(&worker->lights);
     }
@@ -627,23 +611,10 @@ void World_Free()
     }
     GPUBuffer_Free(&gpu_indices);
     GPUBuffer_Free(&gpu_empty_lights);
-    for (int i = 0; i < MESH_TYPE_COUNT; i++)
+    for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         CPUBuffer_Free(&cpu_voxels[i]);
     }
-}
-
-static int GetIdleWorkers(WorldWorker* workers[WORKERS])
-{
-    int count = 0;
-    for (int i = 0; i < WORKERS; i++)
-    {
-        if (!Worker_IsBusy(&all_workers[i].worker))
-        {
-            workers[count++] = &all_workers[i];
-        }
-    }
-    return count;
 }
 
 static void Shuffle(int dx, int dz)
@@ -659,7 +630,7 @@ static void Shuffle(int dx, int dz)
         SDL_assert(chunks[x][z]);
         int new_x = x - dx;
         int new_z = z - dz;
-        if (IsChunkLocal(new_x, new_z))
+        if (IsChunkInWorld(new_x, new_z))
         {
             kept[new_x][new_z] = chunks[x][z];
         }
@@ -689,7 +660,7 @@ static void Shuffle(int dx, int dz)
     SDL_assert(!count);
 }
 
-static bool MoveChunks(const Camera* camera)
+static bool TryMoveChunks(const Camera* camera)
 {
     const int dx = FloorChunkIndex(camera->x) - WORLD_WIDTH / 2 - world_x;
     const int dz = FloorChunkIndex(camera->z) - WORLD_WIDTH / 2 - world_z;
@@ -698,7 +669,7 @@ static bool MoveChunks(const Camera* camera)
         return true;
     }
     WorldWorker* workers[WORKERS];
-    if (GetIdleWorkers(workers) != WORKERS)
+    if (GetWorkers(workers) != WORKERS)
     {
         return false;
     }
@@ -708,15 +679,15 @@ static bool MoveChunks(const Camera* camera)
 
 void World_Update(const Camera* camera)
 {
-    if (!MoveChunks(camera))
+    if (!TryMoveChunks(camera))
     {
         return;
     }
     WorldWorker* workers[WORKERS] = {0};
-    int count = GetIdleWorkers(workers);
+    int count = GetWorkers(workers);
     for (int i = 0; i < WORLD_WIDTH * WORLD_WIDTH; i++)
     {
-        if (count == 0)
+        if (!count)
         {
             return;
         }
@@ -730,43 +701,38 @@ void World_Update(const Camera* camera)
     }
 }
 
-static void Render(Chunk* chunk, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, WorldFlags flags)
+static void Render(Chunk* chunk, WorldMeshType type, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass)
 {
-    SDL_assert(SDL_HasExactlyOneBitSet32(flags & (WORLD_FLAGS_OPAQUE | WORLD_FLAGS_TRANSPARENT)));
-    MeshType mesh = flags & WORLD_FLAGS_OPAQUE ? MESH_TYPE_OPAQUE : MESH_TYPE_TRANSPARENT;
-    GPUBuffer* voxels = &chunk->gpu_voxels[mesh];
+    GPUBuffer* voxels = &chunk->gpu_voxels[type];
     if (!voxels->size)
     {
         return;
     }
     SDL_GPUBufferBinding voxel_binding = {0};
     SDL_GPUBufferBinding index_binding = {0};
+    SDL_GPUBuffer* lights = NULL;
+    Sint32 light_count;
     voxel_binding.buffer = voxels->buffer;
     index_binding.buffer = gpu_indices.buffer;
-    if (flags & WORLD_FLAGS_LIGHT)
+    if (SDL_GetAtomicInt(&chunk->light_state) == TASK_STATE_COMPLETED && chunk->gpu_lights.size)
     {
-        Sint32 count;
-        SDL_GPUBuffer* light_binding;
-        if (SDL_GetAtomicInt(&chunk->light_state) == TASK_STATE_COMPLETED && chunk->gpu_lights.size)
-        {
-            light_binding = chunk->gpu_lights.buffer;
-            count = chunk->gpu_lights.size;
-        }
-        else
-        {
-            light_binding = gpu_empty_lights.buffer;
-            count = 0;
-        }
-        SDL_PushGPUFragmentUniformData(command_buffer, 0, &count, sizeof(count));
-        SDL_BindGPUFragmentStorageBuffers(render_pass, 1, &light_binding, 1);
+        lights = chunk->gpu_lights.buffer;
+        light_count = chunk->gpu_lights.size;
     }
+    else
+    {
+        lights = gpu_empty_lights.buffer;
+        light_count = 0;
+    }
+    SDL_PushGPUFragmentUniformData(command_buffer, 0, &light_count, sizeof(light_count));
+    SDL_BindGPUFragmentStorageBuffers(render_pass, 1, &lights, 1);
     SDL_PushGPUVertexUniformData(command_buffer, 2, chunk->position, sizeof(chunk->position));
     SDL_BindGPUVertexBuffers(render_pass, 0, &voxel_binding, 1);
     SDL_BindGPUIndexBuffer(render_pass, &index_binding, SDL_GPU_INDEXELEMENTSIZE_32BIT);
     SDL_DrawGPUIndexedPrimitives(render_pass, voxels->size / 4 * 6, 1, 0, 0, 0);
 }
 
-void World_Render(const Camera* camera, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, WorldFlags flags)
+void World_Render(const Camera* camera, WorldMeshType type, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass)
 {
     SDL_PushGPUVertexUniformData(command_buffer, 0, camera->proj, sizeof(camera->proj));
     SDL_PushGPUVertexUniformData(command_buffer, 1, camera->view, sizeof(camera->view));
@@ -774,7 +740,7 @@ void World_Render(const Camera* camera, SDL_GPUCommandBuffer* command_buffer, SD
     {
         int cx = sorted_chunks[i][0];
         int cz = sorted_chunks[i][1];
-        if (IsChunkOnBorder(cx, cz))
+        if (IsChunkOnWorldBorder(cx, cz))
         {
             continue;
         }
@@ -787,7 +753,7 @@ void World_Render(const Camera* camera, SDL_GPUCommandBuffer* command_buffer, SD
         {
             continue;
         }
-        Render(chunk, command_buffer, render_pass, flags);
+        Render(chunk, type, command_buffer, render_pass);
     }
 }
 
@@ -842,30 +808,45 @@ void World_SetBlock(const int position[3], Block block)
     {
         return;
     }
-    int chunk_x = chunk->x / CHUNK_WIDTH - world_x;
-    int chunk_z = chunk->z / CHUNK_WIDTH - world_z;
+    int cx = chunk->x / CHUNK_WIDTH - world_x;
+    int cz = chunk->z / CHUNK_WIDTH - world_z;
+    Chunk* group[3][3] = {0};
+    for (int dx = -1; dx <= 1; dx++)
+    for (int dz = -1; dz <= 1; dz++)
+    {
+        Chunk* neighbor = GetChunk(cx + dx, cz + dz);
+        if (!neighbor ||
+            SDL_GetAtomicInt(&neighbor->block_state) != TASK_STATE_COMPLETED ||
+            SDL_GetAtomicInt(&neighbor->voxel_state) != TASK_STATE_COMPLETED ||
+            SDL_GetAtomicInt(&neighbor->light_state) != TASK_STATE_COMPLETED)
+        {
+            return;
+        }
+        group[dx + 1][dz + 1] = neighbor;
+    }
     Save_SetBlock(chunk->x, chunk->z, position[0], position[1], position[2], block);
-    int local_x = position[0];
-    int local_y = position[1];
-    int local_z = position[2];
-    WorldToChunk(chunk, &local_x, &local_y, &local_z);
+    int bx = position[0];
+    int by = position[1];
+    int bz = position[2];
+    WorldBlockToChunkBlock(chunk, &bx, &by, &bz);
     Block old_block = SetChunkBlock(chunk, position[0], position[1], position[2], block);
-    int min_x = local_x == 0 ? -1 : 0;
-    int max_x = local_x == CHUNK_WIDTH - 1 ? 1 : 0;
-    int min_z = local_z == 0 ? -1 : 0;
-    int max_z = local_z == CHUNK_WIDTH - 1 ? 1 : 0;
+    int min_x = bx == 0 ? -1 : 0;
+    int max_x = bx == CHUNK_WIDTH - 1 ? 1 : 0;
+    int min_z = bz == 0 ? -1 : 0;
+    int max_z = bz == CHUNK_WIDTH - 1 ? 1 : 0;
     for (int dx = min_x; dx <= max_x; dx++)
     for (int dz = min_z; dz <= max_z; dz++)
     {
-        int cx = chunk_x + dx;
-        int cz = chunk_z + dz;
-        if (IsChunkLocal(cx, cz) && !IsChunkOnBorder(cx, cz))
+        int x = cx + dx;
+        int z = cz + dz;
+        if (IsChunkInWorld(x, z) && !IsChunkOnWorldBorder(x, z))
         {
-            RegenerateChunkVoxels(cx, cz);
+            Chunk* chunks[3][3] = {0};
+            GetGroup(x, z, chunks);
+            SDL_SetAtomicInt(&chunks[1][1]->voxel_state, TASK_STATE_RUNNING);
+            GenerateChunkVoxels(chunks, cpu_voxels);
         }
     }
-    Chunk* neighborhood[3][3] = {0};
-    GetNeighborhood(chunk_x, chunk_z, neighborhood);
     if (!Block_IsLight(block) && !Block_IsLight(old_block))
     {
         return;
@@ -873,7 +854,7 @@ void World_SetBlock(const int position[3], Block block)
     for (int dx = 0; dx < 3; dx++)
     for (int dz = 0; dz < 3; dz++)
     {
-        SDL_SetAtomicInt(&neighborhood[dx][dz]->light_state, TASK_STATE_REQUESTED);
+        SDL_SetAtomicInt(&group[dx][dz]->light_state, TASK_STATE_REQUESTED);
     }
 }
 

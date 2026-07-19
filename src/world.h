@@ -10,12 +10,12 @@
 
 typedef struct Camera Camera;
 
-typedef enum WorldFlags
+typedef enum WorldMeshType
 {
-    WORLD_FLAGS_OPAQUE = 0x01,
-    WORLD_FLAGS_TRANSPARENT = 0x02,
-    WORLD_FLAGS_LIGHT = 0x04,
-} WorldFlags;
+    WORLD_MESH_TYPE_OPAQUE,
+    WORLD_MESH_TYPE_TRANSPARENT,
+    WORLD_MESH_TYPE_COUNT,
+} WorldMeshType;
 
 typedef struct WorldQuery
 {
@@ -27,7 +27,7 @@ typedef struct WorldQuery
 void World_Init(SDL_GPUDevice* device);
 void World_Free();
 void World_Update(const Camera* camera);
-void World_Render(const Camera* camera, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, WorldFlags flags);
+void World_Render(const Camera* camera, WorldMeshType type, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass);
 Block World_GetBlock(const int position[3]);
 void World_SetBlock(const int position[3], Block block);
 WorldQuery World_Raycast(const Camera* camera, float max_distance);

@@ -4,7 +4,7 @@
 
 static int Distance2D(void* userdata, const void* lhs, const void* rhs)
 {
-    int center = *(int*)userdata;
+    int center = *(int*) userdata;
     const int* l = lhs;
     const int* r = rhs;
     int dl = (l[0] - center) * (l[0] - center) + (l[1] - center) * (l[1] - center);

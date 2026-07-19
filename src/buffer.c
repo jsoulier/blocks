@@ -3,7 +3,7 @@
 #include "buffer.h"
 
 static _Thread_local SDL_GPUCommandBuffer* upload_command_buffer;
-static _Thread_local SDL_GPUCopyPass* upload_pass;
+static _Thread_local SDL_GPUCopyPass* upload_copy_pass;
 
 void CPUBuffer_Init(CPUBuffer* buffer, SDL_GPUDevice* device, Uint32 stride)
 {
@@ -95,7 +95,7 @@ void GPUBuffer_Free(GPUBuffer* buffer)
 bool GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
 {
     SDL_assert(upload_command_buffer);
-    SDL_assert(upload_pass);
+    SDL_assert(upload_copy_pass);
     destination->size = 0;
     if (source->data)
     {
@@ -129,7 +129,7 @@ bool GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
     location.transfer_buffer = source->buffer;
     region.buffer = destination->buffer;
     region.size = size * source->stride;
-    SDL_UploadToGPUBuffer(upload_pass, &location, &region, true);
+    SDL_UploadToGPUBuffer(upload_copy_pass, &location, &region, true);
     destination->size = size;
     return true;
 }
@@ -142,15 +142,15 @@ void GPUBuffer_Clear(GPUBuffer* buffer)
 bool GPUBuffer_BeginUpload(GPUBuffer* buffer)
 {
     SDL_assert(!upload_command_buffer);
-    SDL_assert(!upload_pass);
+    SDL_assert(!upload_copy_pass);
     upload_command_buffer = SDL_AcquireGPUCommandBuffer(buffer->device);
     if (!upload_command_buffer)
     {
         SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
         return false;
     }
-    upload_pass = SDL_BeginGPUCopyPass(upload_command_buffer);
-    if (!upload_pass)
+    upload_copy_pass = SDL_BeginGPUCopyPass(upload_command_buffer);
+    if (!upload_copy_pass)
     {
         SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
         SDL_CancelGPUCommandBuffer(upload_command_buffer);
@@ -162,10 +162,10 @@ bool GPUBuffer_BeginUpload(GPUBuffer* buffer)
 
 void GPUBuffer_EndUpload()
 {
-    SDL_assert(upload_pass);
+    SDL_assert(upload_copy_pass);
     SDL_assert(upload_command_buffer);
-    SDL_EndGPUCopyPass(upload_pass);
+    SDL_EndGPUCopyPass(upload_copy_pass);
     SDL_SubmitGPUCommandBuffer(upload_command_buffer);
-    upload_pass = NULL;
+    upload_copy_pass = NULL;
     upload_command_buffer = NULL;
 }
