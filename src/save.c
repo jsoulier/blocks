@@ -21,7 +21,7 @@ static const char* SCHEMA =
     "    id INTEGER PRIMARY KEY NOT NULL,"
     "    time_of_day REAL NOT NULL"
     ");"
-    "CREATE INDEX IF NOT EXISTS bindex ON blocks (cx, cz);";
+    "CREATE INDEX IF NOT EXISTS blocks_index ON blocks (cx, cz);";
 static const char* SET_PLAYER = "INSERT OR REPLACE INTO players (id, data) VALUES (0, ?);";
 static const char* GET_PLAYER = "SELECT data FROM players WHERE id = 0;";
 static const char* SET_SKY = "INSERT OR REPLACE INTO sky (id, time_of_day) VALUES (0, ?);";

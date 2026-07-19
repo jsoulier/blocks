@@ -7,7 +7,7 @@
 
 typedef Uint32 Voxel;
 
-Voxel PackSprite(Block block, int x, int y, int z, Direction direction, int index);
-Voxel PackCube(Block block, int x, int y, int z, Direction direction, int index, int ao);
-void GetAO(const int ao[4], int order[4]);
-void GetPosition(Direction direction, int index, int position[3]);
+void Voxel_GetPosition(Direction direction, int index, int position[3]);
+void Voxel_GetAO(const int ao[4], int order[4]);
+Voxel Voxel_PackSprite(Block block, int x, int y, int z, Direction direction, int index);
+Voxel Voxel_PackCube(Block block, int x, int y, int z, Direction direction, int index, int ao);

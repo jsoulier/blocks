@@ -5,7 +5,8 @@
 #include "voxel.h"
 #include "voxel.inc"
 
-static const int CUBE_POSITIONS[][4][3] = {
+static const int CUBE_POSITIONS[][4][3] =
+{
     {{0, 0, 1}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}},
     {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}},
     {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}},
@@ -14,7 +15,8 @@ static const int CUBE_POSITIONS[][4][3] = {
     {{0, 0, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 1}},
 };
 
-static const int TEXCOORDS[][4][2] = {
+static const int TEXCOORDS[][4][2] =
+{
     {{1, 1}, {1, 0}, {0, 1}, {0, 0}},
     {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
     {{1, 1}, {0, 1}, {1, 0}, {0, 0}},
@@ -23,16 +25,29 @@ static const int TEXCOORDS[][4][2] = {
     {{0, 0}, {0, 1}, {1, 0}, {1, 1}},
 };
 
-static const int SPRITE_POSITIONS[][4][3] = {
+static const int SPRITE_POSITIONS[][4][3] =
+{
     {{0, 0, 0}, {0, 1, 0}, {1, 0, 1}, {1, 1, 1}},
     {{0, 0, 0}, {1, 0, 1}, {0, 1, 0}, {1, 1, 1}},
     {{0, 0, 1}, {1, 0, 0}, {0, 1, 1}, {1, 1, 0}},
     {{0, 0, 1}, {0, 1, 1}, {1, 0, 0}, {1, 1, 0}},
 };
 
-static const int AO[2][4] = {{0, 1, 2, 3}, {1, 3, 0, 2}};
+void Voxel_GetPosition(Direction direction, int index, int position[3])
+{
+    SDL_assert(direction < 6);
+    SDL_assert(index < 4);
+    SDL_memcpy(position, CUBE_POSITIONS[direction][index], sizeof(int) * 3);
+}
 
-static Voxel Pack(Block block, int x, int y, int z, int u, int v, Direction direction, int ao)
+void Voxel_GetAO(const int ao[4], int order[4])
+{
+    static const int AO[2][4] = {{0, 1, 2, 3}, {1, 3, 0, 2}};
+    int index = ao[0] + ao[3] > ao[1] + ao[2];
+    SDL_memcpy(order, AO[index], sizeof(AO[index]));
+}
+
+static Voxel Voxel_Pack(Block block, int x, int y, int z, int u, int v, Direction direction, int ao)
 {
     SDL_COMPILE_TIME_ASSERT("", AO_OFFSET + AO_BITS <= 32);
     SDL_COMPILE_TIME_ASSERT("", X_OFFSET + X_BITS <= 32);
@@ -63,7 +78,7 @@ static Voxel Pack(Block block, int x, int y, int z, int u, int v, Direction dire
     return voxel;
 }
 
-Voxel PackSprite(Block block, int x, int y, int z, Direction direction, int index)
+Voxel Voxel_PackSprite(Block block, int x, int y, int z, Direction direction, int index)
 {
     SDL_assert(block > BLOCK_EMPTY);
     SDL_assert(block < BLOCK_COUNT);
@@ -71,10 +86,10 @@ Voxel PackSprite(Block block, int x, int y, int z, Direction direction, int inde
     SDL_assert(index < 4);
     const int* p = SPRITE_POSITIONS[direction][index];
     const int* t = TEXCOORDS[direction][index];
-    return Pack(block, x + p[0], y + p[1], z + p[2], t[0], t[1], DIRECTION_UP, AO_MASK);
+    return Voxel_Pack(block, x + p[0], y + p[1], z + p[2], t[0], t[1], DIRECTION_UP, AO_MASK);
 }
 
-Voxel PackCube(Block block, int x, int y, int z, Direction direction, int index, int ao)
+Voxel Voxel_PackCube(Block block, int x, int y, int z, Direction direction, int index, int ao)
 {
     SDL_assert(block > BLOCK_EMPTY);
     SDL_assert(block < BLOCK_COUNT);
@@ -82,17 +97,5 @@ Voxel PackCube(Block block, int x, int y, int z, Direction direction, int index,
     SDL_assert(index < 4);
     const int* p = CUBE_POSITIONS[direction][index];
     const int* t = TEXCOORDS[direction][index];
-    return Pack(block, x + p[0], y + p[1], z + p[2], t[0], t[1], direction, ao);
-}
-
-void GetAO(const int ao[4], int order[4])
-{
-    int index = ao[0] + ao[3] > ao[1] + ao[2];
-    SDL_memcpy(order, AO[index], sizeof(AO[index]));
-}
-
-void GetPosition(Direction direction, int index, int position[3])
-{
-    SDL_assert(direction < 6);
-    SDL_memcpy(position, CUBE_POSITIONS[direction][index], sizeof(int) * 3);
+    return Voxel_Pack(block, x + p[0], y + p[1], z + p[2], t[0], t[1], direction, ao);
 }

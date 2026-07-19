@@ -12,8 +12,6 @@
 
 #define WORKERS 4
 
-static const Uint32 MAX_INDICES = CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH * DIRECTION_COUNT * 6;
-
 typedef enum JobType
 {
     JOB_TYPE_BLOCKS,
@@ -143,9 +141,9 @@ static Chunk* CreateChunk()
     SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_REQUESTED);
     SDL_SetAtomicInt(&chunk->state, JOB_STATE_COMPLETED);
     SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_COMPLETED);
-    for (int mesh_index = 0; mesh_index < MESH_TYPE_COUNT; mesh_index++)
+    for (int i = 0; i < MESH_TYPE_COUNT; i++)
     {
-        GPUBuffer_Init(&chunk->gpu_voxels[mesh_index], device, SDL_GPU_BUFFERUSAGE_VERTEX);
+        GPUBuffer_Init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
     }
     GPUBuffer_Init(&chunk->gpu_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     return chunk;
@@ -168,9 +166,7 @@ static Block SetChunkBlock(Chunk* chunk, int bx, int by, int bz, Block block)
     WorldToChunk(chunk, &bx, &by, &bz);
     Block old_block = chunk->blocks[bx][by][bz];
     chunk->blocks[bx][by][bz] = block;
-    bool is_light = Block_IsLight(block);
-    bool was_light = Block_IsLight(old_block);
-    if (!is_light && !was_light)
+    if (!Block_IsLight(block) && !Block_IsLight(old_block))
     {
         return old_block;
     }
@@ -185,7 +181,7 @@ static Block SetChunkBlock(Chunk* chunk, int bx, int by, int bz, Block block)
             break;
         }
     }
-    if (is_light)
+    if (BLock_IsLight(block))
     {
         if (light_index < 0)
         {
@@ -341,7 +337,7 @@ static bool IsVisible(Block block, Block neighbor)
 static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction direction, int vertex)
 {
     int position[3];
-    GetPosition(direction, vertex, position);
+    Voxel_GetPosition(direction, vertex, position);
     int side1[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
     int side2[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
     int corner[3] = {DIRECTIONS[direction][0], DIRECTIONS[direction][1], DIRECTIONS[direction][2]};
@@ -412,7 +408,7 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                     {
                         for (int vertex = 0; vertex < 4; vertex++)
                         {
-                            Voxel voxel = PackSprite(block, bx, by, bz, direction, vertex);
+                            Voxel voxel = Voxel_PackSprite(block, bx, by, bz, direction, vertex);
                             CPUBuffer_Append(&voxels[MESH_TYPE_OPAQUE], &voxel);
                         }
                     }
@@ -435,11 +431,11 @@ static void GenerateChunkVoxels(Chunk* chunks[3][3], CPUBuffer voxels[MESH_TYPE_
                         ao[i] = GetAO(chunks, bx, by, bz, direction, i);
                     }
                     int order[4];
-                    GetAO(ao, order);
+                    Voxel_GetAO(ao, order);
                     for (int i = 0; i < 4; i++)
                     {
                         int index = order[i];
-                        Voxel voxel = PackCube(block, bx, by, bz, direction, index, ao[index]);
+                        Voxel voxel = Voxel_PackCube(block, bx, by, bz, direction, index, ao[index]);
                         CPUBuffer_Append(&voxels[mesh_type], &voxel);
                     }
                 }
@@ -506,7 +502,8 @@ static void GenerateIndexBuffer()
         return;
     }
     static const int INDICES[] = {0, 1, 2, 3, 2, 1};
-    for (Uint32 quad_index = 0; quad_index < MAX_INDICES / 6; quad_index++)
+    Uint32 max_indices = CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_WIDTH * DIRECTION_COUNT * 6;
+    for (Uint32 quad_index = 0; quad_index < max_indices / 6; quad_index++)
     {
         for (Uint32 index_index = 0; index_index < 6; index_index++)
         {
