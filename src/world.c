@@ -839,12 +839,17 @@ void World_SetBlock(const int position[3], Block block)
     {
         int x = cx + dx;
         int z = cz + dz;
-        if (IsChunkInWorld(x, z) && !IsChunkOnWorldBorder(x, z))
+        SDL_assert(IsChunkInWorld(x, z));
+        if (!IsChunkOnWorldBorder(x, z))
         {
             Chunk* chunks[3][3] = {0};
             GetGroup(x, z, chunks);
             SDL_SetAtomicInt(&chunks[1][1]->voxel_state, TASK_STATE_RUNNING);
             GenerateChunkVoxels(chunks, cpu_voxels);
+        }
+        else
+        {
+            SDL_SetAtomicInt(&group[dx + 1][dz + 1]->voxel_state, TASK_STATE_REQUESTED);
         }
     }
     if (!Block_IsLight(block) && !Block_IsLight(old_block))
