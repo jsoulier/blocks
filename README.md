@@ -1,6 +1,7 @@
 # Blocks
 
-![](image.png)
+![](doc/image1.png)
+![](doc/image2.png)
 
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
@@ -10,8 +11,8 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 - Asynchronous chunk loading
 - Persistent worlds
 - Physics
-- Basic lighting
 - Blocks and sprites
+- Basic lighting
 - Day and night cycle
 
 ### Building

@@ -114,7 +114,7 @@ float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, flo
         {
             continue;
         }
-        float angle = 0.707f;
+        float angle = 1.0f;
         if (!block.IsSprite)
         {
             angle = saturate(dot(normal, offset / distance));
