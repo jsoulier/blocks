@@ -1,21 +1,20 @@
 #include <SDL3/SDL.h>
 
 #include "camera.h"
-#include "check.h"
 
 #define DEGREES(rad) ((rad) * 180.0f / SDL_PI_F)
 #define RADIANS(deg) ((deg) * SDL_PI_F / 180.0f)
 
-static void multiply(float matrix[4][4], float a[4][4], float b[4][4])
+static void Multiply(float matrix[4][4], float lhs[4][4], float rhs[4][4])
 {
     float c[4][4] = {0};
     for (int i = 0; i < 4; i++)
     for (int j = 0; j < 4; j++)
     {
-        c[i][j] += a[0][j] * b[i][0];
-        c[i][j] += a[1][j] * b[i][1];
-        c[i][j] += a[2][j] * b[i][2];
-        c[i][j] += a[3][j] * b[i][3];
+        c[i][j] += lhs[0][j] * rhs[i][0];
+        c[i][j] += lhs[1][j] * rhs[i][1];
+        c[i][j] += lhs[2][j] * rhs[i][2];
+        c[i][j] += lhs[3][j] * rhs[i][3];
     }
     for (int i = 0; i < 4; i++)
     for (int j = 0; j < 4; j++)
@@ -24,7 +23,7 @@ static void multiply(float matrix[4][4], float a[4][4], float b[4][4])
     }
 }
 
-static void perspective(float matrix[4][4], float aspect, float fov, float near, float far)
+static void Perspective(float matrix[4][4], float aspect, float fov, float near, float far)
 {
     matrix[0][0] = (1.0f / SDL_tanf(fov / 2.0f)) / aspect;
     matrix[0][1] = 0.0f;
@@ -42,7 +41,7 @@ static void perspective(float matrix[4][4], float aspect, float fov, float near,
     matrix[3][3] = 0.0f;
 }
 
-static void ortho(float matrix[4][4], float left, float right, float bottom, float top, float near, float far)
+static void Ortho(float matrix[4][4], float left, float right, float bottom, float top, float near, float far)
 {
     matrix[0][0] = 2.0f / (right - left);
     matrix[0][1] = 0.0f;
@@ -62,7 +61,7 @@ static void ortho(float matrix[4][4], float left, float right, float bottom, flo
     matrix[3][3] = 1.0f;
 }
 
-static void translate(float matrix[4][4], float x, float y, float z)
+static void Translate(float matrix[4][4], float x, float y, float z)
 {
     matrix[0][0] = 1.0f;
     matrix[0][1] = 0.0f;
@@ -82,33 +81,33 @@ static void translate(float matrix[4][4], float x, float y, float z)
     matrix[3][3] = 1.0f;
 }
 
-static void frustum(float planes[6][4], float a[4][4])
+static void Frustum(float planes[6][4], float matrix[4][4])
 {
-    planes[0][0] = a[0][3] + a[0][0];
-    planes[0][1] = a[1][3] + a[1][0];
-    planes[0][2] = a[2][3] + a[2][0];
-    planes[0][3] = a[3][3] + a[3][0];
-    planes[1][0] = a[0][3] - a[0][0];
-    planes[1][1] = a[1][3] - a[1][0];
-    planes[1][2] = a[2][3] - a[2][0];
-    planes[1][3] = a[3][3] - a[3][0];
-    planes[2][0] = a[0][3] + a[0][1];
-    planes[2][1] = a[1][3] + a[1][1];
-    planes[2][2] = a[2][3] + a[2][1];
-    planes[2][3] = a[3][3] + a[3][1];
-    planes[3][0] = a[0][3] - a[0][1];
-    planes[3][1] = a[1][3] - a[1][1];
-    planes[3][2] = a[2][3] - a[2][1];
-    planes[3][3] = a[3][3] - a[3][1];
-    planes[4][0] = a[0][2];
-    planes[4][1] = a[1][2];
-    planes[4][2] = a[2][2];
-    planes[4][3] = a[3][2];
-    planes[5][0] = a[0][3] - a[0][2];
-    planes[5][1] = a[1][3] - a[1][2];
-    planes[5][2] = a[2][3] - a[2][2];
-    planes[5][3] = a[3][3] - a[3][2];
-    for (int i = 0; i < 6; ++i)
+    planes[0][0] = matrix[0][3] + matrix[0][0];
+    planes[0][1] = matrix[1][3] + matrix[1][0];
+    planes[0][2] = matrix[2][3] + matrix[2][0];
+    planes[0][3] = matrix[3][3] + matrix[3][0];
+    planes[1][0] = matrix[0][3] - matrix[0][0];
+    planes[1][1] = matrix[1][3] - matrix[1][0];
+    planes[1][2] = matrix[2][3] - matrix[2][0];
+    planes[1][3] = matrix[3][3] - matrix[3][0];
+    planes[2][0] = matrix[0][3] + matrix[0][1];
+    planes[2][1] = matrix[1][3] + matrix[1][1];
+    planes[2][2] = matrix[2][3] + matrix[2][1];
+    planes[2][3] = matrix[3][3] + matrix[3][1];
+    planes[3][0] = matrix[0][3] - matrix[0][1];
+    planes[3][1] = matrix[1][3] - matrix[1][1];
+    planes[3][2] = matrix[2][3] - matrix[2][1];
+    planes[3][3] = matrix[3][3] - matrix[3][1];
+    planes[4][0] = matrix[0][2];
+    planes[4][1] = matrix[1][2];
+    planes[4][2] = matrix[2][2];
+    planes[4][3] = matrix[3][2];
+    planes[5][0] = matrix[0][3] - matrix[0][2];
+    planes[5][1] = matrix[1][3] - matrix[1][2];
+    planes[5][2] = matrix[2][3] - matrix[2][2];
+    planes[5][3] = matrix[3][3] - matrix[3][2];
+    for (int i = 0; i < 6; i++)
     {
         float length = 0.0f;
         length += planes[i][0] * planes[i][0];
@@ -126,7 +125,7 @@ static void frustum(float planes[6][4], float a[4][4])
     }
 }
 
-static void rotate(float matrix[4][4], float x, float y, float z, float angle)
+static void Rotate(float matrix[4][4], float x, float y, float z, float angle)
 {
     float s = SDL_sinf(angle);
     float c = SDL_cosf(angle);
@@ -149,7 +148,7 @@ static void rotate(float matrix[4][4], float x, float y, float z, float angle)
     matrix[3][3] = 1.0f;
 }
 
-void camera_init(camera_t* camera, camera_type_t type)
+void Camera_Init(Camera* camera, CameraType type)
 {
     camera->type = type;
     camera->x = 0.0f;
@@ -165,51 +164,52 @@ void camera_init(camera_t* camera, camera_type_t type)
     camera->ortho = 100.0f;
 }
 
-void camera_update(camera_t* camera)
+void Camera_Update(Camera* camera)
 {
-    float s = SDL_sinf(camera->yaw);
-    float c = SDL_cosf(camera->yaw);
-    translate(camera->view, -camera->x, -camera->y, -camera->z);
-    rotate(camera->proj, c, 0.0f, s, camera->pitch);
-    multiply(camera->view, camera->proj, camera->view);
-    rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
-    multiply(camera->view, camera->proj, camera->view);
+    float sy = SDL_sinf(camera->yaw);
+    float cy = SDL_cosf(camera->yaw);
+    float rotation[4][4];
+    Translate(camera->view, -camera->x, -camera->y, -camera->z);
+    Rotate(rotation, cy, 0.0f, sy, camera->pitch);
+    Multiply(camera->view, rotation, camera->view);
+    Rotate(rotation, 0.0f, 1.0f, 0.0f, -camera->yaw);
+    Multiply(camera->view, rotation, camera->view);
     float aspect = (float) camera->width / camera->height;
     if (camera->type == CAMERA_TYPE_PERSPECTIVE)
     {
-        perspective(camera->proj, aspect, camera->fov, camera->near, camera->far);
+        Perspective(camera->proj, aspect, camera->fov, camera->near, camera->far);
     }
     else
     {
         float ox = camera->ortho * aspect;
         float oy = camera->ortho;
-        ortho(camera->proj, -ox, ox, -oy, oy, -camera->far, camera->far);
+        Ortho(camera->proj, -ox, ox, -oy, oy, -camera->far, camera->far);
     }
-    multiply(camera->matrix, camera->proj, camera->view);
-    frustum(camera->planes, camera->matrix);
+    Multiply(camera->matrix, camera->proj, camera->view);
+    Frustum(camera->planes, camera->matrix);
 }
 
-void camera_move(camera_t* camera, float x, float y, float z)
+void Camera_Move(Camera* camera, float right, float up, float forward)
 {
     float sy = SDL_sinf(camera->yaw);
     float cy = SDL_cosf(camera->yaw);
     float sp = SDL_sinf(camera->pitch);
     float cp = SDL_cosf(camera->pitch);
-    camera->x += cp * (sy * z) + cy * x;
-    camera->y += y + z * sp;
-    camera->z -= cp * (cy * z) - sy * x;
+    camera->x += cp * sy * forward + cy * right;
+    camera->y += up + forward * sp;
+    camera->z -= cp * cy * forward - sy * right;
     camera->y = SDL_clamp(camera->y, -camera->far, camera->far);
 }
 
-void camera_resize(camera_t* camera, int width, int height)
+void Camera_Resize(Camera* camera, int width, int height)
 {
-    CHECK(width > 0.0f);
-    CHECK(height > 0.0f);
+    SDL_assert(width > 0.0f);
+    SDL_assert(height > 0.0f);
     camera->width = width;
     camera->height = height;
 }
 
-void camera_rotate(camera_t* camera, float pitch, float yaw)
+void Camera_Rotate(Camera* camera, float pitch, float yaw)
 {
     static const float PITCH = SDL_PI_F / 2.0f - SDL_FLT_EPSILON;
     camera->pitch += RADIANS(pitch);
@@ -217,26 +217,26 @@ void camera_rotate(camera_t* camera, float pitch, float yaw)
     camera->pitch = SDL_clamp(camera->pitch, -PITCH, PITCH);
 }
 
-void camera_get_vector(const camera_t* camera, float* x, float* y, float* z)
+void Camera_GetVector(const Camera* camera, float* x, float* y, float* z)
 {
-    float c = SDL_cosf(camera->pitch);
-    *x = SDL_cosf(camera->yaw - RADIANS(90.0f)) * c;
+    float cp = SDL_cosf(camera->pitch);
+    *x = SDL_cosf(camera->yaw - RADIANS(90.0f)) * cp;
     *y = SDL_sinf(camera->pitch);
-    *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * c;
+    *z = SDL_sinf(camera->yaw - RADIANS(90.0f)) * cp;
 }
 
-bool camera_get_vis(const camera_t* camera, float x, float y, float z, float sx, float sy, float sz)
+bool Camera_IsVisible(const Camera* camera, float x, float y, float z, float width, float height, float depth)
 {
-    float x2 = x + sx;
-    float y2 = y + sy;
-    float z2 = z + sz;
-    for (int i = 0; i < 6; ++i)
+    float max_x = x + width;
+    float max_y = y + height;
+    float max_z = z + depth;
+    for (int i = 0; i < 6; i++)
     {
-        const float *plane = camera->planes[i];
-        float a = plane[0] >= 0.0f ? x2 : x;
-        float b = plane[1] >= 0.0f ? y2 : y;
-        float c = plane[2] >= 0.0f ? z2 : z;
-        if (plane[0] * a + plane[1] * b + plane[2] * c + plane[3] < 0.0f)
+        const float* plane = camera->planes[i];
+        float point_x = plane[0] >= 0.0f ? max_x : x;
+        float point_y = plane[1] >= 0.0f ? max_y : y;
+        float point_z = plane[2] >= 0.0f ? max_z : z;
+        if (plane[0] * point_x + plane[1] * point_y + plane[2] * point_z + plane[3] < 0.0f)
         {
             return false;
         }

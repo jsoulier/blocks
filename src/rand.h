@@ -4,6 +4,6 @@
 
 #include "block.h"
 
-typedef void (*rand_set_block_t)(void* userdata, int bx, int by, int bz, block_t block);
+typedef void (*RandSetBlock)(void* userdata, int bx, int by, int bz, Block block);
 
-void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function);
+void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock callback);

@@ -24,21 +24,21 @@ struct Output
 {
     float4 Position : SV_Position;
     float4 WorldPosition : TEXCOORD0;
-    nointerpolation float3 Normal : TEXCOORD1;
-    float3 Texcoord : TEXCOORD2;
-    nointerpolation uint Voxel : TEXCOORD3;
+    float2 Texcoord : TEXCOORD1;
+    nointerpolation uint Voxel : TEXCOORD2;
+    float AO : TEXCOORD3;
 };
 
 Output main(Input input)
 {
     Output output;
-    int3 chunkPosition = float3(ChunkPosition.x, 0.0f, ChunkPosition.y);
+    int3 chunkPosition = int3(ChunkPosition.x, 0, ChunkPosition.y);
     output.WorldPosition.xyz = GetPosition(input.Voxel) + chunkPosition;
-    output.Normal = GetNormal(input.Voxel);
     output.Position = mul(View, float4(output.WorldPosition.xyz, 1.0f));
     output.WorldPosition.w = output.Position.z;
     output.Position = mul(Proj, output.Position);
     output.Texcoord = GetTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
+    output.AO = GetAO(input.Voxel);
     return output;
 }

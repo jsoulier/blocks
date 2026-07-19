@@ -1,6 +1,7 @@
 # Blocks
 
-![](image.png)
+![](doc/image1.png)
+![](doc/image2.png)
 
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
@@ -10,9 +11,9 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 - Asynchronous chunk loading
 - Persistent worlds
 - Physics
-- Directional shadows
-- Clustered dynamic lighting
 - Blocks and sprites
+- Basic lighting
+- Day and night cycle
 
 ### Building
 
@@ -59,16 +60,4 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `Scroll` to change blocks
 - `F11` to toggle fullscreen
 - `LControl` to sprint
-
-### Passes
-
-1. Render opaques to depth texture (for shadows)
-2. Render sky to G-buffer
-3. Render opaques to G-buffer
-4. Calculate SSAO
-5. Blur SSAO
-6. Composite G-buffer
-7. Render transparents to depth teture (for predepth)
-8. Render transparents and composite
-9. Render raycast
-10. Render UI
+- `T` to reset the time of day

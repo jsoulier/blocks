@@ -8,28 +8,26 @@
 #define CHUNK_HEIGHT 240
 #define WORLD_WIDTH 20
 
-typedef struct camera camera_t;
+typedef struct Camera Camera;
 
-typedef enum world_flags
+typedef enum WorldMeshType
 {
-    WORLD_FLAGS_OPAQUE      = 0x01,
-    WORLD_FLAGS_TRANSPARENT = 0x02,
-    WORLD_FLAGS_LIGHT       = 0x04,
-}
-world_flags_t;
+    WORLD_MESH_TYPE_OPAQUE,
+    WORLD_MESH_TYPE_TRANSPARENT,
+    WORLD_MESH_TYPE_COUNT,
+} WorldMeshType;
 
-typedef struct world_query
+typedef struct WorldQuery
 {
-    block_t block;
+    Block block;
     int current[3];
     int previous[3];
-}
-world_query_t;
+} WorldQuery;
 
-void world_init(SDL_GPUDevice* device);
-void world_free();
-void world_update(const camera_t* camera);
-void world_render(const camera_t* camera, SDL_GPUCommandBuffer* cbuf, SDL_GPURenderPass* pass, world_flags_t flags);
-block_t world_get_block(const int position[3]);
-void world_set_block(const int position[3], block_t block);
-world_query_t world_raycast(const camera_t* camera, float length);
+void World_Init(SDL_GPUDevice* device);
+void World_Free();
+void World_Update(const Camera* camera);
+void World_Render(const Camera* camera, WorldMeshType type, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass);
+void World_SetBlock(const int position[3], Block block);
+Block World_GetBlock(const int position[3]);
+WorldQuery World_Raycast(const Camera* camera, float max_distance);

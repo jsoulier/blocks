@@ -4,8 +4,10 @@
 
 #include "direction.h"
 
-typedef Uint8 block_t;
-enum // block_t
+#define BLOCK_WIDTH 16
+
+typedef Uint8 Block;
+enum // Block
 {
     BLOCK_EMPTY,
 
@@ -31,28 +33,26 @@ enum // block_t
     BLOCK_MAGENTA_TORCH,
     BLOCK_WHITE_TORCH,
     BLOCK_PLANKS,
-    BLOCK_GLASS,
 
     BLOCK_COUNT,
 };
 
-typedef struct light
+typedef struct Light
 {
+    Sint32 x;
+    Sint32 y;
+    Sint32 z;
     Uint8 red;
     Uint8 green;
     Uint8 blue;
     Uint8 radius;
-    Sint32 x;
-    Sint32 y;
-    Sint32 z;
-}
-light_t;
+} Light;
 
-bool block_is_opaque(block_t block);
-bool block_is_sprite(block_t block);
-bool block_is_solid(block_t block);
-bool block_has_occlusion(block_t block);
-bool block_has_shadow(block_t block);
-int block_get_index(block_t block, direction_t direction);
-bool block_is_light(block_t block);
-light_t block_get_light(block_t block);
+SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device);
+bool Block_IsOpaque(Block block);
+bool Block_IsSolid(Block block);
+bool Block_IsSprite(Block block);
+bool Block_UseAO(Block block);
+int Block_GetIndex(Block block, Direction direction);
+bool Block_IsLight(Block block);
+Light Block_GetLight(Block block);

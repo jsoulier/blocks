@@ -4,29 +4,26 @@
 #include "rand.h"
 #include "world.h"
 
-void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
+void Rand_GetBlocks(void* userdata, int cx, int cz, RandSetBlock callback)
 {
-    for (int a = 0; a < CHUNK_WIDTH; a++)
-    for (int b = 0; b < CHUNK_WIDTH; b++)
+    for (int x = 0; x < CHUNK_WIDTH; x++)
+    for (int z = 0; z < CHUNK_WIDTH; z++)
     {
-        int x = cx + a;
-        int z = cz + b;
-        bool low = false;
-        bool grass = false;
-        float height = stb_perlin_fbm_noise3(x * 0.005f, 0.0f, z * 0.005f, 2.0f, 0.5f, 6);
-        height *= 50.0f;
-        height = SDL_powf(SDL_max(height, 0.0f), 1.3f);
-        height += 30;
-        height = SDL_clamp(height, 0, CHUNK_HEIGHT - 1);
-        if (height < 40)
+        int bx = cx + x;
+        int bz = cz + z;
+        float height = stb_perlin_fbm_noise3(bx * 0.005f, 0.0f, bz * 0.005f, 2.0f, 0.5f, 6) * 50.0f;
+        height = SDL_powf(SDL_max(height, 0.0f), 1.3f) + 30.0f;
+        height = SDL_clamp(height, 0.0f, CHUNK_HEIGHT - 1.0f);
+        bool is_low_elevation = false;
+        if (height < 40.0f)
         {
-            height += stb_perlin_fbm_noise3(-x * 0.01f, 0.0f, z * 0.01f, 2.0f, 0.5f, 6) * 12.0f;
-            low = true;
+            height += stb_perlin_fbm_noise3(-bx * 0.01f, 0.0f, bz * 0.01f, 2.0f, 0.5f, 6) * 12.0f;
+            is_low_elevation = true;
         }
-        float biome = stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 6);
-        block_t top;
-        block_t bottom;
-        if (height + biome < 31)
+        float biome = stb_perlin_fbm_noise3(bx * 0.2f, 0.0f, bz * 0.2f, 2.0f, 0.5f, 6);
+        Block top;
+        Block bottom;
+        if (height + biome < 31.0f)
         {
             top = BLOCK_SAND;
             bottom = BLOCK_SAND;
@@ -35,13 +32,12 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
         {
             biome *= 8.0f;
             biome = SDL_clamp(biome, -5.0f, 5.0f);
-            if (height + biome < 61)
+            if (height + biome < 61.0f)
             {
                 top = BLOCK_GRASS;
                 bottom = BLOCK_DIRT;
-                grass = true;
             }
-            else if (height + biome < 132)
+            else if (height + biome < 132.0f)
             {
                 top = BLOCK_STONE;
                 bottom = BLOCK_STONE;
@@ -55,22 +51,22 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
         int y = 0;
         for (; y < height; y++)
         {
-            function(userdata, x, y, z, bottom);
+            callback(userdata, bx, y, bz, bottom);
         }
-        function(userdata, x, y, z, top);
+        callback(userdata, bx, y, bz, top);
         for (; y < 30; y++)
         {
-            function(userdata, x, y, z, BLOCK_WATER);
+            callback(userdata, bx, y, bz, BLOCK_WATER);
         }
-        if (low && grass)
+        if (top == BLOCK_GRASS && is_low_elevation)
         {
-            float plant = stb_perlin_fbm_noise3(x * 0.2f, 0.0f, z * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
-            if (plant > 0.8f && a > 2 && a < CHUNK_WIDTH - 2 && b > 2 && b < CHUNK_WIDTH - 2)
+            float plant = stb_perlin_fbm_noise3(bx * 0.2f, 0.0f, bz * 0.2f, 2.0f, 0.5f, 3) * 0.5f + 0.5f;
+            if (plant > 0.8f && x > 2 && x < CHUNK_WIDTH - 2 && z > 2 && z < CHUNK_WIDTH - 2)
             {
-                int log = 3 + plant * 2.0f;
-                for (int dy = 0; dy < log; dy++)
+                int trunk = 3 + plant * 2.0f;
+                for (int dy = 0; dy < trunk; dy++)
                 {
-                    function(userdata, x, y + dy + 1, z, BLOCK_LOG);
+                    callback(userdata, bx, y + dy + 1, bz, BLOCK_LOG);
                 }
                 for (int dx = -1; dx <= 1; dx++)
                 for (int dz = -1; dz <= 1; dz++)
@@ -78,26 +74,26 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
                 {
                     if (dx || dz || dy)
                     {
-                        function(userdata, x + dx, y + log + dy, z + dz, BLOCK_LEAVES);
+                        callback(userdata, bx + dx, y + trunk + dy, bz + dz, BLOCK_LEAVES);
                     }
                 }
             }
             else if (plant > 0.55f)
             {
-                function(userdata, x, y + 1, z, BLOCK_BUSH);
+                callback(userdata, bx, y + 1, bz, BLOCK_BUSH);
             }
             else if (plant > 0.52f)
             {
-                int value = SDL_max(((int) (plant * 1000.0f)) % 4, 0);
-                block_t flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
-                function(userdata, x, y + 1, z, flowers[value]);
+                int i = (int)(plant * 1000.0f) % 4;
+                Block flowers[] = {BLOCK_BLUEBELL, BLOCK_GARDENIA, BLOCK_LAVENDER, BLOCK_ROSE};
+                callback(userdata, bx, y + 1, bz, flowers[i]);
             }
         }
-        if (height > 130)
+        if (height > 130.0f)
         {
             continue;
         }
-        float cloud = stb_perlin_turbulence_noise3(x * 0.015f, 0.0f, z * 0.015f, 2.0f, 0.5f, 6);
+        float cloud = stb_perlin_turbulence_noise3(bx * 0.015f, 0.0f, bz * 0.015f, 2.0f, 0.5f, 6);
         int scale = -1;
         if (cloud > 0.9f)
         {
@@ -107,13 +103,13 @@ void rand_get_blocks(void* userdata, int cx, int cz, rand_set_block_t function)
         {
             scale = 1;
         }
-        else if (cloud > 0.6)
+        else if (cloud > 0.6f)
         {
             scale = 0;
         }
         for (int y = -scale; y <= scale; y++)
         {
-            function(userdata, x, 155 - y, z, BLOCK_CLOUD);
+            callback(userdata, bx, 155 - y, bz, BLOCK_CLOUD);
         }
     }
 }

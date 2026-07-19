@@ -27,10 +27,14 @@ add_executable(blocks WIN32
     src/rand.c
     src/save.c
     src/shader.c
+    src/sky.c
+    src/sort.c
     src/voxel.c
+    src/worker.c
     src/world.c
 )
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
+target_compile_definitions(blocks PRIVATE SDL_ASSERT_LEVEL=$<IF:$<CONFIG:Debug>,3,0>)
 target_include_directories(blocks PUBLIC lib/jsmn)
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
@@ -86,19 +90,13 @@ function(add_shader FILE)
     endif()
     package(${JSON})
 endfunction()
-add_shader(blur.comp shaders/shader.hlsl src/voxel.inc)
-add_shader(composite.comp shaders/shader.hlsl src/voxel.inc)
-add_shader(depth.frag shaders/shader.hlsl src/voxel.inc)
-add_shader(depth.vert shaders/shader.hlsl src/voxel.inc)
+add_shader(hud.frag)
+add_shader(hud.vert)
 add_shader(opaque.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(opaque.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.vert shaders/shader.hlsl src/voxel.inc)
-add_shader(shadow.frag shaders/shader.hlsl src/voxel.inc)
-add_shader(shadow.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(sky.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(sky.vert shaders/shader.hlsl src/voxel.inc)
-add_shader(ssao.comp shaders/shader.hlsl src/voxel.inc)
 add_shader(transparent.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(transparent.vert shaders/shader.hlsl src/voxel.inc)
-add_shader(ui.comp shaders/shader.hlsl src/voxel.inc)
