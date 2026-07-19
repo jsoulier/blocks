@@ -788,19 +788,6 @@ static Chunk* GetWorldChunk(const int position[3])
     }
 }
 
-Block World_GetBlock(const int position[3])
-{
-    Chunk* chunk = GetWorldChunk(position);
-    if (chunk)
-    {
-        return GetChunkBlock(chunk, position[0], position[1], position[2]);
-    }
-    else
-    {
-        return BLOCK_EMPTY;
-    }
-}
-
 void World_SetBlock(const int position[3], Block block)
 {
     Chunk* chunk = GetWorldChunk(position);
@@ -860,6 +847,19 @@ void World_SetBlock(const int position[3], Block block)
     for (int dz = 0; dz < 3; dz++)
     {
         SDL_SetAtomicInt(&group[dx][dz]->light_state, TASK_STATE_REQUESTED);
+    }
+}
+
+Block World_GetBlock(const int position[3])
+{
+    Chunk* chunk = GetWorldChunk(position);
+    if (chunk)
+    {
+        return GetChunkBlock(chunk, position[0], position[1], position[2]);
+    }
+    else
+    {
+        return BLOCK_EMPTY;
     }
 }
 

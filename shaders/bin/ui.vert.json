@@ -1,1 +1,0 @@
-{ "samplers": 0, "storage_textures": 0, "storage_buffers": 0, "uniform_buffers": 1, "inputs": [], "outputs": [{ "name": "out.var.TEXCOORD0", "type": "float2", "location": 0 }, { "name": "out.var.TEXCOORD1", "type": "uint", "location": 1 }, { "name": "out.var.TEXCOORD2", "type": "uint", "location": 2 }] }

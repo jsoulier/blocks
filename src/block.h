@@ -4,6 +4,8 @@
 
 #include "direction.h"
 
+#define BLOCK_WIDTH 16
+
 typedef Uint8 Block;
 enum // Block
 {

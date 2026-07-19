@@ -27,8 +27,15 @@ typedef struct Camera
     };
     float pitch;
     float yaw;
-    Sint32 width;
-    Sint32 height;
+    union
+    {
+        struct
+        {
+            Sint32 width;
+            Sint32 height;
+        };
+        Sint32 size[2];
+    };
     float fov;
     float near;
     float far;
