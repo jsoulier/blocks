@@ -321,9 +321,9 @@ static int GetAO(Chunk* chunks[3][3], int bx, int by, int bz, Direction directio
         corner[i] = offset;
     }
     SDL_assert(sides == 2);
-    bool has_side1 = Block_IsOccluded(GetGroupBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
-    bool has_side2 = Block_IsOccluded(GetGroupBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
-    bool has_corner = Block_IsOccluded(GetGroupBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
+    bool has_side1 = Block_UseAO(GetGroupBlock(chunks, bx, by, bz, side1[0], side1[1], side1[2]));
+    bool has_side2 = Block_UseAO(GetGroupBlock(chunks, bx, by, bz, side2[0], side2[1], side2[2]));
+    bool has_corner = Block_UseAO(GetGroupBlock(chunks, bx, by, bz, corner[0], corner[1], corner[2]));
     if (!has_side1 || !has_side2)
     {
         return AO_MASK - has_side1 - has_side2 - has_corner;

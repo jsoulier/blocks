@@ -6,13 +6,13 @@
 
 typedef struct BlockData
 {
+    Light light;
     Uint32 is_opaque;
     Uint32 is_solid;
     Uint32 is_sprite;
-    Uint32 is_occluded;
+    Uint32 use_ao;
     Uint32 use_sun_normal;
     float sun_intensity;
-    Light light;
     Uint32 indices[DIRECTION_COUNT];
 } BlockData;
 
@@ -20,255 +20,255 @@ static const BlockData BLOCKS[BLOCK_COUNT] =
 {
     [BLOCK_EMPTY] =
     {
+        .light = {0},
         .is_opaque = false,
         .is_solid = false,
         .is_sprite = false,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = false,
         .sun_intensity = 0.0f,
-        .light = {0},
         .indices = {0},
     },
     [BLOCK_GRASS] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {2, 2, 2, 2, 1, 3},
     },
     [BLOCK_DIRT] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {3, 3, 3, 3, 3, 3},
     },
     [BLOCK_SAND] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {5, 5, 5, 5, 5, 5},
     },
     [BLOCK_SNOW] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {6, 6, 6, 6, 6, 6},
     },
     [BLOCK_STONE] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {4, 4, 4, 4, 4, 4},
     },
     [BLOCK_LOG] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {8, 8, 8, 8, 7, 7},
     },
     [BLOCK_LEAVES] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {10, 10, 10, 10, 10, 10},
     },
     [BLOCK_CLOUD] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = false,
         .sun_intensity = 1.0f,
-        .light = {0},
         .indices = {9, 9, 9, 9, 9, 9},
     },
     [BLOCK_BUSH] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {15, 15, 15, 15, 15, 15},
     },
     [BLOCK_BLUEBELL] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {13, 13, 13, 13, 13, 13},
     },
     [BLOCK_GARDENIA] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {12, 12, 12, 12, 12, 12},
     },
     [BLOCK_ROSE] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {11, 11, 11, 11, 11, 11},
     },
     [BLOCK_LAVENDER] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {14, 14, 14, 14, 14, 14},
     },
     [BLOCK_WATER] =
     {
+        .light = {0},
         .is_opaque = false,
         .is_solid = false,
         .is_sprite = false,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {16, 16, 16, 16, 16, 16},
     },
     [BLOCK_RED_TORCH] =
     {
+        .light = {0, 0, 0, 236, 39, 63, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {236, 39, 63, 15},
         .indices = {17, 17, 17, 17, 17, 17},
     },
     [BLOCK_GREEN_TORCH] =
     {
+        .light = {0, 0, 0, 90, 181, 82, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {90, 181, 82, 15},
         .indices = {18, 18, 18, 18, 18, 18},
     },
     [BLOCK_BLUE_TORCH] =
     {
+        .light = {0, 0, 0, 51, 136, 222, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {51, 136, 222, 15},
         .indices = {19, 19, 19, 19, 19, 19},
     },
     [BLOCK_YELLOW_TORCH] =
     {
+        .light = {0, 0, 0, 243, 168, 51, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {243, 168, 51, 15},
         .indices = {20, 20, 20, 20, 20, 20},
     },
     [BLOCK_CYAN_TORCH] =
     {
+        .light = {0, 0, 0, 54, 197, 244, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {54, 197, 244, 15},
         .indices = {21, 21, 21, 21, 21, 21},
     },
     [BLOCK_MAGENTA_TORCH] =
     {
+        .light = {0, 0, 0, 250, 110, 121, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {250, 110, 121, 15},
         .indices = {22, 22, 22, 22, 22, 22},
     },
     [BLOCK_WHITE_TORCH] =
     {
+        .light = {0, 0, 0, 255, 255, 255, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
-        .is_occluded = false,
+        .use_ao = false,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {255, 255, 255, 15},
         .indices = {23, 23, 23, 23, 23, 23},
     },
     [BLOCK_PLANKS] =
     {
+        .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
-        .is_occluded = true,
+        .use_ao = true,
         .use_sun_normal = true,
         .sun_intensity = 0.55f,
-        .light = {0},
         .indices = {24, 24, 24, 24, 24, 24},
     },
 };
@@ -321,9 +321,9 @@ bool Block_IsSprite(Block block)
     return BLOCKS[block].is_sprite;
 }
 
-bool Block_IsOccluded(Block block)
+bool Block_UseAO(Block block)
 {
-    return BLOCKS[block].is_occluded;
+    return BLOCKS[block].use_ao;
 }
 
 int Block_GetIndex(Block block, Direction direction)

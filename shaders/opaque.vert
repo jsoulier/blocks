@@ -26,7 +26,7 @@ struct Output
     float4 WorldPosition : TEXCOORD0;
     float2 Texcoord : TEXCOORD1;
     nointerpolation uint Voxel : TEXCOORD2;
-    float Occlusion : TEXCOORD3;
+    float AO : TEXCOORD3;
 };
 
 Output main(Input input)
@@ -39,6 +39,6 @@ Output main(Input input)
     output.Position = mul(Proj, output.Position);
     output.Texcoord = GetTexcoord(input.Voxel);
     output.Voxel = input.Voxel;
-    output.Occlusion = GetOcclusion(input.Voxel);
+    output.AO = GetAO(input.Voxel);
     return output;
 }

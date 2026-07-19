@@ -39,20 +39,20 @@ enum // Block
 
 typedef struct Light
 {
+    Sint32 x;
+    Sint32 y;
+    Sint32 z;
     Uint8 red;
     Uint8 green;
     Uint8 blue;
     Uint8 radius;
-    Sint32 x;
-    Sint32 y;
-    Sint32 z;
 } Light;
 
 SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device);
 bool Block_IsOpaque(Block block);
 bool Block_IsSolid(Block block);
 bool Block_IsSprite(Block block);
-bool Block_IsOccluded(Block block);
+bool Block_UseAO(Block block);
 int Block_GetIndex(Block block, Direction direction);
 bool Block_IsLight(Block block);
 Light Block_GetLight(Block block);
