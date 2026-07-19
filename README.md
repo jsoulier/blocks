@@ -10,7 +10,6 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 - Asynchronous chunk loading
 - Persistent worlds
 - Physics
-- Directional shadows
 - Clustered dynamic lighting
 - Blocks and sprites
 - Day and night cycle

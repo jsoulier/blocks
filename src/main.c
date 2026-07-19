@@ -630,6 +630,7 @@ static bool Resize(int width, int height)
 
 static void RenderShadowPass(SDL_GPUCommandBuffer* cbuf)
 {
+    return;
     if (!sky.is_shadow_on)
     {
         return;

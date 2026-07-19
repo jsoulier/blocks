@@ -196,7 +196,7 @@ float GetSunlight(
     }
     shadowVisibility /= 9.0f;
     float shadowFade = smoothstep(0.05f, 0.2f, sunIntensity);
-    shadowVisibility = lerp(1.0f, shadowVisibility, shadowFade);
+    shadowVisibility = lerp(1.0f, shadowVisibility, shadowFade) * 0.1 + 0.707f;
     return sunlight * lightAngle * shadowVisibility;
 }
 

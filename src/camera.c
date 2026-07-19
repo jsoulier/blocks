@@ -174,7 +174,7 @@ void Camera_Update(Camera* camera)
     Multiply(camera->view, rotation, camera->view);
     Rotate(rotation, 0.0f, 1.0f, 0.0f, -camera->yaw);
     Multiply(camera->view, rotation, camera->view);
-    float aspect = (float)camera->width / camera->height;
+    float aspect = (float) camera->width / camera->height;
     if (camera->type == CAMERA_TYPE_PERSPECTIVE)
     {
         Perspective(camera->proj, aspect, camera->fov, camera->near, camera->far);

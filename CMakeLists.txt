@@ -22,6 +22,7 @@ add_executable(blocks WIN32
     src/buffer.c
     src/camera.c
     src/main.c
+    src/map.c
     src/player.c
     src/rand.c
     src/save.c

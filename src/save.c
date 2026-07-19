@@ -181,7 +181,7 @@ bool Save_GetSky(float* time_of_day)
     bool has_sky = sqlite3_step(get_sky) == SQLITE_ROW;
     if (has_sky)
     {
-        *time_of_day = (float)sqlite3_column_double(get_sky, 0);
+        *time_of_day = sqlite3_column_double(get_sky, 0);
     }
     sqlite3_reset(get_sky);
     SDL_UnlockMutex(mutex);

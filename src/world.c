@@ -3,6 +3,7 @@
 #include "block.h"
 #include "buffer.h"
 #include "camera.h"
+#include "map.h"
 #include "rand.h"
 #include "save.h"
 #include "voxel.h"
@@ -63,9 +64,7 @@ typedef struct Chunk
         Sint32 position[2];
     };
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
-    Light* lights;
-    int light_size;
-    int light_capacity;
+    Map lights;
     GPUBuffer gpu_voxels[MESH_TYPE_COUNT];
     GPUBuffer gpu_lights;
 } Chunk;
@@ -141,6 +140,7 @@ static Chunk* CreateChunk()
     SDL_SetAtomicInt(&chunk->block_state, JOB_STATE_REQUESTED);
     SDL_SetAtomicInt(&chunk->state, JOB_STATE_COMPLETED);
     SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_COMPLETED);
+    Map_Init(&chunk->lights, 8);
     for (int i = 0; i < MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
@@ -156,7 +156,7 @@ static void FreeChunk(Chunk* chunk)
     {
         GPUBuffer_Free(&chunk->gpu_voxels[i]);
     }
-    SDL_free(chunk->lights);
+    Map_Free(&chunk->lights);
     SDL_free(chunk);
 }
 
@@ -171,43 +171,13 @@ static Block SetChunkBlock(Chunk* chunk, int bx, int by, int bz, Block block)
         return old_block;
     }
     SDL_SetAtomicInt(&chunk->light_state, JOB_STATE_REQUESTED);
-    int light_index = -1;
-    for (int index = 0; index < chunk->light_size; index++)
+    if (Block_IsLight(block))
     {
-        Light* light = &chunk->lights[index];
-        if (light->x == chunk->x + bx && light->y == by && light->z == chunk->z + bz)
-        {
-            light_index = index;
-            break;
-        }
+        Map_Set(&chunk->lights, bx, by, bz, block);
     }
-    if (BLock_IsLight(block))
+    else
     {
-        if (light_index < 0)
-        {
-            if (chunk->light_size == chunk->light_capacity)
-            {
-                int capacity = SDL_max(8, chunk->light_capacity * 2);
-                Light* lights = SDL_realloc(chunk->lights, capacity * sizeof(Light));
-                if (!lights)
-                {
-                    SDL_Log("Failed to allocate chunk lights");
-                    return old_block;
-                }
-                chunk->lights = lights;
-                chunk->light_capacity = capacity;
-            }
-            light_index = chunk->light_size++;
-        }
-        Light light = Block_GetLight(block);
-        light.x = chunk->x + bx;
-        light.y = by;
-        light.z = chunk->z + bz;
-        chunk->lights[light_index] = light;
-    }
-    else if (light_index >= 0)
-    {
-        chunk->lights[light_index] = chunk->lights[--chunk->light_size];
+        Map_Remove(&chunk->lights, bx, by, bz);
     }
     return old_block;
 }
@@ -379,7 +349,7 @@ static void GenerateChunkBlocks(Chunk* chunk)
     SDL_assert(SDL_GetAtomicInt(&chunk->state) == JOB_STATE_REQUESTED);
     SDL_assert(SDL_GetAtomicInt(&chunk->light_state) == JOB_STATE_REQUESTED);
     SDL_memset(chunk->blocks, 0, sizeof(chunk->blocks));
-    chunk->light_size = 0;
+    Map_Clear(&chunk->lights);
     Rand_GetBlocks(chunk, chunk->x, chunk->z, SetChunkBlockFunction);
     Save_GetBlocks(chunk, chunk->x, chunk->z, SetChunkBlockFunction);
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == JOB_STATE_RUNNING);
@@ -466,9 +436,20 @@ static void GenerateChunkLights(Chunk* chunks[3][3], CPUBuffer* lights)
         {
             const Chunk* neighbor = chunks[x][z];
             SDL_assert(neighbor);
-            for (int light_index = 0; light_index < neighbor->light_size; light_index++)
+            for (Uint32 light_index = 0; light_index < neighbor->lights.capacity; light_index++)
             {
-                CPUBuffer_Append(lights, &neighbor->lights[light_index]);
+                if (!Map_IsRowValid(&neighbor->lights, light_index))
+                {
+                    continue;
+                }
+                MapRow row = Map_GetRow(&neighbor->lights, light_index);
+                Block block = row.value;
+                SDL_assert(Block_IsLight(block));
+                Light light = Block_GetLight(block);
+                light.x = neighbor->x + row.x;
+                light.y = row.y;
+                light.z = neighbor->z + row.z;
+                CPUBuffer_Append(lights, &light);
             }
         }
     }
