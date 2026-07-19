@@ -9,21 +9,17 @@ static void Multiply(float matrix[4][4], float lhs[4][4], float rhs[4][4])
 {
     float c[4][4] = {0};
     for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 4; j++)
     {
-        for (int j = 0; j < 4; j++)
-        {
-            c[i][j] += lhs[0][j] * rhs[i][0];
-            c[i][j] += lhs[1][j] * rhs[i][1];
-            c[i][j] += lhs[2][j] * rhs[i][2];
-            c[i][j] += lhs[3][j] * rhs[i][3];
-        }
+        c[i][j] += lhs[0][j] * rhs[i][0];
+        c[i][j] += lhs[1][j] * rhs[i][1];
+        c[i][j] += lhs[2][j] * rhs[i][2];
+        c[i][j] += lhs[3][j] * rhs[i][3];
     }
     for (int i = 0; i < 4; i++)
+    for (int j = 0; j < 4; j++)
     {
-        for (int j = 0; j < 4; j++)
-        {
-            matrix[i][j] = c[i][j];
-        }
+        matrix[i][j] = c[i][j];
     }
 }
 

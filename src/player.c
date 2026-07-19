@@ -39,17 +39,13 @@ static bool IsColliding(const float position[3])
         max[i] = SDL_floorf(position[i] + AABB[1][i] - EPSILON);
     }
     for (int bx = min[0]; bx <= max[0]; bx++)
+    for (int by = min[1]; by <= max[1]; by++)
+    for (int bz = min[2]; bz <= max[2]; bz++)
     {
-        for (int by = min[1]; by <= max[1]; by++)
+        int block[3] = {bx, by, bz};
+        if (Block_IsSolid(World_GetBlock(block)))
         {
-            for (int bz = min[2]; bz <= max[2]; bz++)
-            {
-                int block[3] = {bx, by, bz};
-                if (Block_IsSolid(World_GetBlock(block)))
-                {
-                    return true;
-                }
-            }
+            return true;
         }
     }
     return false;
@@ -170,9 +166,8 @@ void Player_Move(Player* player, float dt)
         }
         else
         {
-            float blend = SDL_min(1.0f, AIR_ACCELERATION * dt);
-            player->velocity[0] += (dx - player->velocity[0]) * blend;
-            player->velocity[2] += (dz - player->velocity[2]) * blend;
+            player->velocity[0] += (dx - player->velocity[0]) * AIR_ACCELERATION * dt;
+            player->velocity[2] += (dz - player->velocity[2]) * AIR_ACCELERATION * dt;
         }
         if (keys[SDL_SCANCODE_SPACE] && player->is_on_ground)
         {

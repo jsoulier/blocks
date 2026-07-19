@@ -65,25 +65,22 @@ static const float kAO[4] = {0.4f, 0.6f, 0.8f, 1.0f};
 
 float GetOcclusion(uint voxel)
 {
-    return kAO[(voxel >> VOXEL_AO_OFFSET) & VOXEL_AO_MASK];
+    return kAO[(voxel >> AO_OFFSET) & AO_MASK];
 }
 
 uint GetDirection(uint voxel)
 {
-    return (voxel >> VOXEL_DIRECTION_OFFSET) & VOXEL_DIRECTION_MASK;
+    return (voxel >> DIRECTION_OFFSET) & DIRECTION_MASK;
 }
 
 uint GetBlockIndex(uint voxel)
 {
-    return (voxel >> VOXEL_BLOCK_OFFSET) & VOXEL_BLOCK_MASK;
+    return (voxel >> BLOCK_OFFSET) & BLOCK_MASK;
 }
 
 float3 GetPosition(uint voxel)
 {
-    return float3(
-        (voxel >> VOXEL_X_OFFSET) & VOXEL_X_MASK,
-        (voxel >> VOXEL_Y_OFFSET) & VOXEL_Y_MASK,
-        (voxel >> VOXEL_Z_OFFSET) & VOXEL_Z_MASK);
+    return float3((voxel >> X_OFFSET) & X_MASK, (voxel >> Y_OFFSET) & Y_MASK, (voxel >> Z_OFFSET) & Z_MASK);
 }
 
 uint GetAtlasIndex(uint voxel, Block block)
@@ -93,7 +90,7 @@ uint GetAtlasIndex(uint voxel, Block block)
 
 float2 GetTexcoord(uint voxel)
 {
-    return float2((voxel >> VOXEL_U_OFFSET) & VOXEL_U_MASK, (voxel >> VOXEL_V_OFFSET) & VOXEL_V_MASK);
+    return float2((voxel >> U_OFFSET) & U_MASK, (voxel >> V_OFFSET) & V_MASK);
 }
 
 float3 GetNormal(uint voxel)
