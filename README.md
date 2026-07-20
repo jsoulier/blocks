@@ -1,7 +1,6 @@
 # Blocks
 
-![](doc/image1.png)
-![](doc/image2.png)
+![](image.png)
 
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 

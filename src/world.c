@@ -6,7 +6,6 @@
 #include "map.h"
 #include "rand.h"
 #include "save.h"
-#include "sort.h"
 #include "voxel.h"
 #include "voxel.inc"
 #include "worker.h"
@@ -72,6 +71,16 @@ static CPUBuffer cpu_voxels[WORLD_MESH_TYPE_COUNT];
 static int sorted_chunks[WORLD_WIDTH * WORLD_WIDTH][2];
 static int world_x;
 static int world_z;
+
+static int SortFunction(void* userdata, const void* lhs, const void* rhs)
+{
+    int center = *(int*) userdata;
+    const int* l = lhs;
+    const int* r = rhs;
+    int dl = (l[0] - center) * (l[0] - center) + (l[1] - center) * (l[1] - center);
+    int dr = (r[0] - center) * (r[0] - center) + (r[1] - center) * (r[1] - center);
+    return (dl > dr) - (dl < dr);
+}
 
 static int FloorChunkIndex(float index)
 {
@@ -587,7 +596,8 @@ void World_Init(SDL_GPUDevice* gpu_device)
         sorted_chunks[index][0] = x;
         sorted_chunks[index][1] = z;
     }
-    Sort_Distance2D(sorted_chunks, WORLD_WIDTH * WORLD_WIDTH, WORLD_WIDTH / 2);
+    int center = WORLD_WIDTH / 2;
+    SDL_qsort_r(sorted_chunks, WORLD_WIDTH * WORLD_WIDTH, sizeof(int) * 2, SortFunction, &center);
     GenerateEmptyLightBuffer();
     GenerateIndexBuffer();
 }

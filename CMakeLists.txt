@@ -28,7 +28,6 @@ add_executable(blocks WIN32
     src/save.c
     src/shader.c
     src/sky.c
-    src/sort.c
     src/voxel.c
     src/worker.c
     src/world.c
@@ -79,9 +78,11 @@ function(add_shader FILE)
             COMMENT ${BINARY}
         )
         string(REPLACE . _ NAME ${NAME})
-        set(NAME package_${NAME})
-        add_custom_target(${NAME} DEPENDS ${BINARY})
-        add_dependencies(blocks ${NAME})
+        add_custom_target(package_${NAME} DEPENDS ${BINARY})
+        add_dependencies(blocks package_${NAME})
+        if(TARGET compile_${NAME})
+            add_dependencies(package_${NAME} compile_${NAME})
+        endif()
     endfunction()
     if(APPLE)
         package(${MSL})

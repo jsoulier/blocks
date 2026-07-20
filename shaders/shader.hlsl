@@ -113,7 +113,8 @@ float3 GetSky(float3 position, float3 top, float3 horizon)
 
 float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, float3 normal, Material material)
 {
-    static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
+    static const float3 kOffset = float3(0.0f, 0.5f, 0.0f);
+    static const float kMinAngle = 0.25f;
     float3 final = float3(0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < count; i++)
     {
@@ -125,15 +126,7 @@ float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, flo
         {
             continue;
         }
-        float angle = 1.0f;
-        if (!material.IsSprite)
-        {
-            angle = saturate(dot(normal, offset / distance));
-        }
-        if (angle <= 0.0f)
-        {
-            continue;
-        }
+        float angle = lerp(kMinAngle, 1.0f, saturate(dot(normal, offset / distance)));
         float attenuation = 1.0f - smoothstep(0.0f, 1.0f, saturate(distance / radius));
         float3 color;
         color.r = ((light.Color & 0x000000FF) >> 0) / 255.0f;

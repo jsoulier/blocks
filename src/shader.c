@@ -57,117 +57,52 @@ SDL_GPUShader* Shader_Load(SDL_GPUDevice* device, const char* name)
         SDL_Log("Failed to parse json: %s", shader_json_path);
         return NULL;
     }
-    void* shader = NULL;
-    if (SDL_strstr(name, ".comp"))
+    SDL_GPUShaderCreateInfo info = {0};
+    for (int i = 1; i < tokens; i += 2)
     {
-        SDL_GPUComputePipelineCreateInfo info = {0};
-        for (int i = 1; i < tokens; i += 2)
+        if (json_tokens[i].type != JSMN_STRING)
         {
-            if (json_tokens[i].type != JSMN_STRING)
-            {
-                continue;
-            }
-            char* key_string = shader_json_data + json_tokens[i + 0].start;
-            char* value_string = shader_json_data + json_tokens[i + 1].start;
-            int key_size = json_tokens[i + 0].end - json_tokens[i + 0].start;
-            Uint32* value;
-            if (!SDL_memcmp("samplers", key_string, key_size))
-            {
-                value = &info.num_samplers;
-            }
-            else if (!SDL_memcmp("readonly_storage_textures", key_string, key_size))
-            {
-                value = &info.num_readonly_storage_textures;
-            }
-            else if (!SDL_memcmp("readonly_storage_buffers", key_string, key_size))
-            {
-                value = &info.num_readonly_storage_buffers;
-            }
-            else if (!SDL_memcmp("readwrite_storage_textures", key_string, key_size))
-            {
-                value = &info.num_readwrite_storage_textures;
-            }
-            else if (!SDL_memcmp("readwrite_storage_buffers", key_string, key_size))
-            {
-                value = &info.num_readwrite_storage_buffers;
-            }
-            else if (!SDL_memcmp("uniform_buffers", key_string, key_size))
-            {
-                value = &info.num_uniform_buffers;
-            }
-            else if (!SDL_memcmp("threadcount_x", key_string, key_size))
-            {
-                value = &info.threadcount_x;
-            }
-            else if (!SDL_memcmp("threadcount_y", key_string, key_size))
-            {
-                value = &info.threadcount_y;
-            }
-            else if (!SDL_memcmp("threadcount_z", key_string, key_size))
-            {
-                value = &info.threadcount_z;
-            }
-            else
-            {
-                continue;
-            }
-            *value = *value_string - '0';
+            continue;
         }
-        info.code = shader_data;
-        info.code_size = shader_size;
-        info.entrypoint = entrypoint;
-        info.format = format;
-        shader = SDL_CreateGPUComputePipeline(device, &info);
-    }
-    else
-    {
-        SDL_GPUShaderCreateInfo info = {0};
-        for (int i = 1; i < tokens; i += 2)
+        char* key_string = shader_json_data + json_tokens[i + 0].start;
+        char* value_string = shader_json_data + json_tokens[i + 1].start;
+        int key_size = json_tokens[i + 0].end - json_tokens[i + 0].start;
+        Uint32* value;
+        if (!SDL_memcmp("samplers", key_string, key_size))
         {
-            if (json_tokens[i].type != JSMN_STRING)
-            {
-                continue;
-            }
-            char* key_string = shader_json_data + json_tokens[i + 0].start;
-            char* value_string = shader_json_data + json_tokens[i + 1].start;
-            int key_size = json_tokens[i + 0].end - json_tokens[i + 0].start;
-            Uint32* value;
-            if (!SDL_memcmp("samplers", key_string, key_size))
-            {
-                value = &info.num_samplers;
-            }
-            else if (!SDL_memcmp("storage_textures", key_string, key_size))
-            {
-                value = &info.num_storage_textures;
-            }
-            else if (!SDL_memcmp("storage_buffers", key_string, key_size))
-            {
-                value = &info.num_storage_buffers;
-            }
-            else if (!SDL_memcmp("uniform_buffers", key_string, key_size))
-            {
-                value = &info.num_uniform_buffers;
-            }
-            else
-            {
-                continue;
-            }
-            *value = *value_string - '0';
+            value = &info.num_samplers;
         }
-        info.code = shader_data;
-        info.code_size = shader_size;
-        info.entrypoint = entrypoint;
-        info.format = format;
-        if (SDL_strstr(name, ".frag"))
+        else if (!SDL_memcmp("storage_textures", key_string, key_size))
         {
-            info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+            value = &info.num_storage_textures;
+        }
+        else if (!SDL_memcmp("storage_buffers", key_string, key_size))
+        {
+            value = &info.num_storage_buffers;
+        }
+        else if (!SDL_memcmp("uniform_buffers", key_string, key_size))
+        {
+            value = &info.num_uniform_buffers;
         }
         else
         {
-            info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+            continue;
         }
-        shader = SDL_CreateGPUShader(device, &info);
+        *value = *value_string - '0';
     }
+    info.code = shader_data;
+    info.code_size = shader_size;
+    info.entrypoint = entrypoint;
+    info.format = format;
+    if (SDL_strstr(name, ".frag"))
+    {
+        info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+    }
+    else
+    {
+        info.stage = SDL_GPU_SHADERSTAGE_VERTEX;
+    }
+    SDL_GPUShader* shader = SDL_CreateGPUShader(device, &info);
     if (!shader)
     {
         SDL_Log("Failed to create shader: %s", SDL_GetError());
