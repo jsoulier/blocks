@@ -1,5 +1,5 @@
-#ifndef INC
-#define INC
+#ifndef VOXEL_INC
+#define VOXEL_INC
 
 #define AO_BITS 2
 #define DIRECTION_BITS 3
