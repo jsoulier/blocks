@@ -18,7 +18,7 @@ struct Output
 Output main(uint vertexID : SV_VertexID)
 {
     Output output;
-    float3 position = GetCubePosition(vertexID) * 1.02f;
+    float3 position = GetCubePosition(vertexID) * 1.025f;
     position += BlockPosition + 0.5f;
     output.Position = mul(Transform, float4(position, 1.0f));
     return output;

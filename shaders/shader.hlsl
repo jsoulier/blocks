@@ -6,7 +6,8 @@
 
 static const float kEpsilon = 0.001f;
 static const float kPi = 3.14159265f;
-static const uint kWater = 16;
+static const uint kBlockCloud = 8;
+static const uint kBlockWater = 14;
 
 struct Light
 {
@@ -14,16 +15,16 @@ struct Light
     uint Color;
 };
 
-struct Block
+struct Material
 {
+    uint Indices[6];
+    uint Padding0;
+    uint Padding1;
     Light _Light;
     uint IsOpaque;
     uint IsSolid;
     uint IsSprite;
     uint UseAO;
-    uint UseSunNormal;
-    float SunIntensity;
-    uint Indices[6];
 };
 
 static const float3 kCubePositions[8] =
@@ -65,14 +66,14 @@ uint GetDirection(uint voxel)
     return (voxel >> DIRECTION_OFFSET) & DIRECTION_MASK;
 }
 
-uint GetBlockIndex(uint voxel)
+uint GetBlock(uint voxel)
 {
     return (voxel >> BLOCK_OFFSET) & BLOCK_MASK;
 }
 
-uint GetAtlasIndex(uint voxel, Block block)
+uint GetAtlasIndex(uint voxel, Material material)
 {
-    return block.Indices[GetDirection(voxel)];
+    return material.Indices[GetDirection(voxel)];
 }
 
 float3 GetPosition(uint voxel)
@@ -100,7 +101,17 @@ float GetAO(uint voxel)
     return kAO[(voxel >> AO_OFFSET) & AO_MASK];
 }
 
-float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, float3 normal, Block block)
+float GetFog(float distance)
+{
+    return min(pow(distance / 250.0f, 2.5f), 1.0f);
+}
+
+float3 GetSky(float3 position, float3 top, float3 horizon)
+{
+    return lerp(horizon, top, (atan2(position.y, length(position.xz)) + kPi / 2.0f) / kPi);
+}
+
+float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, float3 normal, Material material)
 {
     static const float3 kOffset = float3(0.0f, 0.25f, 0.0f);
     float3 final = float3(0.0f, 0.0f, 0.0f);
@@ -115,7 +126,7 @@ float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, flo
             continue;
         }
         float angle = 1.0f;
-        if (!block.IsSprite)
+        if (!material.IsSprite)
         {
             angle = saturate(dot(normal, offset / distance));
         }
@@ -133,28 +144,23 @@ float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, flo
     return final;
 }
 
-float GetSunlight(float3 direction, float intensity, float3 normal, Block block)
+float GetSunlight(float3 direction, float intensity, float3 normal, uint block)
 {
+    static const float kIntensity = 0.55f;
     if (intensity <= 0.0f)
     {
         return 0.0f;
     }
-    float angle = 1.0f;
-    if (block.UseSunNormal)
+    float ratio = 0.0f;
+    if (block == kBlockCloud)
     {
-        angle = saturate(-dot(normal, direction));
+        ratio = 1.0f;
     }
-    return block.SunIntensity * intensity * angle;
-}
-
-float GetFogValue(float distance)
-{
-    return min(pow(distance / 250.0f, 2.5f), 1.0f);
-}
-
-float3 GetSkyColor(float3 position, float3 top, float3 horizon)
-{
-    return lerp(horizon, top, (atan2(position.y, length(position.xz)) + kPi / 2.0f) / kPi);
+    else
+    {
+        ratio = saturate(-dot(normal, direction));
+    }
+    return kIntensity * intensity * ratio;
 }
 
 #endif

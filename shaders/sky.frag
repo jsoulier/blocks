@@ -22,7 +22,7 @@ cbuffer UniformBuffer : register(b0, space3)
 Output main(Input input)
 {
     Output output;
-    output.Color = float4(GetSkyColor(input.LocalPosition, SkyTop.xyz, SkyHorizon.xyz), 1.0f);
+    output.Color = float4(GetSky(input.LocalPosition, SkyTop.xyz, SkyHorizon.xyz), 1.0f);
     output.Position = float4(0.0f, 0.0f, 0.0f, 0.0f);
     return output;
 }

@@ -4,282 +4,236 @@
 #include "buffer.h"
 #include "direction.h"
 
-typedef struct BlockData
+typedef struct Material
 {
+    Uint32 indices[DIRECTION_COUNT];
+    Uint32 padding0;
+    Uint32 padding1;
     Light light;
     Uint32 is_opaque;
     Uint32 is_solid;
     Uint32 is_sprite;
     Uint32 use_ao;
-    Uint32 use_sun_normal;
-    float sun_intensity;
-    Uint32 indices[DIRECTION_COUNT];
-} BlockData;
+} Material;
 
-static const BlockData BLOCKS[BLOCK_COUNT] =
+static const Material BLOCKS[BLOCK_COUNT] =
 {
     [BLOCK_EMPTY] =
     {
+        .indices = {0},
         .light = {0},
         .is_opaque = false,
         .is_solid = false,
         .is_sprite = false,
         .use_ao = false,
-        .use_sun_normal = false,
-        .sun_intensity = 0.0f,
-        .indices = {0},
     },
     [BLOCK_GRASS] =
     {
+        .indices = {2, 2, 2, 2, 1, 3},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {2, 2, 2, 2, 1, 3},
     },
     [BLOCK_DIRT] =
     {
+        .indices = {3, 3, 3, 3, 3, 3},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {3, 3, 3, 3, 3, 3},
     },
     [BLOCK_SAND] =
     {
+        .indices = {5, 5, 5, 5, 5, 5},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {5, 5, 5, 5, 5, 5},
     },
     [BLOCK_SNOW] =
     {
+        .indices = {6, 6, 6, 6, 6, 6},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {6, 6, 6, 6, 6, 6},
     },
     [BLOCK_STONE] =
     {
+        .indices = {4, 4, 4, 4, 4, 4},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {4, 4, 4, 4, 4, 4},
     },
     [BLOCK_LOG] =
     {
+        .indices = {8, 8, 8, 8, 7, 7},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {8, 8, 8, 8, 7, 7},
     },
     [BLOCK_LEAVES] =
     {
+        .indices = {10, 10, 10, 10, 10, 10},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {10, 10, 10, 10, 10, 10},
     },
     [BLOCK_CLOUD] =
     {
+        .indices = {9, 9, 9, 9, 9, 9},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = false,
-        .sun_intensity = 1.0f,
-        .indices = {9, 9, 9, 9, 9, 9},
     },
     [BLOCK_BUSH] =
     {
+        .indices = {15, 15, 15, 15, 15, 15},
         .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {15, 15, 15, 15, 15, 15},
     },
     [BLOCK_BLUEBELL] =
     {
+        .indices = {13, 13, 13, 13, 13, 13},
         .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {13, 13, 13, 13, 13, 13},
     },
     [BLOCK_GARDENIA] =
     {
+        .indices = {12, 12, 12, 12, 12, 12},
         .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {12, 12, 12, 12, 12, 12},
     },
     [BLOCK_ROSE] =
     {
+        .indices = {11, 11, 11, 11, 11, 11},
         .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {11, 11, 11, 11, 11, 11},
     },
     [BLOCK_LAVENDER] =
     {
+        .indices = {14, 14, 14, 14, 14, 14},
         .light = {0},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {14, 14, 14, 14, 14, 14},
     },
     [BLOCK_WATER] =
     {
+        .indices = {16, 16, 16, 16, 16, 16},
         .light = {0},
         .is_opaque = false,
         .is_solid = false,
         .is_sprite = false,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {16, 16, 16, 16, 16, 16},
     },
     [BLOCK_RED_TORCH] =
     {
+        .indices = {17, 17, 17, 17, 17, 17},
         .light = {0, 0, 0, 236, 39, 63, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {17, 17, 17, 17, 17, 17},
     },
     [BLOCK_GREEN_TORCH] =
     {
+        .indices = {18, 18, 18, 18, 18, 18},
         .light = {0, 0, 0, 90, 181, 82, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {18, 18, 18, 18, 18, 18},
     },
     [BLOCK_BLUE_TORCH] =
     {
+        .indices = {19, 19, 19, 19, 19, 19},
         .light = {0, 0, 0, 51, 136, 222, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {19, 19, 19, 19, 19, 19},
     },
     [BLOCK_YELLOW_TORCH] =
     {
+        .indices = {20, 20, 20, 20, 20, 20},
         .light = {0, 0, 0, 243, 168, 51, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {20, 20, 20, 20, 20, 20},
     },
     [BLOCK_CYAN_TORCH] =
     {
+        .indices = {21, 21, 21, 21, 21, 21},
         .light = {0, 0, 0, 54, 197, 244, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {21, 21, 21, 21, 21, 21},
     },
     [BLOCK_MAGENTA_TORCH] =
     {
+        .indices = {22, 22, 22, 22, 22, 22},
         .light = {0, 0, 0, 250, 110, 121, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {22, 22, 22, 22, 22, 22},
     },
     [BLOCK_WHITE_TORCH] =
     {
+        .indices = {23, 23, 23, 23, 23, 23},
         .light = {0, 0, 0, 255, 255, 255, 15},
         .is_opaque = true,
         .is_solid = false,
         .is_sprite = true,
         .use_ao = false,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {23, 23, 23, 23, 23, 23},
     },
     [BLOCK_PLANKS] =
     {
+        .indices = {24, 24, 24, 24, 24, 24},
         .light = {0},
         .is_opaque = true,
         .is_solid = true,
         .is_sprite = false,
         .use_ao = true,
-        .use_sun_normal = true,
-        .sun_intensity = 0.55f,
-        .indices = {24, 24, 24, 24, 24, 24},
     },
 };
 
 SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device)
 {
     SDL_COMPILE_TIME_ASSERT("", sizeof(Light) == sizeof(Uint32) * 4);
-    SDL_COMPILE_TIME_ASSERT("", sizeof(BlockData) == sizeof(Uint32) * 16);
+    SDL_COMPILE_TIME_ASSERT("", sizeof(Material) == sizeof(Uint32) * 16);
     CPUBuffer cpu_blocks;
     GPUBuffer gpu_blocks;
-    CPUBuffer_Init(&cpu_blocks, device, sizeof(BlockData));
+    CPUBuffer_Init(&cpu_blocks, device, sizeof(Material));
     GPUBuffer_Init(&gpu_blocks, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     if (!GPUBuffer_BeginUpload(&gpu_blocks))
     {
@@ -287,9 +241,9 @@ SDL_GPUBuffer* Block_GetBuffer(SDL_GPUDevice* device)
         GPUBuffer_Free(&gpu_blocks);
         return NULL;
     }
-    for (int block_index = 0; block_index < BLOCK_COUNT; block_index++)
+    for (int i = 0; i < BLOCK_COUNT; i++)
     {
-        CPUBuffer_Append(&cpu_blocks, &BLOCKS[block_index]);
+        CPUBuffer_Append(&cpu_blocks, &BLOCKS[i]);
     }
     if (!GPUBuffer_Upload(&gpu_blocks, &cpu_blocks))
     {
