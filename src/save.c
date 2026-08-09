@@ -3,6 +3,7 @@
 
 #include "save.h"
 
+static const char* NAME = "blocks.sqlite3";
 static const char* SCHEMA =
     "CREATE TABLE IF NOT EXISTS players ("
     "    id INT PRIMARY KEY NOT NULL,"
@@ -58,8 +59,17 @@ static bool Prepare(sqlite3_stmt** statement, const char* sql, const char* name)
     return true;
 }
 
-bool Save_Init(const char* path)
+bool Save_Init()
 {
+    char* pref_path = SDL_GetPrefPath(NULL, "blocks");
+    if (!pref_path)
+    {
+        SDL_Log("Failed to get pref path: %s", SDL_GetError());
+        return false;
+    }
+    char path[1024] = {0};
+    SDL_snprintf(path, sizeof(path), "%s%s", pref_path, NAME);
+    SDL_free(pref_path);
     if (sqlite3_open(path, &handle))
     {
         SDL_Log("Failed to open %s database: %s", path, sqlite3_errmsg(handle));
@@ -110,6 +120,18 @@ void Save_Free()
     set_block = NULL;
     get_blocks = NULL;
     mutex = NULL;
+}
+
+void Save_Commit()
+{
+    if (!handle)
+    {
+        return;
+    }
+    SDL_LockMutex(mutex);
+    sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
+    sqlite3_exec(handle, "BEGIN;", NULL, NULL, NULL);
+    SDL_UnlockMutex(mutex);
 }
 
 void Save_SetPlayer(const void* data, int size)

@@ -6,8 +6,9 @@
 
 typedef void (*SaveSetBlock)(void* userdata, int bx, int by, int bz, Block block);
 
-bool Save_Init(const char* path);
+bool Save_Init();
 void Save_Free();
+void Save_Commit();
 void Save_SetPlayer(const void* data, int size);
 bool Save_GetPlayer(void* data, int size);
 void Save_SetSky(float time_of_day);

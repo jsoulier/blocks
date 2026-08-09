@@ -1,0 +1,43 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = 'com.jsoulier.blocks'
+    compileSdk 35
+    ndkVersion '28.2.13676358'
+    defaultConfig {
+        applicationId 'com.jsoulier.blocks'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_PLATFORM=android-24', '-DANDROID_STL=c++_static'
+                abiFilters 'arm64-v8a', 'x86_64'
+            }
+        }
+    }
+    androidResources {
+        noCompress.addAll(['spv', 'json'])
+    }
+    externalNativeBuild {
+        cmake {
+            path '../../CMakeLists.txt'
+            version '3.22.1+'
+        }
+    }
+    sourceSets.main {
+        def sdl = '../../lib/SDL/android-project/app/src/main'
+        java.srcDirs += "$sdl/java"
+        res.srcDirs += "$sdl/res"
+    }
+    applicationVariants.all { variant ->
+        tasks["merge${variant.name.capitalize()}Assets"]
+            .dependsOn("externalNativeBuild${variant.name.capitalize()}")
+    }
+    lint {
+        abortOnError = false
+    }
+}

@@ -42,12 +42,18 @@ cd bin
 ./blocks
 ```
 
+#### Android
+
+Open `android/` in Android Studio and press `Run`.
+
 #### Shaders
 
 Shaders are precompiled.
 To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
 
 ### Controls
+
+#### Desktop
 
 - `WASDEQ` to move
 - `Space` to jump

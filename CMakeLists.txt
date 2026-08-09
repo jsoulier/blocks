@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 3.24)
 project(blocks)
 
-set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINARY_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
+if(ANDROID)
+    set(BINARY_DIR ${CMAKE_SOURCE_DIR}/android/app/src/main/assets)
+else()
+    set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINARY_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
+endif()
 make_directory(${BINARY_DIR})
-
-configure_file(LICENSE.txt ${BINARY_DIR} COPYONLY)
-configure_file(README.md ${BINARY_DIR} COPYONLY)
 configure_file(textures/atlas.png ${BINARY_DIR} COPYONLY)
 
-add_subdirectory(lib/SDL)
-add_executable(blocks WIN32
+set(SRC
     lib/sqlite3/sqlite3.c
     lib/stb/stb.c
     src/block.c
@@ -32,6 +32,14 @@ add_executable(blocks WIN32
     src/worker.c
     src/world.c
 )
+
+add_subdirectory(lib/SDL)
+if(ANDROID)
+    add_library(blocks SHARED ${SRC})
+    set_target_properties(blocks PROPERTIES OUTPUT_NAME main)
+else()
+    add_executable(blocks WIN32 ${SRC})
+endif()
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
 target_compile_definitions(blocks PRIVATE SDL_ASSERT_LEVEL=$<IF:$<CONFIG:Debug>,3,0>)
 target_include_directories(blocks PUBLIC lib/jsmn)

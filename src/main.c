@@ -10,8 +10,8 @@
 #include "sky.h"
 #include "world.h"
 
-static const char* SAVE_PATH = "blocks.sqlite3";
 static const int MIP_LEVELS = 4;
+static const Uint64 SAVE_INTERVAL = 10000;
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
 
 static SDL_Window* window;
@@ -33,7 +33,8 @@ static SDL_GPUBuffer* block_buffer;
 static SDL_GPUSampler* nearest_sampler;
 static Sky sky;
 static Player player;
-static Uint64 ticks1;
+static Uint64 last_ticks;
+static Uint64 save_ticks;
 
 static bool CreateAtlas()
 {
@@ -341,11 +342,15 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
         SDL_Log("Failed to create window: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    SDL_PropertiesID device_props = SDL_CreateProperties();
+    SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, true);
+    SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, true);
 #ifndef NDEBUG
-    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, true, NULL);
-#else
-    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL, false, NULL);
+    SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, true);
 #endif
+    SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_FEATURE_CLIP_DISTANCE_BOOLEAN, false);
+    device = SDL_CreateGPUDeviceWithProperties(device_props);
+    SDL_DestroyProperties(device_props);
     if (!device)
     {
         SDL_Log("Failed to create device: %s", SDL_GetError());
@@ -402,13 +407,14 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     }
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
     SetWindowIcon();
-    Save_Init(SAVE_PATH);
+    Save_Init();
     Sky_Load(&sky);
     World_Init(device);
     Player_Load(&player);
     Sky_Update(&sky, 0.0f);
     World_Update(&player.camera);
-    ticks1 = SDL_GetTicks();
+    last_ticks = SDL_GetTicks();
+    save_ticks = last_ticks;
     return SDL_APP_CONTINUE;
 }
 
@@ -643,9 +649,9 @@ static void Render()
 
 SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 {
-    Uint64 ticks2 = SDL_GetTicks();
-    float dt = ticks2 - ticks1;
-    ticks1 = ticks2;
+    Uint64 ticks = SDL_GetTicks();
+    float dt = ticks - last_ticks;
+    last_ticks = ticks;
     if (SDL_GetWindowRelativeMouseMode(window))
     {
         Player_Move(&player, dt);
@@ -653,6 +659,13 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     }
     World_Update(&player.camera);
     Render();
+    if (ticks - save_ticks >= SAVE_INTERVAL)
+    {
+        save_ticks = ticks;
+        Player_Save(&player);
+        Sky_Save(&sky);
+        Save_Commit();
+    }
     return SDL_APP_CONTINUE;
 }
 
