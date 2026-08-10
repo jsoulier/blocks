@@ -4,6 +4,8 @@
 
 #include "block.h"
 #include "camera.h"
+#include "hud.inc"
+#include "input.h"
 #include "player.h"
 #include "save.h"
 #include "shader.h"
@@ -12,7 +14,14 @@
 
 static const int MIP_LEVELS = 4;
 static const Uint64 SAVE_INTERVAL = 10000;
+static const Uint64 LOAD_INTERVAL = 500;
+#if defined(SDL_PLATFORM_ANDROID) || defined(SDL_PLATFORM_IOS)
+static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_1;
+static const SDL_GPUTextureFormat POSITION_FORMAT = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
+#else
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
+static const SDL_GPUTextureFormat POSITION_FORMAT = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
+#endif
 
 static SDL_Window* window;
 static SDL_GPUDevice* device;
@@ -35,6 +44,7 @@ static Sky sky;
 static Player player;
 static Uint64 last_ticks;
 static Uint64 save_ticks;
+static Uint64 load_ticks;
 
 static bool CreateAtlas()
 {
@@ -172,7 +182,7 @@ static bool CreateOpaquePipeline()
 {
     SDL_GPUColorTargetDescription color_targets[2] = {0};
     color_targets[0].format = color_format;
-    color_targets[1].format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
+    color_targets[1].format = POSITION_FORMAT;
     SDL_GPUVertexAttribute vertex_attributes[1] = {0};
     SDL_GPUVertexBufferDescription vertex_buffers[1] = {0};
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_UINT;
@@ -239,7 +249,7 @@ static bool CreateSkyPipeline()
 {
     SDL_GPUColorTargetDescription color_targets[2] = {0};
     color_targets[0].format = color_format;
-    color_targets[1].format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
+    color_targets[1].format = POSITION_FORMAT;
     SDL_GPUGraphicsPipelineCreateInfo info = {0};
     info.vertex_shader = Shader_Load(device, "sky.vert");
     info.fragment_shader = Shader_Load(device, "sky.frag");
@@ -408,6 +418,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_FlashWindow(window, SDL_FLASH_BRIEFLY);
     SetWindowIcon();
     Save_Init();
+    Input_Init(window);
     Sky_Load(&sky);
     World_Init(device);
     Player_Load(&player);
@@ -415,6 +426,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     World_Update(&player.camera);
     last_ticks = SDL_GetTicks();
     save_ticks = last_ticks;
+    load_ticks = last_ticks;
     return SDL_APP_CONTINUE;
 }
 
@@ -470,13 +482,18 @@ static bool Resize(int width, int height)
         return false;
     }
     info.sample_count = SDL_GPU_SAMPLECOUNT_1;
-    info.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
+    info.format = POSITION_FORMAT;
     info.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     position_texture = SDL_CreateGPUTexture(device, &info);
     if (!position_texture)
     {
         SDL_Log("Failed to create position texture: %s", SDL_GetError());
         return false;
+    }
+    if (SAMPLE_COUNT == SDL_GPU_SAMPLECOUNT_1)
+    {
+        Camera_Resize(&player.camera, width, height);
+        return true;
     }
     info.format = color_format;
     info.sample_count = SAMPLE_COUNT;
@@ -487,7 +504,7 @@ static bool Resize(int width, int height)
         SDL_Log("Failed to create multisample color texture: %s", SDL_GetError());
         return false;
     }
-    info.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
+    info.format = POSITION_FORMAT;
     msaa_position_texture = SDL_CreateGPUTexture(device, &info);
     if (!msaa_position_texture)
     {
@@ -498,19 +515,28 @@ static bool Resize(int width, int height)
     return true;
 }
 
-static void RenderOpaquePass(SDL_GPUCommandBuffer* command_buffer)
+static void RenderOpaquePass(SDL_GPUCommandBuffer* command_buffer, SDL_GPUTexture* swapchain_texture)
 {
     SDL_GPUColorTargetInfo color_info[2] = {0};
     color_info[0].load_op = SDL_GPU_LOADOP_CLEAR;
-    color_info[0].texture = msaa_color_texture;
-    color_info[0].cycle = true;
     color_info[0].store_op = SDL_GPU_STOREOP_STORE;
     color_info[1].load_op = SDL_GPU_LOADOP_CLEAR;
-    color_info[1].texture = msaa_position_texture;
     color_info[1].cycle = true;
-    color_info[1].store_op = SDL_GPU_STOREOP_RESOLVE;
-    color_info[1].resolve_texture = position_texture;
-    color_info[1].cycle_resolve_texture = true;
+    if (SAMPLE_COUNT != SDL_GPU_SAMPLECOUNT_1)
+    {
+        color_info[0].texture = msaa_color_texture;
+        color_info[0].cycle = true;
+        color_info[1].texture = msaa_position_texture;
+        color_info[1].store_op = SDL_GPU_STOREOP_RESOLVE;
+        color_info[1].resolve_texture = position_texture;
+        color_info[1].cycle_resolve_texture = true;
+    }
+    else
+    {
+        color_info[0].texture = swapchain_texture;
+        color_info[1].texture = position_texture;
+        color_info[1].store_op = SDL_GPU_STOREOP_STORE;
+    }
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_CLEAR;
     depth_info.stencil_load_op = SDL_GPU_LOADOP_CLEAR;
@@ -549,12 +575,20 @@ static void RenderTransparentPass(SDL_GPUCommandBuffer* command_buffer, SDL_GPUT
 {
     SDL_GPUColorTargetInfo color_info = {0};
     color_info.load_op = SDL_GPU_LOADOP_LOAD;
-    color_info.texture = msaa_color_texture;
-    color_info.store_op = SDL_GPU_STOREOP_RESOLVE;
-    color_info.resolve_texture = swapchain_texture;
+    if (SAMPLE_COUNT != SDL_GPU_SAMPLECOUNT_1)
+    {
+        color_info.texture = msaa_color_texture;
+        color_info.store_op = SDL_GPU_STOREOP_RESOLVE;
+        color_info.resolve_texture = swapchain_texture;
+    }
+    else
+    {
+        color_info.texture = swapchain_texture;
+        color_info.store_op = SDL_GPU_STOREOP_STORE;
+    }
     SDL_GPUDepthStencilTargetInfo depth_info = {0};
     depth_info.load_op = SDL_GPU_LOADOP_LOAD;
-    depth_info.store_op = SDL_GPU_STOREOP_STORE;
+    depth_info.store_op = SDL_GPU_STOREOP_DONT_CARE;
     depth_info.texture = depth_texture;
     SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &color_info, 1, &depth_info);
     if (!render_pass)
@@ -599,6 +633,16 @@ static void RenderHudPass(SDL_GPUCommandBuffer* command_buffer, SDL_GPUTexture* 
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
+    float safe[4];
+    Input_GetSafeArea(safe);
+    Sint32 uniforms[8] = {0};
+    uniforms[0] = player.camera.width;
+    uniforms[1] = player.camera.height;
+    uniforms[2] = Input_GetDevice() == INPUT_DEVICE_TOUCH;
+    for (int i = 0; i < 4; i++)
+    {
+        uniforms[4 + i] = safe[i];
+    }
     Uint32 block = Block_GetIndex(player.block, DIRECTION_NORTH);
     SDL_GPUTextureSamplerBinding sampler_binding = {0};
     sampler_binding.texture = atlas_texture;
@@ -606,9 +650,9 @@ static void RenderHudPass(SDL_GPUCommandBuffer* command_buffer, SDL_GPUTexture* 
     SDL_PushGPUDebugGroup(command_buffer, "ui");
     SDL_BindGPUGraphicsPipeline(render_pass, hud_pipeline);
     SDL_BindGPUFragmentSamplers(render_pass, 0, &sampler_binding, 1);
-    SDL_PushGPUVertexUniformData(command_buffer, 0, &player.camera.size, sizeof(player.camera.size));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, uniforms, sizeof(uniforms));
     SDL_PushGPUFragmentUniformData(command_buffer, 0, &block, sizeof(block));
-    SDL_DrawGPUPrimitives(render_pass, 6, 3, 0, 0);
+    SDL_DrawGPUPrimitives(render_pass, 6, HUD_INSTANCE_COUNT, 0, 0);
     SDL_PopGPUDebugGroup(command_buffer);
     SDL_EndGPURenderPass(render_pass);
 }
@@ -641,7 +685,7 @@ static void Render()
         return;
     }
     Camera_Update(&player.camera);
-    RenderOpaquePass(command_buffer);
+    RenderOpaquePass(command_buffer, swapchain_texture);
     RenderTransparentPass(command_buffer, swapchain_texture);
     RenderHudPass(command_buffer, swapchain_texture);
     SDL_SubmitGPUCommandBuffer(command_buffer);
@@ -652,12 +696,19 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     Uint64 ticks = SDL_GetTicks();
     float dt = ticks - last_ticks;
     last_ticks = ticks;
-    if (SDL_GetWindowRelativeMouseMode(window))
+    if (ticks - load_ticks < LOAD_INTERVAL)
     {
-        Player_Move(&player, dt);
-        Sky_Update(&sky, dt / 1000.0f);
+        World_Update(&player.camera);
+        return SDL_APP_CONTINUE;
+    }
+    if (Input_GetResetSky())
+    {
+        Sky_Reset(&sky);
     }
     World_Update(&player.camera);
+    Player_Update(&player, dt);
+    Sky_Update(&sky, dt / 1000.0f);
+    Input_Update();
     Render();
     if (ticks - save_ticks >= SAVE_INTERVAL)
     {
@@ -671,59 +722,5 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
 
 SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
 {
-    switch (event->type)
-    {
-    case SDL_EVENT_QUIT:
-        return SDL_APP_SUCCESS;
-    case SDL_EVENT_KEY_DOWN:
-        if (event->key.scancode == SDL_SCANCODE_ESCAPE)
-        {
-            SDL_SetWindowRelativeMouseMode(window, false);
-            SDL_SetWindowFullscreen(window, false);
-        }
-        else if (event->key.scancode == SDL_SCANCODE_F5)
-        {
-            Player_ToggleController(&player);
-        }
-        else if (event->key.scancode == SDL_SCANCODE_T)
-        {
-            Sky_Reset(&sky);
-        }
-        else if (event->key.scancode == SDL_SCANCODE_F11)
-        {
-            SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
-        }
-        break;
-    case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        if (!SDL_GetWindowRelativeMouseMode(window))
-        {
-            SDL_SetWindowRelativeMouseMode(window, true);
-        }
-        else if (event->button.button == SDL_BUTTON_LEFT)
-        {
-            Player_BreakBlock(&player);
-        }
-        else if (event->button.button == SDL_BUTTON_MIDDLE)
-        {
-            Player_SelectBlock(&player);
-        }
-        else if (event->button.button == SDL_BUTTON_RIGHT)
-        {
-            Player_PlaceBlock(&player);
-        }
-        break;
-    case SDL_EVENT_MOUSE_WHEEL:
-        if (SDL_GetWindowRelativeMouseMode(window))
-        {
-            Player_ChangeBlock(&player, event->wheel.y);
-        }
-        break;
-    case SDL_EVENT_MOUSE_MOTION:
-        if (SDL_GetWindowRelativeMouseMode(window))
-        {
-            Player_Rotate(&player, event->motion.yrel, event->motion.xrel);
-        }
-        break;
-    }
-    return SDL_APP_CONTINUE;
+    return Input_Event(event);
 }

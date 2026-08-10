@@ -1,3 +1,6 @@
 {
     "cmake.parallelJobs": 8,
+    "files.associations": {
+        "*.inc": "cpp"
+    }
 }

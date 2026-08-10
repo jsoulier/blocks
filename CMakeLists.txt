@@ -21,6 +21,7 @@ set(SRC
     src/block.c
     src/buffer.c
     src/camera.c
+    src/input.c
     src/main.c
     src/map.c
     src/player.c
@@ -99,8 +100,8 @@ function(add_shader FILE)
     endif()
     package(${JSON})
 endfunction()
-add_shader(hud.frag)
-add_shader(hud.vert)
+add_shader(hud.frag src/hud.inc)
+add_shader(hud.vert src/hud.inc)
 add_shader(opaque.frag shaders/shader.hlsl src/voxel.inc)
 add_shader(opaque.vert shaders/shader.hlsl src/voxel.inc)
 add_shader(raycast.frag shaders/shader.hlsl src/voxel.inc)

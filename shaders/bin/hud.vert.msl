@@ -47,9 +47,13 @@ struct spvUnsafeArray
 struct type_UniformBuffer
 {
     int2 Viewport;
+    int Touch;
+    int Padding;
+    int4 Safe;
 };
 
-constant spvUnsafeArray<float2, 6> _48 = spvUnsafeArray<float2, 6>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0) });
+constant spvUnsafeArray<float2, 6> _66 = spvUnsafeArray<float2, 6>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0) });
+constant spvUnsafeArray<float2, 5> _67 = spvUnsafeArray<float2, 5>({ float2(100.0), float2(210.0, 100.0), float2(100.0, 210.0), float2(210.0), float2(100.0) });
 
 struct main0_out
 {
@@ -61,28 +65,88 @@ struct main0_out
 vertex main0_out main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], uint gl_VertexIndex [[vertex_id]], uint gl_InstanceIndex [[instance_id]])
 {
     main0_out out = {};
-    float2 _59 = float2(UniformBuffer.Viewport);
-    float2 _60 = _59 * float2(0.0007812500116415321826934814453125, 0.001388888922519981861114501953125);
-    float _63 = precise::max(_60.x, _60.y);
-    uint _65 = uint(gl_InstanceIndex == 0u);
-    float2 _81;
-    float2 _82;
-    if (_65 != 0u)
+    float2 _78 = float2(UniformBuffer.Viewport);
+    float4 _81 = float4(UniformBuffer.Safe);
+    float _83 = _78.x * 0.0007812500116415321826934814453125;
+    float _85 = _78.y * 0.001388888922519981861114501953125;
+    float _87 = (_83 > _85) ? _83 : _85;
+    bool _92;
+    if (gl_InstanceIndex != 0u)
     {
-        float2 _70 = float2(10.0) * _63;
-        _81 = _70 + float2(50.0 * _63);
-        _82 = _70;
+        _92 = gl_InstanceIndex == 1u;
     }
     else
     {
-        float2 _74 = _59 * 0.5;
-        float2 _78 = select(float2(2.0, 8.0), float2(8.0, 2.0), bool2(gl_InstanceIndex == 1u)) * _63;
-        _81 = _74 + _78;
-        _82 = _74 - _78;
+        _92 = true;
     }
-    out.gl_Position = float4(((mix(_82, _81, _48[gl_VertexIndex]) / _59) * 2.0) - float2(1.0), 0.0, 1.0);
-    out.out_var_TEXCOORD0 = float2(_48[gl_VertexIndex].x, 1.0 - _48[gl_VertexIndex].y);
-    out.out_var_TEXCOORD1 = _65;
+    float2 _174;
+    float2 _175;
+    if (_92)
+    {
+        float2 _167 = _78 * 0.5;
+        float2 _171 = select(float2(2.0, 8.0), float2(8.0, 2.0), bool2(gl_InstanceIndex == 0u)) * _87;
+        _174 = _167 + _171;
+        _175 = _167 - _171;
+    }
+    else
+    {
+        float2 _165;
+        float2 _166;
+        if (gl_InstanceIndex == 2u)
+        {
+            float2 _163;
+            float2 _164;
+            if (UniformBuffer.Touch != 0)
+            {
+                float2 _158 = float2(_81.x + (_67[4u].x * _87), _81.y + (_67[4u].y * _87));
+                float2 _160 = float2(27.0000019073486328125 * _87);
+                _163 = _158 + _160;
+                _164 = _158 - _160;
+            }
+            else
+            {
+                float2 _144 = _81.xy + float2(10.0 * _87);
+                _163 = _144 + float2(50.0 * _87);
+                _164 = _144;
+            }
+            _165 = _163;
+            _166 = _164;
+        }
+        else
+        {
+            float2 _133;
+            float2 _134;
+            if (UniformBuffer.Touch == 0)
+            {
+                _133 = float2(0.0);
+                _134 = float2(0.0);
+            }
+            else
+            {
+                uint _106 = gl_InstanceIndex - 3u;
+                float _123;
+                if (_106 == 4u)
+                {
+                    _123 = _81.x + (_67[_106].x * _87);
+                }
+                else
+                {
+                    _123 = (_81.x + _81.z) - (_67[_106].x * _87);
+                }
+                float2 _128 = float2(_123, _81.y + (_67[_106].y * _87));
+                float2 _130 = float2(45.0 * _87);
+                _133 = _128 + _130;
+                _134 = _128 - _130;
+            }
+            _165 = _133;
+            _166 = _134;
+        }
+        _174 = _165;
+        _175 = _166;
+    }
+    out.gl_Position = float4(((mix(_175, _174, _66[gl_VertexIndex]) / _78) * 2.0) - float2(1.0), 0.0, 1.0);
+    out.out_var_TEXCOORD0 = float2(_66[gl_VertexIndex].x, 1.0 - _66[gl_VertexIndex].y);
+    out.out_var_TEXCOORD1 = gl_InstanceIndex;
     return out;
 }
 
