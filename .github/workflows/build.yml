@@ -79,7 +79,7 @@ jobs:
           java-version: 17
 
       - name: Dependencies
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.31.6"
 
       - name: Build
         working-directory: android
