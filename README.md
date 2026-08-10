@@ -6,6 +6,7 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
 ### Features
 
+- Desktop and Android support
 - Procedural world generation
 - Asynchronous chunk loading
 - Persistent worlds
@@ -62,17 +63,18 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `Left Click` to break a block
 - `Middle Click` to select a block
 - `Right Click` to place a block
-- `Scroll` to change the selected block
+- `Scroll` to change blocks
 - `F11` to toggle fullscreen
 - `LControl` to sprint
 - `T` to reset the time of day
 
 #### Mobile
 
-- Drag the left half of the screen to move
-- Drag the right half of the screen to look
+- Left side of the screen to move
+- Right side of the screen to look
 - `Blue` to jump
+- `Purple` to toggle fly
 - `Red` to break a block
 - `Green` to place a block
-- `Grey` to change the selected block
+- `Grey` to change blocks
 - `Yellow` to sprint

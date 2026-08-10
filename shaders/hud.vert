@@ -39,6 +39,7 @@ static const float2 kButtons[HUD_BUTTON_COUNT] =
     float2(HUD_BUTTON_JUMP_X, HUD_BUTTON_JUMP_Y),
     float2(HUD_BUTTON_SPRINT_X, HUD_BUTTON_SPRINT_Y),
     float2(HUD_BUTTON_BLOCK_X, HUD_BUTTON_BLOCK_Y),
+    float2(HUD_BUTTON_CONTROLLER_X, HUD_BUTTON_CONTROLLER_Y),
 };
 
 static float2 GetButtonCenter(uint index, float4 safe, float scale)

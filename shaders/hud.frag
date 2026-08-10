@@ -27,6 +27,7 @@ static const float3 kColors[HUD_BUTTON_COUNT] =
     float3(0.45f, 0.75f, 0.95f),
     float3(0.95f, 0.80f, 0.40f),
     float3(0.72f, 0.74f, 0.78f),
+    float3(0.75f, 0.55f, 0.95f),
 };
 
 float4 main(Input input) : SV_Target0

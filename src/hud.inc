@@ -10,16 +10,17 @@
 #define HUD_BLOCK_MARGIN 10.0f
 #define HUD_BLOCK_SIZE 50.0f
 #define HUD_BLOCK_SCALE 0.6f
-#define HUD_BUTTON_CENTER_X(x, w, index, offset, scale) ((index) == HUD_BUTTON_BLOCK ? (x) + (offset) * (scale) : (x) + (w) - (offset) * (scale))
-#define HUD_BUTTON_CENTER_Y(y, offset, scale) ((y) + (offset) * (scale))
+#define HUD_BUTTON_CENTER_X(x, w, i, o, s) ((i) >= HUD_BUTTON_BLOCK ? (x) + (o) * (s) : (x) + (w) - (o) * (s))
+#define HUD_BUTTON_CENTER_Y(y, o, s) ((y) + (o) * (s))
 #define HUD_STICK_RADIUS 120.0f
 #define HUD_BUTTON_RADIUS 45.0f
-#define HUD_BUTTON_COUNT 5
+#define HUD_BUTTON_COUNT 6
 #define HUD_BUTTON_PLACE 0
 #define HUD_BUTTON_BREAK 1
 #define HUD_BUTTON_JUMP 2
 #define HUD_BUTTON_SPRINT 3
 #define HUD_BUTTON_BLOCK 4
+#define HUD_BUTTON_CONTROLLER 5
 #define HUD_BUTTON_PLACE_X 100.0f
 #define HUD_BUTTON_PLACE_Y 100.0f
 #define HUD_BUTTON_BREAK_X 210.0f
@@ -30,6 +31,8 @@
 #define HUD_BUTTON_SPRINT_Y 210.0f
 #define HUD_BUTTON_BLOCK_X 100.0f
 #define HUD_BUTTON_BLOCK_Y 100.0f
+#define HUD_BUTTON_CONTROLLER_X 100.0f
+#define HUD_BUTTON_CONTROLLER_Y 210.0f
 #define HUD_INSTANCE_CROSSHAIR_X 0
 #define HUD_INSTANCE_CROSSHAIR_Y 1
 #define HUD_INSTANCE_BLOCK 2

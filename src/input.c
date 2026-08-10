@@ -10,6 +10,7 @@ static const float BUTTONS[HUD_BUTTON_COUNT][2] =
     {HUD_BUTTON_JUMP_X, HUD_BUTTON_JUMP_Y},
     {HUD_BUTTON_SPRINT_X, HUD_BUTTON_SPRINT_Y},
     {HUD_BUTTON_BLOCK_X, HUD_BUTTON_BLOCK_Y},
+    {HUD_BUTTON_CONTROLLER_X, HUD_BUTTON_CONTROLLER_Y},
 };
 
 static SDL_Window* window;
@@ -191,6 +192,7 @@ SDL_AppResult Input_Event(const SDL_Event* event)
             place_block |= index == HUD_BUTTON_PLACE;
             break_block |= index == HUD_BUTTON_BREAK;
             change_block += index == HUD_BUTTON_BLOCK;
+            toggle_controller |= index == HUD_BUTTON_CONTROLLER;
         }
         else if (touch[0] < viewport[0] * 0.5f)
         {

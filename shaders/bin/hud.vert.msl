@@ -52,8 +52,8 @@ struct type_UniformBuffer
     int4 Safe;
 };
 
-constant spvUnsafeArray<float2, 6> _66 = spvUnsafeArray<float2, 6>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0) });
-constant spvUnsafeArray<float2, 5> _67 = spvUnsafeArray<float2, 5>({ float2(100.0), float2(210.0, 100.0), float2(100.0, 210.0), float2(210.0), float2(100.0) });
+constant spvUnsafeArray<float2, 6> _63 = spvUnsafeArray<float2, 6>({ float2(0.0), float2(1.0, 0.0), float2(0.0, 1.0), float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0) });
+constant spvUnsafeArray<float2, 6> _64 = spvUnsafeArray<float2, 6>({ float2(100.0), float2(210.0, 100.0), float2(100.0, 210.0), float2(210.0), float2(100.0), float2(100.0, 210.0) });
 
 struct main0_out
 {
@@ -65,87 +65,87 @@ struct main0_out
 vertex main0_out main0(constant type_UniformBuffer& UniformBuffer [[buffer(0)]], uint gl_VertexIndex [[vertex_id]], uint gl_InstanceIndex [[instance_id]])
 {
     main0_out out = {};
-    float2 _78 = float2(UniformBuffer.Viewport);
-    float4 _81 = float4(UniformBuffer.Safe);
-    float _83 = _78.x * 0.0007812500116415321826934814453125;
-    float _85 = _78.y * 0.001388888922519981861114501953125;
-    float _87 = (_83 > _85) ? _83 : _85;
-    bool _92;
+    float2 _75 = float2(UniformBuffer.Viewport);
+    float4 _78 = float4(UniformBuffer.Safe);
+    float _80 = _75.x * 0.0007812500116415321826934814453125;
+    float _82 = _75.y * 0.001388888922519981861114501953125;
+    float _84 = (_80 > _82) ? _80 : _82;
+    bool _89;
     if (gl_InstanceIndex != 0u)
     {
-        _92 = gl_InstanceIndex == 1u;
+        _89 = gl_InstanceIndex == 1u;
     }
     else
     {
-        _92 = true;
+        _89 = true;
     }
-    float2 _174;
-    float2 _175;
-    if (_92)
+    float2 _171;
+    float2 _172;
+    if (_89)
     {
-        float2 _167 = _78 * 0.5;
-        float2 _171 = select(float2(2.0, 8.0), float2(8.0, 2.0), bool2(gl_InstanceIndex == 0u)) * _87;
-        _174 = _167 + _171;
-        _175 = _167 - _171;
+        float2 _164 = _75 * 0.5;
+        float2 _168 = select(float2(2.0, 8.0), float2(8.0, 2.0), bool2(gl_InstanceIndex == 0u)) * _84;
+        _171 = _164 + _168;
+        _172 = _164 - _168;
     }
     else
     {
-        float2 _165;
-        float2 _166;
+        float2 _162;
+        float2 _163;
         if (gl_InstanceIndex == 2u)
         {
-            float2 _163;
-            float2 _164;
+            float2 _160;
+            float2 _161;
             if (UniformBuffer.Touch != 0)
             {
-                float2 _158 = float2(_81.x + (_67[4u].x * _87), _81.y + (_67[4u].y * _87));
-                float2 _160 = float2(27.0000019073486328125 * _87);
-                _163 = _158 + _160;
-                _164 = _158 - _160;
+                float2 _155 = float2(_78.x + (_64[4u].x * _84), _78.y + (_64[4u].y * _84));
+                float2 _157 = float2(27.0000019073486328125 * _84);
+                _160 = _155 + _157;
+                _161 = _155 - _157;
             }
             else
             {
-                float2 _144 = _81.xy + float2(10.0 * _87);
-                _163 = _144 + float2(50.0 * _87);
-                _164 = _144;
+                float2 _141 = _78.xy + float2(10.0 * _84);
+                _160 = _141 + float2(50.0 * _84);
+                _161 = _141;
             }
-            _165 = _163;
-            _166 = _164;
+            _162 = _160;
+            _163 = _161;
         }
         else
         {
-            float2 _133;
-            float2 _134;
+            float2 _130;
+            float2 _131;
             if (UniformBuffer.Touch == 0)
             {
-                _133 = float2(0.0);
-                _134 = float2(0.0);
+                _130 = float2(0.0);
+                _131 = float2(0.0);
             }
             else
             {
-                uint _106 = gl_InstanceIndex - 3u;
-                float _123;
-                if (_106 == 4u)
+                uint _103 = gl_InstanceIndex - 3u;
+                float _120;
+                if (_103 >= 4u)
                 {
-                    _123 = _81.x + (_67[_106].x * _87);
+                    _120 = _78.x + (_64[_103].x * _84);
                 }
                 else
                 {
-                    _123 = (_81.x + _81.z) - (_67[_106].x * _87);
+                    _120 = (_78.x + _78.z) - (_64[_103].x * _84);
                 }
-                float2 _128 = float2(_123, _81.y + (_67[_106].y * _87));
-                float2 _130 = float2(45.0 * _87);
-                _133 = _128 + _130;
-                _134 = _128 - _130;
+                float2 _125 = float2(_120, _78.y + (_64[_103].y * _84));
+                float2 _127 = float2(45.0 * _84);
+                _130 = _125 + _127;
+                _131 = _125 - _127;
             }
-            _165 = _133;
-            _166 = _134;
+            _162 = _130;
+            _163 = _131;
         }
-        _174 = _165;
-        _175 = _166;
+        _171 = _162;
+        _172 = _163;
     }
-    out.gl_Position = float4(((mix(_175, _174, _66[gl_VertexIndex]) / _78) * 2.0) - float2(1.0), 0.0, 1.0);
-    out.out_var_TEXCOORD0 = float2(_66[gl_VertexIndex].x, 1.0 - _66[gl_VertexIndex].y);
+    out.gl_Position = float4(((mix(_172, _171, _63[gl_VertexIndex]) / _75) * 2.0) - float2(1.0), 0.0, 1.0);
+    out.out_var_TEXCOORD0 = float2(_63[gl_VertexIndex].x, 1.0 - _63[gl_VertexIndex].y);
     out.out_var_TEXCOORD1 = gl_InstanceIndex;
     return out;
 }

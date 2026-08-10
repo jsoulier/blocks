@@ -49,7 +49,7 @@ struct type_UniformBuffer
     uint Block;
 };
 
-constant spvUnsafeArray<float3, 5> _60 = spvUnsafeArray<float3, 5>({ float3(0.449999988079071044921875, 0.85000002384185791015625, 0.5), float3(0.949999988079071044921875, 0.449999988079071044921875, 0.449999988079071044921875), float3(0.449999988079071044921875, 0.75, 0.949999988079071044921875), float3(0.949999988079071044921875, 0.800000011920928955078125, 0.4000000059604644775390625), float3(0.7200000286102294921875, 0.7400000095367431640625, 0.7799999713897705078125) });
+constant spvUnsafeArray<float3, 6> _62 = spvUnsafeArray<float3, 6>({ float3(0.449999988079071044921875, 0.85000002384185791015625, 0.5), float3(0.949999988079071044921875, 0.449999988079071044921875, 0.449999988079071044921875), float3(0.449999988079071044921875, 0.75, 0.949999988079071044921875), float3(0.949999988079071044921875, 0.800000011920928955078125, 0.4000000059604644775390625), float3(0.7200000286102294921875, 0.7400000095367431640625, 0.7799999713897705078125), float3(0.75, 0.550000011920928955078125, 0.949999988079071044921875) });
 
 struct main0_out
 {
@@ -65,44 +65,44 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _111;
+    float4 _113;
     do
     {
-        bool _71;
+        bool _73;
         if (in.in_var_TEXCOORD1 != 0u)
         {
-            _71 = in.in_var_TEXCOORD1 == 1u;
+            _73 = in.in_var_TEXCOORD1 == 1u;
         }
         else
         {
-            _71 = true;
+            _73 = true;
         }
-        if (_71)
+        if (_73)
         {
-            _111 = float4(1.0);
+            _113 = float4(1.0);
             break;
         }
         if (in.in_var_TEXCOORD1 == 2u)
         {
-            float3 _84 = float3(in.in_var_TEXCOORD0, float(UniformBuffer.Block));
-            float4 _86 = atlasTexture.sample(atlasSampler, _84.xy, uint(rint(_84.z)));
-            if (_86.w <= 0.001000000047497451305389404296875)
+            float3 _86 = float3(in.in_var_TEXCOORD0, float(UniformBuffer.Block));
+            float4 _88 = atlasTexture.sample(atlasSampler, _86.xy, uint(rint(_86.z)));
+            if (_88.w <= 0.001000000047497451305389404296875)
             {
                 discard_fragment();
             }
-            _111 = _86;
+            _113 = _88;
             break;
         }
-        float _92 = length(in.in_var_TEXCOORD0 - float2(0.5));
-        float _93 = fwidth(_92);
-        if (_92 > 0.5)
+        float _94 = length(in.in_var_TEXCOORD0 - float2(0.5));
+        float _95 = fwidth(_94);
+        if (_94 > 0.5)
         {
             discard_fragment();
         }
-        _111 = float4(_60[in.in_var_TEXCOORD1 - 3u], mix(0.119999997317790985107421875, 0.75, smoothstep(0.4650000035762786865234375 - _93, 0.4650000035762786865234375, _92)) * (1.0 - smoothstep(0.5 - _93, 0.5, _92)));
+        _113 = float4(_62[in.in_var_TEXCOORD1 - 3u], mix(0.119999997317790985107421875, 0.75, smoothstep(0.4650000035762786865234375 - _95, 0.4650000035762786865234375, _94)) * (1.0 - smoothstep(0.5 - _95, 0.5, _94)));
         break;
     } while(false);
-    out.out_var_SV_Target0 = _111;
+    out.out_var_SV_Target0 = _113;
     return out;
 }
 
