@@ -2,6 +2,7 @@
 
 #include "block.h"
 #include "camera.h"
+#include "input.h"
 #include "player.h"
 #include "save.h"
 #include "world.h"
@@ -73,7 +74,7 @@ static void Bisect(float position[3], int axis, float step)
     position[axis] = start[axis] + step * lower;
 }
 
-static bool Move(float position[3], int axis, float delta)
+static bool MoveAxis(float position[3], int axis, float delta)
 {
     if (SDL_fabsf(delta) <= SDL_FLT_EPSILON)
     {
@@ -128,80 +129,64 @@ void Player_Save(const Player* player)
     Save_SetPlayer(&save, sizeof(save));
 }
 
-void Player_ToggleController(Player* player)
+static void Move(Player* player, float dt)
 {
-    player->controller++;
-    player->controller %= PLAYER_CONTROLLER_COUNT;
-}
-
-void Player_Rotate(Player* player, float pitch, float yaw)
-{
-    Camera_Rotate(&player->camera, pitch * -SENSITIVITY, yaw * SENSITIVITY);
-    player->query = World_Raycast(&player->camera, REACH);
-}
-
-void Player_Move(Player* player, float dt)
-{
-    const bool* keys = SDL_GetKeyboardState(NULL);
-    if (player->controller == PLAYER_CONTROLLER_WALK)
+    float delta[3];
+    Input_GetMovement(delta);
+    bool sprint = Input_GetSprint();
+    if (player->controller == PLAYER_CONTROLLER_FLY)
     {
-        dt = SDL_min(dt * 0.001f, 0.05f);
-        float right = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
-        float forward = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
-        float length = SDL_sqrtf(right * right + forward * forward);
-        if (length > SDL_FLT_EPSILON)
-        {
-            right /= length;
-            forward /= length;
-        }
-        float speed = WALK_SPEED * (keys[SDL_SCANCODE_LCTRL] ? SPRINT_MULTIPLER : 1.0f);
-        float sy = SDL_sinf(player->camera.yaw);
-        float cy = SDL_cosf(player->camera.yaw);
-        float dx = (cy * right + sy * forward) * speed;
-        float dz = (sy * right - cy * forward) * speed;
-        if (player->is_on_ground)
-        {
-            player->velocity[0] = dx;
-            player->velocity[2] = dz;
-        }
-        else
-        {
-            player->velocity[0] += (dx - player->velocity[0]) * AIR_ACCELERATION * dt;
-            player->velocity[2] += (dz - player->velocity[2]) * AIR_ACCELERATION * dt;
-        }
-        if (keys[SDL_SCANCODE_SPACE] && player->is_on_ground)
-        {
-            player->velocity[1] = JUMP_SPEED;
-            player->is_on_ground = false;
-        }
-        if (dt <= SDL_FLT_EPSILON)
-        {
-            return;
-        }
-        player->velocity[1] -= GRAVITY * dt;
-        bool hits[3];
-        for (int i = 0; i < 3; i++)
-        {
-            hits[i] = Move(player->camera.position, i, player->velocity[i] * dt);
-        }
-        player->is_on_ground = hits[1] && player->velocity[1] < 0.0f;
-        for (int i = 0; i < 3; i++)
-        {
-            player->velocity[i] *= !hits[i];
-        }
+        float speed = FLY_SPEED * (sprint ? SPRINT_MULTIPLER : 1.0f);
+        Camera_Move(&player->camera, delta[0] * speed * dt, delta[1] * speed * dt, delta[2] * speed * dt);
+        return;
+    }
+    dt = SDL_min(dt * 0.001f, 0.05f);
+    float right = delta[0];
+    float forward = delta[2];
+    float length = SDL_sqrtf(right * right + forward * forward);
+    if (length > SDL_FLT_EPSILON)
+    {
+        right /= length;
+        forward /= length;
+    }
+    float speed = WALK_SPEED * (sprint ? SPRINT_MULTIPLER : 1.0f);
+    float sy = SDL_sinf(player->camera.yaw);
+    float cy = SDL_cosf(player->camera.yaw);
+    float dx = (cy * right + sy * forward) * speed;
+    float dz = (sy * right - cy * forward) * speed;
+    if (player->is_on_ground)
+    {
+        player->velocity[0] = dx;
+        player->velocity[2] = dz;
     }
     else
     {
-        float speed = FLY_SPEED * (keys[SDL_SCANCODE_LCTRL] ? SPRINT_MULTIPLER : 1.0f);
-        float dx = keys[SDL_SCANCODE_D] - keys[SDL_SCANCODE_A];
-        float dy = keys[SDL_SCANCODE_SPACE] + keys[SDL_SCANCODE_E] - keys[SDL_SCANCODE_LSHIFT] - keys[SDL_SCANCODE_Q];
-        float dz = keys[SDL_SCANCODE_W] - keys[SDL_SCANCODE_S];
-        Camera_Move(&player->camera, dx * speed * dt, dy * speed * dt, dz * speed * dt);
+        player->velocity[0] += (dx - player->velocity[0]) * AIR_ACCELERATION * dt;
+        player->velocity[2] += (dz - player->velocity[2]) * AIR_ACCELERATION * dt;
     }
-    player->query = World_Raycast(&player->camera, REACH);
+    if (Input_GetJump() && player->is_on_ground)
+    {
+        player->velocity[1] = JUMP_SPEED;
+        player->is_on_ground = false;
+    }
+    if (dt <= SDL_FLT_EPSILON)
+    {
+        return;
+    }
+    player->velocity[1] -= GRAVITY * dt;
+    bool hits[3];
+    for (int i = 0; i < 3; i++)
+    {
+        hits[i] = MoveAxis(player->camera.position, i, player->velocity[i] * dt);
+    }
+    player->is_on_ground = hits[1] && player->velocity[1] < 0.0f;
+    for (int i = 0; i < 3; i++)
+    {
+        player->velocity[i] *= !hits[i];
+    }
 }
 
-void Player_PlaceBlock(const Player* player)
+static void SetBlock(const Player* player)
 {
     if (player->query.block == BLOCK_EMPTY)
     {
@@ -224,26 +209,35 @@ void Player_PlaceBlock(const Player* player)
     }
 }
 
-void Player_SelectBlock(Player* player)
+void Player_Update(Player* player, float dt)
 {
-    if (player->query.block != BLOCK_EMPTY)
+    if (Input_GetToggleController())
+    {
+        player->controller++;
+        player->controller %= PLAYER_CONTROLLER_COUNT;
+    }
+    float pan[2];
+    Input_GetRotation(pan);
+    Camera_Rotate(&player->camera, pan[1] * -SENSITIVITY, pan[0] * SENSITIVITY);
+    Move(player, dt);
+    player->query = World_Raycast(&player->camera, REACH);
+    int change_block = Input_GetChangeBlock();
+    if (change_block)
+    {
+        static const int COUNT = BLOCK_COUNT - BLOCK_EMPTY - 1;
+        int block = (player->block - (BLOCK_EMPTY + 1) + change_block) % COUNT;
+        player->block = (block < 0 ? block + COUNT : block) + BLOCK_EMPTY + 1;
+    }
+    if (Input_GetSelectBlock() && player->query.block != BLOCK_EMPTY)
     {
         player->block = player->query.block;
     }
-}
-
-void Player_BreakBlock(const Player* player)
-{
-    if (player->query.block != BLOCK_EMPTY)
+    if (Input_GetBreakBlock() && player->query.block != BLOCK_EMPTY)
     {
         World_SetBlock(player->query.current, BLOCK_EMPTY);
     }
-}
-
-void Player_ChangeBlock(Player* player, int dy)
-{
-    static const int COUNT = BLOCK_COUNT - BLOCK_EMPTY - 1;
-    int block = player->block - (BLOCK_EMPTY + 1) + dy;
-    block = (block + COUNT) % COUNT;
-    player->block = block + BLOCK_EMPTY + 1;
+    if (Input_GetPlaceBlock())
+    {
+        SetBlock(player);
+    }
 }

@@ -25,10 +25,4 @@ typedef struct Player
 
 void Player_Load(Player* player);
 void Player_Save(const Player* player);
-void Player_ToggleController(Player* player);
-void Player_Rotate(Player* player, float pitch, float yaw);
-void Player_Move(Player* player, float dt);
-void Player_PlaceBlock(const Player* player);
-void Player_SelectBlock(Player* player);
-void Player_BreakBlock(const Player* player);
-void Player_ChangeBlock(Player* player, int dy);
+void Player_Update(Player* player, float dt);

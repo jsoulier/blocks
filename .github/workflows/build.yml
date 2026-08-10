@@ -62,3 +62,25 @@ jobs:
 
       - name: Build
         run: cmake --build build
+
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Dependencies
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.31.6"
+
+      - name: Build
+        working-directory: android
+        run: ./gradlew assembleDebug

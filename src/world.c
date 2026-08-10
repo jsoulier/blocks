@@ -567,9 +567,9 @@ static int GetWorkers(WorldWorker* workers[WORKERS])
     return count;
 }
 
-void World_Init(SDL_GPUDevice* gpu_device)
+void World_Init(SDL_GPUDevice* in_device)
 {
-    device = gpu_device;
+    device = in_device;
     world_x = SDL_MAX_SINT32;
     world_z = SDL_MAX_SINT32;
     GPUBuffer_Init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);

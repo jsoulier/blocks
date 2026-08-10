@@ -1,7 +1,7 @@
 #ifndef SHADER_HLSL
 #define SHADER_HLSL
 
-// https://github.com/libsdl-org/SDL_shadercross/issues/211
+// TODO: https://github.com/libsdl-org/SDL_shadercross/issues/211
 #include "../src/voxel.inc"
 
 static const float kEpsilon = 0.001f;

@@ -51,8 +51,12 @@ float4 main(Input input) : SV_Target0
     float alpha = color.a;
     if (block == kBlockWater)
     {
-        float3 seabed = positionTexture.Sample(positionSampler, input.Fragment).xyz;
-        alpha += (input.WorldPosition.y - seabed.y) / 10.0f;
+        float4 seabed = positionTexture.Sample(positionSampler, input.Fragment);
+        if (seabed.w != 0.0f)
+        {
+            alpha += max(0.0f, input.WorldPosition.y - seabed.y) / 10.0f;
+            alpha = saturate(alpha);
+        }
     }
     return float4(lerp(albedo * (light + ambient + sunlight), sky, fog), alpha);
 }
