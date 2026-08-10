@@ -284,6 +284,8 @@ void Input_Update()
         sprint = buttons[HUD_BUTTON_SPRINT] != 0;
         break;
     case INPUT_DEVICE_GAMEPAD:
+        // TODO:
+        break;
     case INPUT_DEVICE_COUNT:
         break;
     }
