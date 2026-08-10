@@ -154,16 +154,16 @@ fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& 
     if (_110 == 14u)
     {
         float4 _230 = positionTexture.sample(positionSampler, in.in_var_TEXCOORD3);
-        float _242;
+        float _243;
         if (_230.w != 0.0)
         {
-            _242 = _223 + (precise::max(0.0, in.in_var_TEXCOORD0.y - _230.y) * 0.100000001490116119384765625);
+            _243 = fast::clamp(_223 + (precise::max(0.0, in.in_var_TEXCOORD0.y - _230.y) * 0.100000001490116119384765625), 0.0, 1.0);
         }
         else
         {
-            _242 = _223;
+            _243 = _223;
         }
-        _244 = fast::clamp(_242, 0.0, 1.0);
+        _244 = _243;
     }
     else
     {
