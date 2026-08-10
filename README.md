@@ -45,7 +45,7 @@ cd bin
 
 #### Android
 
-Open `android/` in Android Studio and press `Run`.
+Open `android/` in Android Studio and press `Run`
 
 #### Shaders
 

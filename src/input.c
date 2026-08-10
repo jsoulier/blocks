@@ -296,14 +296,14 @@ InputDevice Input_GetDevice()
     return device;
 }
 
-void Input_GetMovement(float input_delta[3])
+void Input_GetMovement(float in_movement[3])
 {
-    SDL_memcpy(input_delta, movement, sizeof(movement));
+    SDL_memcpy(in_movement, movement, sizeof(movement));
 }
 
-void Input_GetRotation(float input_pan[2])
+void Input_GetRotation(float in_rotation[2])
 {
-    SDL_memcpy(input_pan, rotation, sizeof(rotation));
+    SDL_memcpy(in_rotation, rotation, sizeof(rotation));
 }
 
 bool Input_GetJump()
