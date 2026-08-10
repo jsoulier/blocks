@@ -42,7 +42,7 @@ static const float2 kButtons[HUD_BUTTON_COUNT] =
     float2(HUD_BUTTON_CONTROLLER_X, HUD_BUTTON_CONTROLLER_Y),
 };
 
-static float2 GetButtonCenter(uint index, float4 safe, float scale)
+static float2 GetCenter(uint index, float4 safe, float scale)
 {
     float2 offset = kButtons[index];
     float x = HUD_BUTTON_CENTER_X(safe.x, safe.z, index, offset.x, scale);
@@ -71,7 +71,7 @@ Output main(Input input)
     {
         if (Touch)
         {
-            float2 center = GetButtonCenter(HUD_BUTTON_BLOCK, safe, scale);
+            float2 center = GetCenter(HUD_BUTTON_BLOCK, safe, scale);
             float extent = HUD_BUTTON_RADIUS * HUD_BLOCK_SCALE * scale;
             minimum = center - extent;
             maximum = center + extent;
@@ -89,7 +89,7 @@ Output main(Input input)
     }
     else
     {
-        float2 center = GetButtonCenter(input.InstanceID - HUD_INSTANCE_BUTTON, safe, scale);
+        float2 center = GetCenter(input.InstanceID - HUD_INSTANCE_BUTTON, safe, scale);
         minimum = center - HUD_BUTTON_RADIUS * scale;
         maximum = center + HUD_BUTTON_RADIUS * scale;
     }
