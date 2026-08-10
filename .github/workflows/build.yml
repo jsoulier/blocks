@@ -83,6 +83,4 @@ jobs:
 
       - name: Build
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: ./gradlew assembleDebug

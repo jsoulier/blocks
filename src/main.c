@@ -14,7 +14,7 @@
 
 static const int MIP_LEVELS = 4;
 static const Uint64 SAVE_INTERVAL = 10000;
-static const Uint64 LOAD_INTERVAL = 500;
+static const Uint64 LOAD_INTERVAL = 500; // preload for 500 ms to avoid spawning inside of chunks
 #if defined(SDL_PLATFORM_ANDROID) || defined(SDL_PLATFORM_IOS)
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_1;
 static const SDL_GPUTextureFormat POSITION_FORMAT = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
@@ -635,13 +635,13 @@ static void RenderHudPass(SDL_GPUCommandBuffer* command_buffer, SDL_GPUTexture* 
     }
     float safe[4];
     Input_GetSafeArea(safe);
-    Sint32 uniforms[8] = {0};
-    uniforms[0] = player.camera.width;
-    uniforms[1] = player.camera.height;
-    uniforms[2] = Input_GetDevice() == INPUT_DEVICE_TOUCH;
+    Sint32 hud[8] = {0};
+    hud[0] = player.camera.width;
+    hud[1] = player.camera.height;
+    hud[2] = Input_GetDevice() == INPUT_DEVICE_TOUCH;
     for (int i = 0; i < 4; i++)
     {
-        uniforms[4 + i] = safe[i];
+        hud[4 + i] = safe[i];
     }
     Uint32 block = Block_GetIndex(player.block, DIRECTION_NORTH);
     SDL_GPUTextureSamplerBinding sampler_binding = {0};
@@ -650,7 +650,7 @@ static void RenderHudPass(SDL_GPUCommandBuffer* command_buffer, SDL_GPUTexture* 
     SDL_PushGPUDebugGroup(command_buffer, "ui");
     SDL_BindGPUGraphicsPipeline(render_pass, hud_pipeline);
     SDL_BindGPUFragmentSamplers(render_pass, 0, &sampler_binding, 1);
-    SDL_PushGPUVertexUniformData(command_buffer, 0, uniforms, sizeof(uniforms));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, hud, sizeof(hud));
     SDL_PushGPUFragmentUniformData(command_buffer, 0, &block, sizeof(block));
     SDL_DrawGPUPrimitives(render_pass, 6, HUD_INSTANCE_COUNT, 0, 0);
     SDL_PopGPUDebugGroup(command_buffer);

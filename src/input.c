@@ -296,12 +296,12 @@ InputDevice Input_GetDevice()
     return device;
 }
 
-void Input_GetDelta(float input_delta[3])
+void Input_GetMovement(float input_delta[3])
 {
     SDL_memcpy(input_delta, movement, sizeof(movement));
 }
 
-void Input_GetPan(float input_pan[2])
+void Input_GetRotation(float input_pan[2])
 {
     SDL_memcpy(input_pan, rotation, sizeof(rotation));
 }
@@ -321,14 +321,14 @@ bool Input_GetBreakBlock()
     return break_block;
 }
 
-bool Input_GetPlaceBlock()
-{
-    return place_block;
-}
-
 bool Input_GetSelectBlock()
 {
     return select_block;
+}
+
+bool Input_GetPlaceBlock()
+{
+    return place_block;
 }
 
 int Input_GetChangeBlock()

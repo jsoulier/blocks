@@ -132,7 +132,7 @@ void Player_Save(const Player* player)
 static void Move(Player* player, float dt)
 {
     float delta[3];
-    Input_GetDelta(delta);
+    Input_GetMovement(delta);
     bool sprint = Input_GetSprint();
     if (player->controller == PLAYER_CONTROLLER_FLY)
     {
@@ -217,7 +217,7 @@ void Player_Update(Player* player, float dt)
         player->controller %= PLAYER_CONTROLLER_COUNT;
     }
     float pan[2];
-    Input_GetPan(pan);
+    Input_GetRotation(pan);
     Camera_Rotate(&player->camera, pan[1] * -SENSITIVITY, pan[0] * SENSITIVITY);
     Move(player, dt);
     player->query = World_Raycast(&player->camera, REACH);
