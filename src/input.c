@@ -46,29 +46,6 @@ void Input_Init(SDL_Window* in_window)
     }
 }
 
-static void SetDevice(InputDevice input_device)
-{
-    if (device == input_device)
-    {
-        return;
-    }
-    device = input_device;
-    SDL_zeroa(movement);
-    SDL_zeroa(rotation);
-    jump = false;
-    sprint = false;
-    break_block = false;
-    select_block = false;
-    place_block = false;
-    change_block = 0;
-    toggle_controller = false;
-    reset_sky = false;
-    SDL_zeroa(buttons);
-    move_finger = 0;
-    look_finger = 0;
-    SDL_zeroa(move_origin);
-}
-
 void Input_GetSafeArea(float safe[4])
 {
     int width;
@@ -97,6 +74,29 @@ static float GetTouch(const SDL_Event* event, float touch[2], float viewport[2])
     touch[0] = event->tfinger.x * viewport[0];
     touch[1] = viewport[1] - event->tfinger.y * viewport[1];
     return HUD_SCALE(viewport[0], viewport[1]);
+}
+
+static void SetDevice(InputDevice in_device)
+{
+    if (device == in_device)
+    {
+        return;
+    }
+    device = in_device;
+    SDL_zeroa(movement);
+    SDL_zeroa(rotation);
+    jump = false;
+    sprint = false;
+    break_block = false;
+    select_block = false;
+    place_block = false;
+    change_block = 0;
+    toggle_controller = false;
+    reset_sky = false;
+    SDL_zeroa(buttons);
+    move_finger = 0;
+    look_finger = 0;
+    SDL_zeroa(move_origin);
 }
 
 SDL_AppResult Input_Event(const SDL_Event* event)
