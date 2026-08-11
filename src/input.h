@@ -11,9 +11,10 @@ typedef enum InputDevice
 } InputDevice;
 
 void Input_Init(SDL_Window* window);
+void Input_Free();
 void Input_GetSafeArea(float safe[4]);
 SDL_AppResult Input_Event(const SDL_Event* event);
-void Input_Update();
+void Input_Update(float dt);
 InputDevice Input_GetDevice();
 void Input_GetMovement(float movement[3]);
 void Input_GetRotation(float rotation[2]);

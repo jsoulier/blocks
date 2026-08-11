@@ -13,22 +13,28 @@ static const float BUTTONS[HUD_BUTTON_COUNT][2] =
     {HUD_BUTTON_CONTROLLER_X, HUD_BUTTON_CONTROLLER_Y},
 };
 
-static SDL_Window* window;
-static InputDevice device;
-static float movement[3];
-static float rotation[2];
-static bool jump;
-static bool sprint;
-static bool break_block;
-static bool select_block;
-static bool place_block;
-static int change_block;
-static bool toggle_controller;
-static bool reset_sky;
-static SDL_FingerID buttons[HUD_BUTTON_COUNT];
-static SDL_FingerID move_finger;
-static SDL_FingerID look_finger;
-static float move_origin[2];
+static const float GAMEPAD_DEADZONE = 0.2f;
+static const float GAMEPAD_THRESHOLD = 0.5f;
+static const float GAMEPAD_SENSITIVITY = 2.0f;
+
+static SDL_Window* window;                     // k&m / touch / gamepad
+static InputDevice device;                     // k&m / touch / gamepad
+static float movement[3];                      // k&m / touch / gamepad
+static float rotation[2];                      // k&m / touch / gamepad
+static bool jump;                              // k&m / touch / gamepad
+static bool sprint;                            // k&m / touch / gamepad
+static bool break_block;                       // k&m / touch / gamepad
+static bool select_block;                      // k&m / touch / gamepad
+static bool place_block;                       // k&m / touch / gamepad
+static int change_block;                       // k&m / touch / gamepad
+static bool toggle_controller;                 // k&m / touch / gamepad
+static bool reset_sky;                         // k&m / touch / gamepad
+static SDL_FingerID buttons[HUD_BUTTON_COUNT]; // touch
+static SDL_FingerID move_finger;               // touch
+static SDL_FingerID look_finger;               // touch
+static float move_origin[2];                   // touch
+static SDL_Gamepad* gamepad;                   // gamepad
+static bool triggers[2];                       // gamepad
 
 void Input_Init(SDL_Window* in_window)
 {
@@ -44,6 +50,12 @@ void Input_Init(SDL_Window* in_window)
     {
         device = INPUT_DEVICE_KEYBOARD_MOUSE;
     }
+}
+
+void Input_Free()
+{
+    SDL_CloseGamepad(gamepad);
+    gamepad = NULL;
 }
 
 void Input_GetSafeArea(float safe[4])
@@ -97,6 +109,7 @@ static void SetDevice(InputDevice in_device)
     move_finger = 0;
     look_finger = 0;
     SDL_zeroa(move_origin);
+    SDL_zeroa(triggers);
 }
 
 SDL_AppResult Input_Event(const SDL_Event* event)
@@ -104,8 +117,11 @@ SDL_AppResult Input_Event(const SDL_Event* event)
     switch (event->type)
     {
     case SDL_EVENT_QUIT:
+    {
         return SDL_APP_SUCCESS;
+    }
     case SDL_EVENT_KEY_DOWN:
+    {
         SetDevice(INPUT_DEVICE_KEYBOARD_MOUSE);
         if (event->key.repeat)
         {
@@ -133,7 +149,9 @@ SDL_AppResult Input_Event(const SDL_Event* event)
             reset_sky = true;
         }
         break;
+    }
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    {
         SetDevice(INPUT_DEVICE_KEYBOARD_MOUSE);
         if (!SDL_GetWindowRelativeMouseMode(window))
         {
@@ -152,14 +170,18 @@ SDL_AppResult Input_Event(const SDL_Event* event)
             place_block = true;
         }
         break;
+    }
     case SDL_EVENT_MOUSE_WHEEL:
+    {
         SetDevice(INPUT_DEVICE_KEYBOARD_MOUSE);
         if (SDL_GetWindowRelativeMouseMode(window))
         {
             change_block += event->wheel.y;
         }
         break;
+    }
     case SDL_EVENT_MOUSE_MOTION:
+    {
         SetDevice(INPUT_DEVICE_KEYBOARD_MOUSE);
         if (SDL_GetWindowRelativeMouseMode(window))
         {
@@ -167,6 +189,7 @@ SDL_AppResult Input_Event(const SDL_Event* event)
             rotation[1] += event->motion.yrel;
         }
         break;
+    }
     case SDL_EVENT_FINGER_DOWN:
     {
         SetDevice(INPUT_DEVICE_TOUCH);
@@ -225,6 +248,8 @@ SDL_AppResult Input_Event(const SDL_Event* event)
         break;
     }
     case SDL_EVENT_FINGER_UP:
+    {
+        SetDevice(INPUT_DEVICE_TOUCH);
         if (event->tfinger.fingerID == move_finger)
         {
             move_finger = 0;
@@ -246,10 +271,95 @@ SDL_AppResult Input_Event(const SDL_Event* event)
         }
         break;
     }
+    case SDL_EVENT_GAMEPAD_ADDED:
+    {
+        if (!gamepad)
+        {
+            gamepad = SDL_OpenGamepad(event->gdevice.which);
+            if (!gamepad)
+            {
+                SDL_Log("Failed to open gamepad: %s", SDL_GetError());
+            }
+        }
+        break;
+    }
+    case SDL_EVENT_GAMEPAD_REMOVED:
+    {
+        if (gamepad && event->gdevice.which == SDL_GetGamepadID(gamepad))
+        {
+            SDL_CloseGamepad(gamepad);
+            gamepad = NULL;
+        }
+        break;
+    }
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+    {
+        SetDevice(INPUT_DEVICE_GAMEPAD);
+        if (event->gbutton.button == SDL_GAMEPAD_BUTTON_WEST)
+        {
+            reset_sky = true;
+        }
+        else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_NORTH)
+        {
+            toggle_controller = true;
+        }
+        else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_RIGHT_STICK)
+        {
+            select_block = true;
+        }
+        else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_LEFT_SHOULDER)
+        {
+            change_block--;
+        }
+        else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER)
+        {
+            change_block++;
+        }
+        else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_LEFT_STICK)
+        {
+            sprint = true;
+        }
+        break;
+    }
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+    {
+        if (SDL_abs(event->gaxis.value) > GAMEPAD_DEADZONE * SDL_JOYSTICK_AXIS_MAX)
+        {
+            SetDevice(INPUT_DEVICE_GAMEPAD);
+        }
+        if (event->gaxis.axis != SDL_GAMEPAD_AXIS_LEFT_TRIGGER && event->gaxis.axis != SDL_GAMEPAD_AXIS_RIGHT_TRIGGER)
+        {
+            break;
+        }
+        int index = event->gaxis.axis - SDL_GAMEPAD_AXIS_LEFT_TRIGGER;
+        bool held = event->gaxis.value > GAMEPAD_THRESHOLD * SDL_JOYSTICK_AXIS_MAX;
+        if (held && !triggers[index])
+        {
+            place_block |= index == 0;
+            break_block |= index == 1;
+        }
+        triggers[index] = held;
+        break;
+    }
+    }
     return SDL_APP_CONTINUE;
 }
 
-void Input_Update()
+static float GetStick(SDL_GamepadAxis axis)
+{
+    float value = SDL_GetGamepadAxis(gamepad, axis) / (float) SDL_JOYSTICK_AXIS_MAX;
+    value = SDL_max(value, -1.0f);
+    if (SDL_fabsf(value) > GAMEPAD_DEADZONE)
+    {
+        return (value - SDL_copysignf(GAMEPAD_DEADZONE, value)) / (1.0f - GAMEPAD_DEADZONE);
+    }
+    else
+    {
+        return 0.0f;
+    }
+}
+
+void Input_Update(float dt)
 {
     SDL_zeroa(rotation);
     change_block = 0;
@@ -280,14 +390,32 @@ void Input_Update()
         break;
     }
     case INPUT_DEVICE_TOUCH:
+    {
         jump = buttons[HUD_BUTTON_JUMP] != 0;
         sprint = buttons[HUD_BUTTON_SPRINT] != 0;
         break;
+    }
     case INPUT_DEVICE_GAMEPAD:
-        // TODO:
+    {
+        if (!gamepad)
+        {
+            SetDevice(INPUT_DEVICE_KEYBOARD_MOUSE);
+            break;
+        }
+        bool up = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
+        bool down = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST);
+        movement[0] = GetStick(SDL_GAMEPAD_AXIS_LEFTX);
+        movement[1] = up - down;
+        movement[2] = -GetStick(SDL_GAMEPAD_AXIS_LEFTY);
+        rotation[0] += GetStick(SDL_GAMEPAD_AXIS_RIGHTX) * GAMEPAD_SENSITIVITY * dt;
+        rotation[1] += GetStick(SDL_GAMEPAD_AXIS_RIGHTY) * GAMEPAD_SENSITIVITY * dt;
+        jump = up;
+        if (!movement[0] && !movement[2])
+        {
+            sprint = false;
+        }
         break;
-    case INPUT_DEVICE_COUNT:
-        break;
+    }
     }
 }
 

@@ -341,7 +341,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
 #endif
     SDL_SetAppMetadata("Blocks", NULL, NULL);
-    if (!SDL_Init(SDL_INIT_VIDEO))
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
         return SDL_APP_FAILURE;
@@ -437,6 +437,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
     Player_Save(&player);
     Sky_Save(&sky);
     Save_Free();
+    Input_Free();
     SDL_ReleaseGPUSampler(device, nearest_sampler);
     SDL_ReleaseGPUTexture(device, msaa_position_texture);
     SDL_ReleaseGPUTexture(device, msaa_color_texture);
@@ -708,7 +709,7 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     World_Update(&player.camera);
     Player_Update(&player, dt);
     Sky_Update(&sky, dt / 1000.0f);
-    Input_Update();
+    Input_Update(dt);
     Render();
     if (ticks - save_ticks >= SAVE_INTERVAL)
     {
