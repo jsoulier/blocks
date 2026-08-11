@@ -49,7 +49,9 @@ struct type_UniformBuffer
     uint Block;
 };
 
-constant spvUnsafeArray<float3, 6> _62 = spvUnsafeArray<float3, 6>({ float3(0.449999988079071044921875, 0.85000002384185791015625, 0.5), float3(0.949999988079071044921875, 0.449999988079071044921875, 0.449999988079071044921875), float3(0.449999988079071044921875, 0.75, 0.949999988079071044921875), float3(0.949999988079071044921875, 0.800000011920928955078125, 0.4000000059604644775390625), float3(0.7200000286102294921875, 0.7400000095367431640625, 0.7799999713897705078125), float3(0.75, 0.550000011920928955078125, 0.949999988079071044921875) });
+constant spvUnsafeArray<uint2, 96> _332 = spvUnsafeArray<uint2, 96>({ uint2(0u), uint2(406600728u, 1572888u), uint2(13878u, 0u), uint2(914306614u, 3552895u), uint2(503528972u, 794416u), uint2(406020864u, 6514188u), uint2(1847342620u, 7222075u), uint2(198150u, 0u), uint2(101059608u, 1575942u), uint2(404229126u, 396312u), uint2(4282148352u, 26172u), uint2(1057754112u, 3084u), uint2(0u, 101452800u), uint2(1056964608u, 0u), uint2(0u, 789504u), uint2(202911840u, 66310u), uint2(2071159614u, 4089711u), uint2(202116620u, 4131852u), uint2(472920862u, 4141830u), uint2(472920862u, 1979184u), uint2(859192376u, 7876735u), uint2(807338815u, 1979184u), uint2(520291868u, 1979187u), uint2(405812031u, 789516u), uint2(506671902u, 1979187u), uint2(1043542814u, 923696u), uint2(789504u), uint2(789504u, 101452800u), uint2(50727960u, 1575942u), uint2(4128768u, 16128u), uint2(806882310u, 396312u), uint2(405811998u, 786444u), uint2(2071683902u, 1966971u), uint2(858988044u, 3355455u), uint2(1046898239u, 4154982u), uint2(50554428u, 3958275u), uint2(1717974559u, 2045542u), uint2(504776319u, 8341014u), uint2(504776319u, 984598u), uint2(50554428u, 8152691u), uint2(1060320051u, 3355443u), uint2(202116126u, 1969164u), uint2(808464504u, 1979187u), uint2(506881639u, 6776374u), uint2(101058063u, 8349254u), uint2(2139060067u, 6513515u), uint2(2070898531u, 6513523u), uint2(1667446300u, 1848931u), uint2(1046898239u, 984582u), uint2(858993438u, 3677755u), uint2(1046898239u, 6776374u), uint2(235352862u, 1979192u), uint2(202124607u, 1969164u), uint2(858993459u, 4141875u), uint2(858993459u, 794163u), uint2(1801675619u, 6518655u), uint2(473326435u, 6501916u), uint2(506671923u, 1969164u), uint2(405889919u, 8349260u), uint2(101058078u, 1967622u), uint2(403441155u, 4218928u), uint2(404232222u, 1972248u), uint2(1664490504u, 0u), uint2(0u, 4278190080u), uint2(1575948u, 0u), uint2(807272448u, 7222078u), uint2(1040582151u, 3892838u), uint2(857604096u, 1979139u), uint2(1043345464u, 7222067u), uint2(857604096u, 1966911u), uint2(252065308u, 984582u), uint2(862846976u, 523255347u), uint2(1849034247u, 6776422u), uint2(202244108u, 1969164u), uint2(808452144u, 506671920u), uint2(912655879u, 6764062u), uint2(202116110u, 1969164u), uint2(2134048768u, 6515583u), uint2(857669632u, 3355443u), uint2(857604096u, 1979187u), uint2(1715142656u, 252067430u), uint2(862846976u, 2016427571u), uint2(1849360384u, 984678u), uint2(54394880u, 2043934u), uint2(205392904u, 1584140u), uint2(858980352u, 7222067u), uint2(858980352u, 794163u), uint2(1801650176u, 3571583u), uint2(912457728u, 6501916u), uint2(858980352u, 523255347u), uint2(423559168u, 4138508u), uint2(118230072u, 3673100u), uint2(1579032u), uint2(940313607u, 461836u), uint2(15214u, 0u), uint2(0u) });
+constant spvUnsafeArray<uint, 7> _333 = spvUnsafeArray<uint, 7>({ 5u, 5u, 4u, 6u, 1u, 3u, 1u });
+constant spvUnsafeArray<uint2, 7> _334 = spvUnsafeArray<uint2, 7>({ uint2(1128352848u, 69u), uint2(1095062082u, 75u), uint2(1347245386u, 0u), uint2(1230131283u, 21582u), uint2(62u, 0u), uint2(5852230u, 0u), uint2(60u, 0u) });
 
 struct main0_out
 {
@@ -65,44 +67,115 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBuffer& UniformBuffer [[buffer(0)]], texture2d_array<float> atlasTexture [[texture(0)]], sampler atlasSampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _113;
+    float4 _450;
     do
     {
-        bool _73;
+        bool _346;
         if (in.in_var_TEXCOORD1 != 0u)
         {
-            _73 = in.in_var_TEXCOORD1 == 1u;
+            _346 = in.in_var_TEXCOORD1 == 1u;
         }
         else
         {
-            _73 = true;
+            _346 = true;
         }
-        if (_73)
+        if (_346)
         {
-            _113 = float4(1.0);
+            _450 = float4(1.0);
             break;
         }
         if (in.in_var_TEXCOORD1 == 2u)
         {
-            float3 _86 = float3(in.in_var_TEXCOORD0, float(UniformBuffer.Block));
-            float4 _88 = atlasTexture.sample(atlasSampler, _86.xy, uint(rint(_86.z)));
-            if (_88.w <= 0.001000000047497451305389404296875)
+            float3 _359 = float3(in.in_var_TEXCOORD0, float(UniformBuffer.Block));
+            float4 _361 = atlasTexture.sample(atlasSampler, _359.xy, uint(rint(_359.z)));
+            if (_361.w <= 0.001000000047497451305389404296875)
             {
                 discard_fragment();
             }
-            _113 = _88;
+            _450 = _361;
             break;
         }
-        float _94 = length(in.in_var_TEXCOORD0 - float2(0.5));
-        float _95 = fwidth(_94);
-        if (_94 > 0.5)
+        float2 _366 = in.in_var_TEXCOORD0 - float2(0.5);
+        float _367 = length(_366);
+        float _368 = fwidth(_367);
+        if (_367 > 0.5)
         {
             discard_fragment();
         }
-        _113 = float4(_62[in.in_var_TEXCOORD1 - 3u], mix(0.119999997317790985107421875, 0.75, smoothstep(0.4650000035762786865234375 - _95, 0.4650000035762786865234375, _94)) * (1.0 - smoothstep(0.5 - _95, 0.5, _94)));
-        break;
+        uint _377 = in.in_var_TEXCOORD1 - 3u;
+        bool _443;
+        do
+        {
+            float2 _386 = float2(float(_333[_377] * 8u), 8.0);
+            float2 _389 = (_366 * 60.0) + (_386 * 0.5);
+            bool _397;
+            if (!any(_389 < float2(0.0)))
+            {
+                _397 = any(_389 >= _386);
+            }
+            else
+            {
+                _397 = true;
+            }
+            if (_397)
+            {
+                _443 = false;
+                break;
+            }
+            uint2 _400 = uint2(_389);
+            uint _401 = _400.x;
+            uint _402 = _401 / 8u;
+            uint _409;
+            if (_402 < 4u)
+            {
+                _409 = _334[_377].x;
+            }
+            else
+            {
+                _409 = _334[_377].y;
+            }
+            uint _414 = (_409 >> (((_402 & 3u) * 8u) & 31u)) & 255u;
+            bool _419;
+            if (_414 >= 32u)
+            {
+                _419 = _414 > 127u;
+            }
+            else
+            {
+                _419 = true;
+            }
+            if (_419)
+            {
+                _443 = false;
+                break;
+            }
+            uint _422 = _414 - 32u;
+            uint _425 = _400.y;
+            uint _432;
+            if (_425 < 4u)
+            {
+                _432 = _332[_422].x;
+            }
+            else
+            {
+                _432 = _332[_422].y;
+            }
+            _443 = ((((_432 >> (((_425 & 3u) * 8u) & 31u)) & 255u) >> ((_401 % 8u) & 31u)) & 1u) != 0u;
+            break;
+        } while(false);
+        if (_443)
+        {
+            _450 = float4(0.86000001430511474609375, 0.87999999523162841796875, 0.920000016689300537109375, 0.949999988079071044921875);
+            break;
+        }
+        else
+        {
+            _450 = float4(0.86000001430511474609375, 0.87999999523162841796875, 0.920000016689300537109375, mix(0.119999997317790985107421875, 0.75, smoothstep(0.4650000035762786865234375 - _368, 0.4650000035762786865234375, _367)) * (1.0 - smoothstep(0.5 - _368, 0.5, _367)));
+            break;
+        }
+        break; // unreachable workaround
     } while(false);
-    out.out_var_SV_Target0 = _113;
+    out.out_var_SV_Target0 = _450;
     return out;
 }
 

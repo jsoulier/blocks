@@ -9,8 +9,9 @@ static const float BUTTONS[HUD_BUTTON_COUNT][2] =
     {HUD_BUTTON_BREAK_X, HUD_BUTTON_BREAK_Y},
     {HUD_BUTTON_JUMP_X, HUD_BUTTON_JUMP_Y},
     {HUD_BUTTON_SPRINT_X, HUD_BUTTON_SPRINT_Y},
-    {HUD_BUTTON_BLOCK_X, HUD_BUTTON_BLOCK_Y},
+    {HUD_BUTTON_BLOCK_NEXT_X, HUD_BUTTON_BLOCK_NEXT_Y},
     {HUD_BUTTON_CONTROLLER_X, HUD_BUTTON_CONTROLLER_Y},
+    {HUD_BUTTON_BLOCK_PREV_X, HUD_BUTTON_BLOCK_PREV_Y},
 };
 
 static const float GAMEPAD_DEADZONE = 0.2f;
@@ -85,7 +86,21 @@ static float GetTouch(const SDL_Event* event, float touch[2], float viewport[2])
     viewport[1] = height;
     touch[0] = event->tfinger.x * viewport[0];
     touch[1] = viewport[1] - event->tfinger.y * viewport[1];
-    return HUD_SCALE(viewport[0], viewport[1]);
+    float scale = HUD_SCALE(viewport[0], viewport[1]);
+    return scale;
+}
+
+static float GetStick(SDL_GamepadAxis axis)
+{
+    float value = SDL_GetGamepadAxis(gamepad, axis) / (float) SDL_JOYSTICK_AXIS_MAX;
+    if (SDL_fabsf(value) > GAMEPAD_DEADZONE)
+    {
+        return (value - SDL_copysignf(GAMEPAD_DEADZONE, value)) / (1.0f - GAMEPAD_DEADZONE);
+    }
+    else
+    {
+        return 0.0f;
+    }
 }
 
 static void SetDevice(InputDevice in_device)
@@ -214,7 +229,8 @@ SDL_AppResult Input_Event(const SDL_Event* event)
             buttons[index] = event->tfinger.fingerID;
             place_block |= index == HUD_BUTTON_PLACE;
             break_block |= index == HUD_BUTTON_BREAK;
-            change_block += index == HUD_BUTTON_BLOCK;
+            change_block += index == HUD_BUTTON_BLOCK_NEXT;
+            change_block -= index == HUD_BUTTON_BLOCK_PREV;
             toggle_controller |= index == HUD_BUTTON_CONTROLLER;
         }
         else if (touch[0] < viewport[0] * 0.5f)
@@ -343,20 +359,6 @@ SDL_AppResult Input_Event(const SDL_Event* event)
     }
     }
     return SDL_APP_CONTINUE;
-}
-
-static float GetStick(SDL_GamepadAxis axis)
-{
-    float value = SDL_GetGamepadAxis(gamepad, axis) / (float) SDL_JOYSTICK_AXIS_MAX;
-    value = SDL_max(value, -1.0f);
-    if (SDL_fabsf(value) > GAMEPAD_DEADZONE)
-    {
-        return (value - SDL_copysignf(GAMEPAD_DEADZONE, value)) / (1.0f - GAMEPAD_DEADZONE);
-    }
-    else
-    {
-        return 0.0f;
-    }
 }
 
 void Input_Update(float dt)

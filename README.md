@@ -1,6 +1,7 @@
 # Blocks
 
-![](image.png)
+![](doc/image2.png)
+![](doc/image1.jpg)
 
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
@@ -87,9 +88,3 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 
 - Left side of the screen to move
 - Right side of the screen to look
-- `Blue` to jump
-- `Purple` to toggle fly
-- `Red` to break a block
-- `Green` to place a block
-- `Grey` to change blocks
-- `Yellow` to sprint
