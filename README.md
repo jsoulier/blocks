@@ -1,9 +1,13 @@
 # Blocks
 
-![](doc/image2.png)
-![](doc/image1.jpg)
-
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
+
+![](doc/image2.png)
+![](doc/image3.png)
+*Running on Desktop*
+
+![](doc/image1.jpg)
+*Running on a Samsung Galaxy A17*
 
 ### Features
 
@@ -56,7 +60,7 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 
 ### Controls
 
-#### Desktop
+#### Keyboard and Mouse
 
 - `WASDEQ` to move
 - `Space` to jump
@@ -69,6 +73,11 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `F11` to toggle fullscreen
 - `LControl` to sprint
 - `T` to reset the time of day
+
+#### Touch
+
+- Left side of the screen to move
+- Right side of the screen to look
 
 #### Gamepad
 
@@ -83,8 +92,3 @@ To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shader
 - `L1/R1` to change blocks
 - `L3` to sprint 
 - `Square` to reset the time of day
-
-#### Mobile
-
-- Left side of the screen to move
-- Right side of the screen to look
