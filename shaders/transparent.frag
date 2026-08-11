@@ -43,7 +43,7 @@ float4 main(Input input) : SV_Target0
     float4 position = input.WorldPosition;
     float3 albedo = color.rgb;
     float3 normal = GetNormal(input.Voxel);
-    float3 light = GetLight(lightBuffer, LightCount, position.xyz, normal, material);
+    float3 light = GetLight(lightBuffer, LightCount, position.xyz, normal);
     float3 ambient = Ambient.xyz;
     float sunlight = GetSunlight(Sun.xyz, Sun.w, normal, block);
     float3 sky = GetSky(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);

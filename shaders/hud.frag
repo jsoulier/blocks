@@ -1,5 +1,6 @@
 // TODO: https://github.com/libsdl-org/SDL_shadercross/issues/211
 #include "../src/hud.inc"
+#include "font.hlsl"
 
 Texture2DArray<float4> atlasTexture : register(t0, space2);
 SamplerState atlasSampler : register(s0, space2);
@@ -20,14 +21,20 @@ static const float kRadius = 0.5f;
 static const float kEdge = 0.035f;
 static const float kFillAlpha = 0.12f;
 static const float kEdgeAlpha = 0.75f;
-static const float3 kColors[HUD_BUTTON_COUNT] =
+static const float kTextAlpha = 0.95f;
+static const float kTextWidth = 0.80f;
+static const float3 kColor = float3(0.86f, 0.88f, 0.92f);
+static const uint kLabelLongest = 6;
+static const uint kLabelLengths[HUD_BUTTON_COUNT] = {5, 5, 4, 6, 1, 3, 1};
+static const uint2 kLabels[HUD_BUTTON_COUNT] =
 {
-    float3(0.45f, 0.85f, 0.50f),
-    float3(0.95f, 0.45f, 0.45f),
-    float3(0.45f, 0.75f, 0.95f),
-    float3(0.95f, 0.80f, 0.40f),
-    float3(0.72f, 0.74f, 0.78f),
-    float3(0.75f, 0.55f, 0.95f),
+    uint2(0x43414C50u, 0x00000045u), // PLACE
+    uint2(0x41455242u, 0x0000004Bu), // BREAK
+    uint2(0x504D554Au, 0x00000000u), // JUMP
+    uint2(0x49525053u, 0x0000544Eu), // SPRINT
+    uint2(0x0000003Eu, 0x00000000u), // >
+    uint2(0x00594C46u, 0x00000000u), // FLY
+    uint2(0x0000003Cu, 0x00000000u), // <
 };
 
 float4 main(Input input) : SV_Target0
@@ -53,6 +60,14 @@ float4 main(Input input) : SV_Target0
     }
     float mask = 1.0f - smoothstep(kRadius - width, kRadius, distance);
     float edge = smoothstep(kRadius - kEdge - width, kRadius - kEdge, distance);
-    float3 color = kColors[input.Instance - HUD_INSTANCE_BUTTON];
-    return float4(color, lerp(kFillAlpha, kEdgeAlpha, edge) * mask);
+    uint index = input.Instance - HUD_INSTANCE_BUTTON;
+    float texels = kLabelLongest * kFontExtent / kTextWidth;
+    if (GetGlyph(kLabels[index], kLabelLengths[index], texels, input.Texcoord))
+    {
+        return float4(kColor, kTextAlpha);
+    }
+    else
+    {
+        return float4(kColor, lerp(kFillAlpha, kEdgeAlpha, edge) * mask);
+    }
 }

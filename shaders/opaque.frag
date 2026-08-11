@@ -53,7 +53,7 @@ Output main(Input input)
     }
     float3 albedo = color.rgb;
     float3 normal = GetNormal(input.Voxel);
-    float3 light = GetLight(lightBuffer, LightCount, input.WorldPosition.xyz, normal, material);
+    float3 light = GetLight(lightBuffer, LightCount, input.WorldPosition.xyz, normal);
     float3 ambient = Ambient.xyz;
     float sunlight = GetSunlight(Sun.xyz, Sun.w, normal, block);
     float3 sky = GetSky(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);

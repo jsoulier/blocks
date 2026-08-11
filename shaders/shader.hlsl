@@ -111,7 +111,7 @@ float3 GetSky(float3 position, float3 top, float3 horizon)
     return lerp(horizon, top, (atan2(position.y, length(position.xz)) + kPi / 2.0f) / kPi);
 }
 
-float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, float3 normal, Material material)
+float3 GetLight(StructuredBuffer<Light> lights, uint count, float3 position, float3 normal)
 {
     static const float3 kOffset = float3(0.0f, 0.5f, 0.0f);
     static const float kMinAngle = 0.25f;
