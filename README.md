@@ -2,11 +2,11 @@
 
 Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
-![](doc/image2.png)
 ![](doc/image3.png)
 *Running on Desktop*
 
 ![](doc/image1.jpg)
+![](doc/image4.jpg)
 *Running on a Samsung Galaxy A17*
 
 ### Features

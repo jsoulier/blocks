@@ -92,6 +92,31 @@ void GPUBuffer_Free(GPUBuffer* buffer)
     buffer->size = 0;
 }
 
+bool GPUBuffer_Reserve(GPUBuffer* buffer, Uint32 capacity, Uint32 stride)
+{
+    SDL_assert(capacity);
+    SDL_assert(stride);
+    if (capacity <= buffer->capacity)
+    {
+        return true;
+    }
+    SDL_ReleaseGPUBuffer(buffer->device, buffer->buffer);
+    buffer->buffer = NULL;
+    buffer->capacity = 0;
+    buffer->size = 0;
+    SDL_GPUBufferCreateInfo info = {0};
+    info.usage = buffer->usage;
+    info.size = capacity * stride;
+    buffer->buffer = SDL_CreateGPUBuffer(buffer->device, &info);
+    if (!buffer->buffer)
+    {
+        SDL_Log("Failed to create buffer: %s", SDL_GetError());
+        return false;
+    }
+    buffer->capacity = capacity;
+    return true;
+}
+
 bool GPUBuffer_Upload(GPUBuffer* destination, CPUBuffer* source)
 {
     SDL_assert(upload_command_buffer);

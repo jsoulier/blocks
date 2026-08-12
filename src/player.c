@@ -114,7 +114,7 @@ void Player_Load(Player* player)
         player->camera.pitch = save.pitch;
         player->camera.yaw = save.yaw;
     }
-    player->query = World_Raycast(&player->camera, REACH);
+    SDL_memset(&player->query, 0, sizeof(player->query));
 }
 
 void Player_Save(const Player* player)

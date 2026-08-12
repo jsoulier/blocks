@@ -24,6 +24,7 @@ typedef enum TaskState
 {
     TASK_STATE_REQUESTED,
     TASK_STATE_RUNNING,
+    TASK_STATE_PUBLISHED,
     TASK_STATE_COMPLETED,
 } TaskState;
 
@@ -59,14 +60,14 @@ typedef struct Chunk
     Block blocks[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_WIDTH];
     Map lights;
     GPUBuffer gpu_voxels[WORLD_MESH_TYPE_COUNT];
-    GPUBuffer gpu_lights;
+    GPUBuffer gpu_render_lights;
+    GPUBuffer gpu_update_lights;
 } Chunk;
 
 static SDL_GPUDevice* device;
 static Chunk* chunks[WORLD_WIDTH][WORLD_WIDTH];
 static WorldWorker all_workers[WORKERS];
 static GPUBuffer gpu_indices;
-static GPUBuffer gpu_empty_lights;
 static CPUBuffer cpu_voxels[WORLD_MESH_TYPE_COUNT];
 static int sorted_chunks[WORLD_WIDTH * WORLD_WIDTH][2];
 static int world_x;
@@ -149,13 +150,17 @@ static Chunk* CreateChunk()
     {
         GPUBuffer_Init(&chunk->gpu_voxels[i], device, SDL_GPU_BUFFERUSAGE_VERTEX);
     }
-    GPUBuffer_Init(&chunk->gpu_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    GPUBuffer_Init(&chunk->gpu_render_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    GPUBuffer_Init(&chunk->gpu_update_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    GPUBuffer_Reserve(&chunk->gpu_render_lights, 1, sizeof(Light));
+    GPUBuffer_Reserve(&chunk->gpu_update_lights, 1, sizeof(Light));
     return chunk;
 }
 
 static void FreeChunk(Chunk* chunk)
 {
-    GPUBuffer_Free(&chunk->gpu_lights);
+    GPUBuffer_Free(&chunk->gpu_render_lights);
+    GPUBuffer_Free(&chunk->gpu_update_lights);
     for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         GPUBuffer_Free(&chunk->gpu_voxels[i]);
@@ -274,16 +279,16 @@ static void UploadLights(Chunk* chunk, CPUBuffer* lights)
 {
     SDL_assert(SDL_GetAtomicInt(&chunk->block_state) == TASK_STATE_COMPLETED);
     SDL_assert(SDL_GetAtomicInt(&chunk->light_state) == TASK_STATE_RUNNING);
-    GPUBuffer_Clear(&chunk->gpu_lights);
+    GPUBuffer_Clear(&chunk->gpu_update_lights);
     if (!lights->size)
     {
         return;
     }
-    if (!GPUBuffer_BeginUpload(&chunk->gpu_lights))
+    if (!GPUBuffer_BeginUpload(&chunk->gpu_update_lights))
     {
         return;
     }
-    GPUBuffer_Upload(&chunk->gpu_lights, lights);
+    GPUBuffer_Upload(&chunk->gpu_update_lights, lights);
     GPUBuffer_EndUpload();
 }
 
@@ -437,23 +442,7 @@ static void GenerateChunkLights(Chunk* chunks[3][3], CPUBuffer* lights)
         }
     }
     UploadLights(chunk, lights);
-    SDL_SetAtomicInt(&chunk->light_state, TASK_STATE_COMPLETED);
-}
-
-static void GenerateEmptyLightBuffer()
-{
-    CPUBuffer lights;
-    CPUBuffer_Init(&lights, device, sizeof(Light));
-    if (!GPUBuffer_BeginUpload(&gpu_empty_lights))
-    {
-        CPUBuffer_Free(&lights);
-        return;
-    }
-    Light light = {0};
-    CPUBuffer_Append(&lights, &light);
-    GPUBuffer_Upload(&gpu_empty_lights, &lights);
-    GPUBuffer_EndUpload();
-    CPUBuffer_Free(&lights);
+    SDL_SetAtomicInt(&chunk->light_state, TASK_STATE_PUBLISHED);
 }
 
 static void GenerateIndexBuffer()
@@ -573,7 +562,6 @@ void World_Init(SDL_GPUDevice* in_device)
     world_x = SDL_MAX_SINT32;
     world_z = SDL_MAX_SINT32;
     GPUBuffer_Init(&gpu_indices, device, SDL_GPU_BUFFERUSAGE_INDEX);
-    GPUBuffer_Init(&gpu_empty_lights, device, SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         CPUBuffer_Init(&cpu_voxels[i], device, sizeof(Voxel));
@@ -598,7 +586,6 @@ void World_Init(SDL_GPUDevice* in_device)
     }
     int center = WORLD_WIDTH / 2;
     SDL_qsort_r(sorted_chunks, WORLD_WIDTH * WORLD_WIDTH, sizeof(int) * 2, SortFunction, &center);
-    GenerateEmptyLightBuffer();
     GenerateIndexBuffer();
 }
 
@@ -620,7 +607,6 @@ void World_Free()
         FreeChunk(chunks[x][z]);
     }
     GPUBuffer_Free(&gpu_indices);
-    GPUBuffer_Free(&gpu_empty_lights);
     for (int i = 0; i < WORLD_MESH_TYPE_COUNT; i++)
     {
         CPUBuffer_Free(&cpu_voxels[i]);
@@ -661,6 +647,8 @@ static void Shuffle(int dx, int dz)
             SDL_SetAtomicInt(&chunk->block_state, TASK_STATE_REQUESTED);
             SDL_SetAtomicInt(&chunk->voxel_state, TASK_STATE_REQUESTED);
             SDL_SetAtomicInt(&chunk->light_state, TASK_STATE_REQUESTED);
+            GPUBuffer_Clear(&chunk->gpu_render_lights);
+            GPUBuffer_Clear(&chunk->gpu_update_lights);
             chunks[x][z] = chunk;
         }
         Chunk* chunk = chunks[x][z];
@@ -718,21 +706,22 @@ static void Render(Chunk* chunk, WorldMeshType type, SDL_GPUCommandBuffer* comma
     {
         return;
     }
+    if (SDL_GetAtomicInt(&chunk->light_state) == TASK_STATE_PUBLISHED)
+    {
+        GPUBuffer lights = chunk->gpu_render_lights;
+        chunk->gpu_render_lights = chunk->gpu_update_lights;
+        chunk->gpu_update_lights = lights;
+        SDL_SetAtomicInt(&chunk->light_state, TASK_STATE_COMPLETED);
+    }
     SDL_GPUBufferBinding voxel_binding = {0};
     SDL_GPUBufferBinding index_binding = {0};
-    SDL_GPUBuffer* lights = NULL;
-    Sint32 light_count;
     voxel_binding.buffer = voxels->buffer;
     index_binding.buffer = gpu_indices.buffer;
-    if (SDL_GetAtomicInt(&chunk->light_state) == TASK_STATE_COMPLETED && chunk->gpu_lights.size)
+    SDL_GPUBuffer* lights = chunk->gpu_render_lights.buffer;
+    Sint32 light_count = chunk->gpu_render_lights.size;
+    if (!lights)
     {
-        lights = chunk->gpu_lights.buffer;
-        light_count = chunk->gpu_lights.size;
-    }
-    else
-    {
-        lights = gpu_empty_lights.buffer;
-        light_count = 0;
+        return;
     }
     SDL_PushGPUFragmentUniformData(command_buffer, 0, &light_count, sizeof(light_count));
     SDL_BindGPUFragmentStorageBuffers(render_pass, 1, &lights, 1);
@@ -815,7 +804,7 @@ void World_SetBlock(const int position[3], Block block)
         if (!neighbor ||
             SDL_GetAtomicInt(&neighbor->block_state) != TASK_STATE_COMPLETED ||
             SDL_GetAtomicInt(&neighbor->voxel_state) != TASK_STATE_COMPLETED ||
-            SDL_GetAtomicInt(&neighbor->light_state) != TASK_STATE_COMPLETED)
+            SDL_GetAtomicInt(&neighbor->light_state) < TASK_STATE_PUBLISHED)
         {
             return;
         }
