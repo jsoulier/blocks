@@ -354,6 +354,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     }
     SDL_PropertiesID device_props = SDL_CreateProperties();
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, true);
+    SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXIL_BOOLEAN, true);
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, true);
 #ifndef NDEBUG
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, true);
@@ -476,7 +477,17 @@ static bool Resize(int width, int height)
     info.layer_count_or_depth = 1;
     info.num_levels = 1;
     info.sample_count = SAMPLE_COUNT;
+    info.props = SDL_CreateProperties();
+    if (!info.props)
+    {
+        SDL_Log("Failed to create properties: %s", SDL_GetError());
+        return false;
+    }
+    SDL_SetFloatProperty(info.props, SDL_PROP_GPU_TEXTURE_CREATE_D3D12_CLEAR_DEPTH_FLOAT, 1.0f);
+    SDL_SetNumberProperty(info.props, SDL_PROP_GPU_TEXTURE_CREATE_D3D12_CLEAR_STENCIL_NUMBER, 0);
     depth_texture = SDL_CreateGPUTexture(device, &info);
+    SDL_DestroyProperties(info.props);
+    info.props = 0;
     if (!depth_texture)
     {
         SDL_Log("Failed to create depth texture: %s", SDL_GetError());
