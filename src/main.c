@@ -203,6 +203,7 @@ static bool CreateOpaquePipeline()
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
     info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
     info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+    info.rasterizer_state.enable_depth_clip = true;
     info.multisample_state.sample_count = SAMPLE_COUNT;
     opaque_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
@@ -239,6 +240,7 @@ static bool CreateTransparentPipeline()
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
     info.multisample_state.sample_count = SAMPLE_COUNT;
+    info.rasterizer_state.enable_depth_clip = true;
     transparent_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -258,6 +260,7 @@ static bool CreateSkyPipeline()
     info.target_info.has_depth_stencil_target = true;
     info.target_info.depth_stencil_format = depth_format;
     info.multisample_state.sample_count = SAMPLE_COUNT;
+    info.rasterizer_state.enable_depth_clip = true;
     sky_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -284,6 +287,7 @@ static bool CreateRaycastPipeline()
     info.target_info.depth_stencil_format = depth_format;
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+    info.rasterizer_state.enable_depth_clip = true;
     info.rasterizer_state.enable_depth_bias = true;
     info.rasterizer_state.depth_bias_constant_factor = -1.0f;
     info.rasterizer_state.depth_bias_slope_factor = -1.0f;
@@ -311,6 +315,7 @@ static bool CreateHudPipeline()
     info.target_info.num_color_targets = 1;
     info.target_info.color_target_descriptions = &color_target;
     info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
+    info.rasterizer_state.enable_depth_clip = true;
     hud_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
