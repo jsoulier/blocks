@@ -203,6 +203,7 @@ static bool CreateOpaquePipeline()
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS;
     info.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_BACK;
     info.rasterizer_state.front_face = SDL_GPU_FRONTFACE_CLOCKWISE;
+    info.rasterizer_state.enable_depth_clip = true;
     info.multisample_state.sample_count = SAMPLE_COUNT;
     opaque_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
@@ -239,6 +240,7 @@ static bool CreateTransparentPipeline()
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
     info.multisample_state.sample_count = SAMPLE_COUNT;
+    info.rasterizer_state.enable_depth_clip = true;
     transparent_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -258,6 +260,7 @@ static bool CreateSkyPipeline()
     info.target_info.has_depth_stencil_target = true;
     info.target_info.depth_stencil_format = depth_format;
     info.multisample_state.sample_count = SAMPLE_COUNT;
+    info.rasterizer_state.enable_depth_clip = true;
     sky_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -284,6 +287,7 @@ static bool CreateRaycastPipeline()
     info.target_info.depth_stencil_format = depth_format;
     info.depth_stencil_state.enable_depth_test = true;
     info.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
+    info.rasterizer_state.enable_depth_clip = true;
     info.rasterizer_state.enable_depth_bias = true;
     info.rasterizer_state.depth_bias_constant_factor = -1.0f;
     info.rasterizer_state.depth_bias_slope_factor = -1.0f;
@@ -311,6 +315,7 @@ static bool CreateHudPipeline()
     info.target_info.num_color_targets = 1;
     info.target_info.color_target_descriptions = &color_target;
     info.multisample_state.sample_count = SDL_GPU_SAMPLECOUNT_1;
+    info.rasterizer_state.enable_depth_clip = true;
     hud_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -354,6 +359,7 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     }
     SDL_PropertiesID device_props = SDL_CreateProperties();
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, true);
+    SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXIL_BOOLEAN, true);
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, true);
 #ifndef NDEBUG
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, true);
@@ -476,7 +482,17 @@ static bool Resize(int width, int height)
     info.layer_count_or_depth = 1;
     info.num_levels = 1;
     info.sample_count = SAMPLE_COUNT;
+    info.props = SDL_CreateProperties();
+    if (!info.props)
+    {
+        SDL_Log("Failed to create properties: %s", SDL_GetError());
+        return false;
+    }
+    SDL_SetFloatProperty(info.props, SDL_PROP_GPU_TEXTURE_CREATE_D3D12_CLEAR_DEPTH_FLOAT, 1.0f);
+    SDL_SetNumberProperty(info.props, SDL_PROP_GPU_TEXTURE_CREATE_D3D12_CLEAR_STENCIL_NUMBER, 0);
     depth_texture = SDL_CreateGPUTexture(device, &info);
+    SDL_DestroyProperties(info.props);
+    info.props = 0;
     if (!depth_texture)
     {
         SDL_Log("Failed to create depth texture: %s", SDL_GetError());
