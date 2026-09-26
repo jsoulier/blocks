@@ -106,10 +106,6 @@ static const uint2 kFont[96] =
     uint2(0x00000000u, 0x00000000u), // delete
 };
 
-// text: 1-8 characters 
-// length: number of characters
-// texels: width of the quad in bitmap pixels
-// texcoord: pixel position in the quad with centered text (0 to 1)
 bool GetGlyph(uint2 text, uint length, float texels, float2 texcoord)
 {
     float2 extent = float2(length * kFontExtent, kFontExtent);

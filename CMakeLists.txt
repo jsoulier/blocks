@@ -34,6 +34,9 @@ set(SRC
     src/world.c
 )
 
+if(EMSCRIPTEN)
+    add_compile_options(-pthread)
+endif()
 add_subdirectory(lib/SDL)
 if(ANDROID)
     add_library(blocks SHARED ${SRC})
@@ -47,6 +50,9 @@ target_include_directories(blocks PUBLIC lib/jsmn)
 target_include_directories(blocks PUBLIC lib/sqlite3)
 target_include_directories(blocks PUBLIC lib/stb)
 target_link_libraries(blocks PRIVATE SDL3::SDL3)
+if(EMSCRIPTEN)
+    target_link_options(blocks PRIVATE -pthread -sPTHREAD_POOL_SIZE=4 -sALLOW_MEMORY_GROWTH=1)
+endif()
 
 find_program(SHADERCROSS shadercross)
 function(add_shader FILE)

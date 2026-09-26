@@ -49,6 +49,15 @@ cd bin
 ./blocks
 ```
 
+#### Web (WIP)
+
+Get [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
+
+```bash
+emcmake cmake -S . -B build/web
+cmake --build build/web
+```
+
 #### Android
 
 Open `android/` in Android Studio and press `Run`

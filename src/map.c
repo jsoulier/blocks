@@ -6,7 +6,7 @@ static const int EMPTY = 0;
 static const int TOMBSTONE = 255;
 static const float MAX_LOAD_FACTOR = 0.75f;
 
-static int HashInt(int x)
+static Uint32 HashInt(Uint32 x)
 {
     x += (x << 10);
     x ^= (x >> 6);
@@ -16,7 +16,7 @@ static int HashInt(int x)
     return x;
 }
 
-static int HashPosition(int x, int y, int z)
+static Uint32 HashPosition(Uint32 x, Uint32 y, Uint32 z)
 {
     return HashInt(x) ^ HashInt(y) ^ HashInt(z);
 }
@@ -66,23 +66,20 @@ void Map_Set(Map* map, int x, int y, int z, int value)
         Grow(map);
     }
     Uint32 mask = map->capacity - 1;
-    Uint32 index = HashPosition(x, y, z) & mask;
+    Uint32 start = HashPosition(x, y, z) & mask;
+    Uint32 index = start;
     Uint32 tombstone = SDL_MAX_UINT32;
+    MapRow* row = NULL;
     for (;;)
     {
-        MapRow* row = &map->rows[index];
+        row = &map->rows[index];
         if (row->value == EMPTY)
         {
             if (tombstone != SDL_MAX_UINT32)
             {
                 row = &map->rows[tombstone];
             }
-            row->x = x;
-            row->y = y;
-            row->z = z;
-            row->value = value;
-            map->size++;
-            return;
+            break;
         }
         if (row->value == TOMBSTONE)
         {
@@ -97,13 +94,26 @@ void Map_Set(Map* map, int x, int y, int z, int value)
             return;
         }
         index = (index + 1) & mask;
+        if (index == start)
+        {
+            SDL_assert(tombstone != SDL_MAX_UINT32);
+            row = &map->rows[tombstone];
+            break;
+        }
     }
+    SDL_assert(row);
+    row->x = x;
+    row->y = y;
+    row->z = z;
+    row->value = value;
+    map->size++;
 }
 
 int Map_Get(const Map* map, int x, int y, int z)
 {
     Uint32 mask = map->capacity - 1;
-    Uint32 index = HashPosition(x, y, z) & mask;
+    Uint32 start = HashPosition(x, y, z) & mask;
+    Uint32 index = start;
     for (;;)
     {
         const MapRow row = map->rows[index];
@@ -116,13 +126,18 @@ int Map_Get(const Map* map, int x, int y, int z)
             return row.value;
         }
         index = (index + 1) & mask;
+        if (index == start)
+        {
+            return EMPTY;
+        }
     }
 }
 
 void Map_Remove(Map* map, int x, int y, int z)
 {
     Uint32 mask = map->capacity - 1;
-    Uint32 index = HashPosition(x, y, z) & mask;
+    Uint32 start = HashPosition(x, y, z) & mask;
+    Uint32 index = start;
     for (;;)
     {
         MapRow* row = &map->rows[index];
@@ -137,6 +152,10 @@ void Map_Remove(Map* map, int x, int y, int z)
             return;
         }
         index = (index + 1) & mask;
+        if (index == start)
+        {
+            return;
+        }
     }
 }
 
