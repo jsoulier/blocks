@@ -54,7 +54,7 @@ cd bin
 Get [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
 
 ```bash
-emcmake cmake -S . -B build/web
+emcmake cmake -S . -B build/web -G Ninja
 cmake --build build/web
 ```
 
@@ -65,7 +65,8 @@ Open `android/` in Android Studio and press `Run`
 #### Shaders
 
 Shaders are precompiled.
-To build locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path
+To build SPV, DXIL, and MSL locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path.
+To build WGSL locally, install [naga-cli](https://crates.io/crates/naga-cli)
 
 ### Controls
 

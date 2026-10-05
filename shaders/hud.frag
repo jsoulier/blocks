@@ -1,9 +1,7 @@
-// TODO: https://github.com/libsdl-org/SDL_shadercross/issues/211
-#include "../src/hud.inc"
-#include "font.hlsl"
+#include "shader.hlsl"
 
-Texture2DArray<float4> atlasTexture : register(t0, space2);
-SamplerState atlasSampler : register(s0, space2);
+BINDING(0) Texture2DArray<float4> atlasTexture : register(t0, space2);
+BINDING(1) SamplerState atlasSampler : register(s0, space2);
 
 cbuffer UniformBuffer : register(b0, space3)
 {
@@ -16,7 +14,6 @@ struct Input
     nointerpolation uint Instance : TEXCOORD1;
 };
 
-static const float kEpsilon = 0.001f;
 static const float kRadius = 0.5f;
 static const float kEdge = 0.035f;
 static const float kFillAlpha = 0.12f;
@@ -39,21 +36,21 @@ static const uint2 kLabels[HUD_BUTTON_COUNT] =
 
 float4 main(Input input) : SV_Target0
 {
+    float4 color = atlasTexture.Sample(atlasSampler, float3(input.Texcoord, Block));
+    float distance = length(input.Texcoord - 0.5f);
+    float width = fwidth(distance);
     if (input.Instance == HUD_INSTANCE_CROSSHAIR_X || input.Instance == HUD_INSTANCE_CROSSHAIR_Y)
     {
         return float4(1.0f, 1.0f, 1.0f, 1.0f);
     }
     if (input.Instance == HUD_INSTANCE_BLOCK)
     {
-        float4 color = atlasTexture.Sample(atlasSampler, float3(input.Texcoord, Block));
         if (color.a <= kEpsilon)
         {
             discard;
         }
         return color;
     }
-    float distance = length(input.Texcoord - 0.5f);
-    float width = fwidth(distance);
     if (distance > kRadius)
     {
         discard;
@@ -61,8 +58,8 @@ float4 main(Input input) : SV_Target0
     float mask = 1.0f - smoothstep(kRadius - width, kRadius, distance);
     float edge = smoothstep(kRadius - kEdge - width, kRadius - kEdge, distance);
     uint index = input.Instance - HUD_INSTANCE_BUTTON;
-    float texels = kLabelLongest * kFontExtent / kTextWidth;
-    if (GetGlyph(kLabels[index], kLabelLengths[index], texels, input.Texcoord))
+    float scale = kLabelLongest / kTextWidth;
+    if (GetGlyph(kLabels[index], kLabelLengths[index], scale, input.Texcoord))
     {
         return float4(kColor, kTextAlpha);
     }

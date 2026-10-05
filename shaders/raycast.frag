@@ -1,3 +1,5 @@
+#include "shader.hlsl"
+
 static const float kAlpha = 0.1f;
 
 float4 main() : SV_Target0

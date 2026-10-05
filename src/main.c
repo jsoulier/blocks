@@ -12,11 +12,19 @@
 #include "sky.h"
 #include "world.h"
 
-static const int MIP_LEVELS = 4;
 static const Uint64 SAVE_INTERVAL = 10000;
 static const Uint64 LOAD_INTERVAL = 500; // preload for 500 ms to avoid spawning inside of chunks
+#ifdef SDL_PLATFORM_EMSCRIPTEN
+// TODO: Remove when SDL's WebGPU can generate mipmaps for array textures
+static const int MIP_LEVELS = 1;
+#else
+static const int MIP_LEVELS = 4;
+#endif
 #if defined(SDL_PLATFORM_ANDROID) || defined(SDL_PLATFORM_IOS)
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_1;
+static const SDL_GPUTextureFormat POSITION_FORMAT = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
+#elif defined(SDL_PLATFORM_EMSCRIPTEN)
+static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
 static const SDL_GPUTextureFormat POSITION_FORMAT = SDL_GPU_TEXTUREFORMAT_R16G16B16A16_FLOAT;
 #else
 static const SDL_GPUSampleCount SAMPLE_COUNT = SDL_GPU_SAMPLECOUNT_4;
@@ -361,6 +369,8 @@ SDL_AppResult SDLCALL SDL_AppInit(void** appstate, int argc, char** argv)
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_SPIRV_BOOLEAN, true);
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_DXIL_BOOLEAN, true);
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_MSL_BOOLEAN, true);
+    // TODO: Uncomment when SDL supports WebGPU
+    // SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_SHADERS_WGSL_BOOLEAN, true);
 #ifndef NDEBUG
     SDL_SetBooleanProperty(device_props, SDL_PROP_GPU_DEVICE_CREATE_DEBUGMODE_BOOLEAN, true);
 #endif

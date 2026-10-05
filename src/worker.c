@@ -34,6 +34,11 @@ void Worker_Init(Worker* worker)
     worker->task = NULL;
     worker->data = NULL;
     worker->quit = false;
+    worker->mutex = NULL;
+    worker->condition = NULL;
+    worker->thread = NULL;
+    // TODO: Remove when SDL's WebGPU backend supports threading
+#ifndef SDL_PLATFORM_EMSCRIPTEN
     worker->mutex = SDL_CreateMutex();
     if (!worker->mutex)
     {
@@ -48,7 +53,12 @@ void Worker_Init(Worker* worker)
     if (!worker->thread)
     {
         SDL_Log("Failed to create thread: %s", SDL_GetError());
+        SDL_DestroyMutex(worker->mutex);
+        SDL_DestroyCondition(worker->condition);
+        worker->mutex = NULL;
+        worker->condition = NULL;
     }
+#endif
 }
 
 void Worker_Free(Worker* worker)
@@ -80,6 +90,11 @@ bool Worker_IsBusy(Worker* worker)
 void Worker_Dispatch(Worker* worker, WorkerTask task, void* data)
 {
     SDL_assert(!Worker_IsBusy(worker));
+    if (!worker->thread)
+    {
+        task(data);
+        return;
+    }
     SDL_LockMutex(worker->mutex);
     SDL_assert(!worker->task);
     SDL_assert(!worker->quit);

@@ -1,11 +1,11 @@
 #include "shader.hlsl"
 
-Texture2DArray<float4> atlasTexture : register(t0, space2);
-SamplerState atlasSampler : register(s0, space2);
-Texture2D<float4> positionTexture : register(t1, space2);
-SamplerState positionSampler : register(s1, space2);
-StructuredBuffer<Material> materialBuffer : register(t2, space2);
-StructuredBuffer<Light> lightBuffer : register(t3, space2);
+BINDING(0) Texture2DArray<float4> atlasTexture : register(t0, space2);
+BINDING(1) SamplerState atlasSampler : register(s0, space2);
+BINDING(2) Texture2D<float4> positionTexture : register(t1, space2);
+BINDING(3) SamplerState positionSampler : register(s1, space2);
+BINDING(4) StructuredBuffer<Material> materialBuffer : register(t2, space2);
+BINDING(5) StructuredBuffer<Light> lightBuffer : register(t3, space2);
 
 cbuffer UniformBuffer : register(b0, space3)
 {
@@ -43,20 +43,19 @@ float4 main(Input input) : SV_Target0
     float4 position = input.WorldPosition;
     float3 albedo = color.rgb;
     float3 normal = GetNormal(input.Voxel);
-    float3 light = GetLight(lightBuffer, LightCount, position.xyz, normal);
+    float3 light = GetLight(lightBuffer, LightCount, position.xyz, normal, Sun, block);
     float3 ambient = Ambient.xyz;
-    float sunlight = GetSunlight(Sun.xyz, Sun.w, normal, block);
     float3 sky = GetSky(input.WorldPosition.xyz - PlayerPosition, SkyTop.xyz, SkyHorizon.xyz);
     float fog = GetFog(distance(position.xz, PlayerPosition.xz));
     float alpha = color.a;
     if (block == kBlockWater)
     {
-        float4 seabed = positionTexture.Sample(positionSampler, input.Fragment);
+        float4 seabed = positionTexture.SampleLevel(positionSampler, input.Fragment, 0.0f);
         if (seabed.w != 0.0f)
         {
             alpha += max(0.0f, input.WorldPosition.y - seabed.y) / 10.0f;
             alpha = saturate(alpha);
         }
     }
-    return float4(lerp(albedo * (light + ambient + sunlight), sky, fog), alpha);
+    return float4(lerp(albedo * (light + ambient), sky, fog), alpha);
 }

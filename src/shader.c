@@ -26,6 +26,13 @@ SDL_GPUShader* Shader_Load(SDL_GPUDevice* device, const char* name)
         entrypoint = "main0";
         file_extension = "msl";
     }
+    // TODO: Uncomment when SDL supports WebGPU
+    // else if (format & SDL_GPU_SHADERFORMAT_WGSL)
+    // {
+    //     format = SDL_GPU_SHADERFORMAT_WGSL;
+    //     entrypoint = "main";
+    //     file_extension = "wgsl";
+    // }
     else
     {
         SDL_assert(false);

@@ -1,5 +1,4 @@
-// TODO: https://github.com/libsdl-org/SDL_shadercross/issues/211
-#include "../src/hud.inc"
+#include "shader.hlsl"
 
 cbuffer UniformBuffer : register(b0, space1)
 {
