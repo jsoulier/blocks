@@ -65,8 +65,7 @@ Open `android/` in Android Studio and press `Run`
 #### Shaders
 
 Shaders are precompiled.
-To build SPV, DXIL, and MSL locally, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) to your path.
-To build WGSL locally, install [naga-cli](https://crates.io/crates/naga-cli)
+To build everything, add [SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross) and [naga-cli](https://crates.io/crates/naga-cli) to your path
 
 ### Controls
 
