@@ -11,7 +11,7 @@ Tiny Minecraft clone in C and HLSL using the new SDL3 GPU API
 
 ### Features
 
-- Desktop and Android support
+- Desktop, Web, and Android support
 - Keyboard and mouse, gamepad, and touch controls
 - Procedural world generation
 - Asynchronous chunk loading
