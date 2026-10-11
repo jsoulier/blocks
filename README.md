@@ -49,7 +49,7 @@ cd bin
 ./blocks
 ```
 
-#### Web (WIP)
+#### Web
 
 Get [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
 
