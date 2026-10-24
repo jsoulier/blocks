@@ -54,6 +54,14 @@ static Uint64 last_ticks;
 static Uint64 save_ticks;
 static Uint64 load_ticks;
 
+static void Save()
+{
+    save_ticks = SDL_GetTicks();
+    Player_Save(&player);
+    Sky_Save(&sky);
+    Save_Commit();
+}
+
 static bool CreateAtlas()
 {
     char path[1024] = {0};
@@ -449,8 +457,7 @@ void SDLCALL SDL_AppQuit(void* appstate, SDL_AppResult result)
 {
     SDL_HideWindow(window);
     World_Free();
-    Player_Save(&player);
-    Sky_Save(&sky);
+    Save();
     Save_Free();
     Input_Free();
     SDL_ReleaseGPUSampler(device, nearest_sampler);
@@ -738,15 +745,16 @@ SDL_AppResult SDLCALL SDL_AppIterate(void* appstate)
     Render();
     if (ticks - save_ticks >= SAVE_INTERVAL)
     {
-        save_ticks = ticks;
-        Player_Save(&player);
-        Sky_Save(&sky);
-        Save_Commit();
+        Save();
     }
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDLCALL SDL_AppEvent(void* appstate, SDL_Event* event)
 {
+    if (event->type == SDL_EVENT_TERMINATING)
+    {
+        Save();
+    }
     return Input_Event(event);
 }
