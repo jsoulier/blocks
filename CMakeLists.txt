@@ -36,6 +36,7 @@ set(SRC
 
 if(EMSCRIPTEN)
     add_compile_options(-pthread)
+    set(SDL_EMSCRIPTEN_PERSISTENT_PATH /storage)
 endif()
 add_subdirectory(lib/SDL)
 if(ANDROID)

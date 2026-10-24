@@ -17,5 +17,13 @@
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "CMake: build",
         },
+        {
+            "name": "server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/server.py",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "CMake: build",
+        },
     ]
 }
